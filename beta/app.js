@@ -131,11 +131,11 @@ function renderAuth(){
       ${v.err ? `<div class="err">${esc(v.err)}</div>` : ''}</div></div>`;
   }
   const inv = inviteToken() && inviteInfo && inviteInfo.name && inviteInfo.name !== '__self' ? inviteInfo.name : '';
-  const title = inv && m === 'signup' ? `Join ${esc(inv)} on Mixing Bowl` : inv && m === 'signin' ? 'Sign in to accept' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
+  const title = inv && m === 'signup' ? `Join ${esc(inv)} on Mixing Bowl` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
   return `<div class="authwrap">
     <div class="authhero">${AUTH_ART}</div>
     <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : ''}<h2>${title}</h2>
-    <p class="muted" style="margin:4px 0 14px">${inv && m === 'signup' ? "Create a free account and you'll be friends right away, so you can see each other's recipes." : inv && m === 'signin' ? `You'll be friends with ${esc(inv)} once you sign in.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
+    <p class="muted" style="margin:4px 0 14px">${inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
     <form data-form="${m}">
       ${m === 'signup' ? `<input class="tin" id="au-name" data-keep placeholder="First name" maxlength="40" required autocomplete="given-name">` : ''}
       <input class="tin" id="au-email" data-keep type="email" placeholder="Email" required autocomplete="email">
@@ -145,7 +145,7 @@ function renderAuth(){
     ${m === 'signup' ? `<div class="fine">By creating an account, you confirm you're 13 or older and agree to the <a href="#terms">Terms</a> and <a href="#privacy">Privacy</a> notice.</div>` : ''}
     ${v.err ? `<div class="err">${esc(v.err)}</div>` : ''}${v.msg ? `<div class="ok">${esc(v.msg)}</div>` : ''}
     <div class="authlinks">
-      ${m !== 'signin' ? `<button class="linkbtn" data-act="authmode" data-m="signin">${inv ? 'Already on Mixing Bowl? Sign in to accept' : 'I have an account — sign in'}</button>` : `<button class="linkbtn" data-act="authmode" data-m="signup">New here? Create an account</button><button class="linkbtn" data-act="authmode" data-m="forgot">Forgot password?</button>`}
+      ${m !== 'signin' ? `<button class="linkbtn" data-act="authmode" data-m="signin">${inv ? 'Already on Mixing Bowl? Sign in' : 'I have an account — sign in'}</button>` : `<button class="linkbtn" data-act="authmode" data-m="signup">New here? Create an account</button><button class="linkbtn" data-act="authmode" data-m="forgot">Forgot password?</button>`}
     </div></div></div>`;
 }
 async function handleAuthForm(kind){
@@ -302,26 +302,27 @@ function renderFriends(){
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   const inc = friends.filter(f => f.status === 'pending' && f.incoming), acc = friends.filter(f => f.status === 'accepted'), out = friends.filter(f => f.status === 'pending' && !f.incoming);
   const n = inc.length + inbox.length;
-  const head = `<div class="fr-h"><h2>Friends</h2><button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button></div>`;
+  const isEmpty = !acc.length && !n && !out.length;
+  const head = `<div class="fr-h"><h2>Friends</h2>${isEmpty ? '' : `<button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button>`}</div>`;
   const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share cookbooks</b><span>You'll be able to see each other's recipes</span></div></div>
     <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
   const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
     ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
     <div class="fbtns"><button class="btn primary" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
-  const books = acc.map(f => `<button class="cbk" data-act="go" data-h="f-${esc(f.friend_id)}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span>${ICON_RIGHT}</button>`).join('');
+  const books = acc.map(f => `<div class="cbk crow"><button class="cbkgo" data-act="go" data-h="f-${esc(f.friend_id)}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span>${ICON_RIGHT}</button><button class="linkbtn rmlink" data-act="frremove" data-id="${esc(f.friend_id)}" aria-label="Remove ${esc(f.name)} as a friend">Remove</button></div>`).join('');
   const waiting = out.map(f => `<div class="cbk wait">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(f.name)}</b><span>Waiting for them to accept</span></span><button class="linkbtn" data-act="frcancel" data-id="${esc(f.friend_id)}">Cancel</button></div>`).join('');
-  const empty = !acc.length && !n && !out.length ? `<div class="card empty frempty"><b>Share cookbooks with friends and family</b><span>When they accept, you can browse each other's recipes and save copies to your own.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
+  const empty = isEmpty ? `<div class="card empty frempty"><b>Share cookbooks with friends and family</b><span>When they accept, you can browse each other's recipes and save copies to your own.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
   return head + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}` : '')
     + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
     + (addFriendOpen ? renderAddFriend() : '');
 }
 function renderAddFriend(){
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add a friend"><div class="askt">Add a friend</div>
-    <p class="frp">Enter the email they use for Mixing Bowl. Your request will show up in their Friends tab. Not on Mixing Bowl yet? Share an invite link instead.</p>
-    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Their email" required><button class="btn primary" type="submit">Send</button></form>
+    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Friend's email" required><button class="btn primary" type="submit">Send</button></form>
+    <div class="frhint">They'll see your request in their Friends tab.</div>
     <div class="ordiv">or</div>
     <button class="btn outline bigbtn" data-act="frlink">${ICON_LINK}Share invite link</button>
-    <div class="privnote">${ICON_LOCK}<span>Friends can see your recipes, except ones you mark private. Your shopping list and progress are always private.</span></div></div>`;
+    <div class="frhint">For friends who aren't on Mixing Bowl yet.</div></div>`;
 }
 function fTile(fid, row){
   const d = row.data || {}, saved = savedCopy(fid, row.id), tt = autoTags(d).slice(0, 3);
@@ -336,7 +337,7 @@ function renderFbook(fid){
   const b = fbook[fid]; if(!b) { setTimeout(() => loadFbook(fid)); }
   const rows = (b && b.rows) || [];
   return `<button class="back" data-act="go" data-h="friends">← Friends</button>
-    <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span><button class="btn sm rmfr" data-act="frremove" data-id="${esc(fid)}">Remove friend</button></div>
+    <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span></div>
     ${rows.length > 4 ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
     ${rows.length > 1 ? fFilterBar(rows) : ''}
     ${!b || b.loading && !rows.length ? `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>` : b.err ? `<div class="card empty">Couldn't load this cookbook. Try again in a moment.</div>` : rows.length ? fGrid(fid, rows) : `<div class="card empty">${esc(f.name)} hasn't shared any recipes yet.</div>`}`;
@@ -418,7 +419,7 @@ function renderInviteCard(){
   if(!inviteInfo || inviteInfo.bad) return '';
   if(inviteInfo.name === '__self'){ setTimeout(() => { forgetInvite(); inviteInfo = null; toast("That's your own invite link. Share it with a friend."); render(); }); return ''; }
   return `<div class="modal"><div class="card mcard" data-stop>${avatar(inviteInfo.t, inviteInfo.name || '?', 'big')}<h3>${esc(inviteInfo.name || 'Someone')} wants to be friends</h3><p>You'll be able to see each other's recipes and save copies.</p>
-    <button class="btn primary bigbtn" data-act="invaccept">Accept</button><button class="btn outline bigbtn" data-act="invno">Not now</button></div></div>`;
+    <button class="btn primary bigbtn" data-act="invaccept">Accept</button><button class="btn outline bigbtn" data-act="invno">Decline</button></div></div>`;
 }
 
 let lastView = '';
@@ -1115,8 +1116,9 @@ const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 16c-6-5-14-6-22-5v38c8-1 16 0 22 5c6-5 14-6 22-5V11c-8-1-16 0-22 5z"/><path d="M32 16v38"/><path d="M18 22h8M18 30h8M38 22h8" class="accl"/></svg>`, title: 'Plan your recipes', text: 'Save your recipes by pasting the URL or the recipe steps into the recipe form.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add to shopping list</b>. Add as many recipes as you like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go. Use the Recipes page as your own personal cookbook to store as many recipes as you\'d like.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends from the <b>Friends</b> tab to see each other\'s recipes. Save any you like to your own cookbook, or send a recipe to a friend.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Recipes page as your own personal cookbook to store as many recipes as you\'d like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your cookbook, or send them one of yours.'},
 ];
 let tourStep = -1;
 function showTour(i){
@@ -1237,8 +1239,8 @@ document.addEventListener('click', async e => {
   if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
   if(a === 'frremove'){ const f = friendBy(id); if(!f) return; const n = savedFrom(f).length;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's cookbooks.${n ? ` You saved ${n} recipe${n === 1 ? '' : 's'} from ${esc(kitchenOf(f.name))}. Keep them in your cookbook, or delete them too?` : ''}</div>
-      <div class="rmbtns">${n ? `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove and keep recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove and delete ${n} recipe${n === 1 ? '' : 's'}</button>` : `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn ghost" data-act="mclose">Cancel</button></div></div></div>`; return; }
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's cookbooks.</div>
+      <div class="rmbtns">${n ? `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend but keep shared recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove friend and remove shared recipes</button>` : `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn ghost" data-act="mclose">Cancel</button></div></div></div>`; return; }
   if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); const {error} = await sb.rpc('remove_friend', {friend: id}); if(error){ toast("Couldn't remove them. Try again."); return; }
     let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
     delete fbook[id]; toast(f ? `Removed ${f.name}${gone ? ` and ${gone} recipe${gone === 1 ? '' : 's'}` : ''}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
@@ -1405,7 +1407,7 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('submit', async e => {
   const kind = e.target.dataset.form; if(!kind) return; e.preventDefault();
-  if(['signin','signup','forgot','newpass'].includes(kind)){ if((kind === 'signup' || kind === 'signin') && inviteToken()) try{ localStorage.setItem('mb_invite_auto', '1'); }catch(err){} return handleAuthForm(kind); }
+  if(['signin','signup','forgot','newpass'].includes(kind)){ return handleAuthForm(kind); }
   if(kind === 'frsend'){ const em = (($('#fr-email') || {}).value || '').trim(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Enter their email address'); return; }
     const btn = e.target.querySelector('button'); btn.disabled = true;
     const {error} = await sb.rpc('send_friend_request', {target_email: em});
@@ -1460,15 +1462,13 @@ window.addEventListener('resize', onNavScroll);
 async function acceptInvite(){
   const t = inviteToken(); if(!t) return;
   const {data, error} = await sb.rpc('accept_invite_link', {t});
-  forgetInvite(); try{ localStorage.removeItem('mb_invite_auto'); }catch(e){} inviteInfo = null;
+  forgetInvite(); inviteInfo = null;
   if(error){ toast("Couldn't accept the invite. Ask for a new link."); render(); return; }
   if(data) toast(`You and ${data} are now friends`); else toast("That's your own invite link");
   await loadFriends(true);
 }
 function afterInviteLogin(){
   if(!inviteToken()) return;
-  let auto = false; try{ auto = !!localStorage.getItem('mb_invite_auto'); }catch(e){}
-  if(auto){ acceptInvite().then(() => { location.hash = 'friends'; }); return; }
   rememberInvite(inviteToken()); if(location.hash !== '#friends') location.hash = 'friends'; else render();
 }
 window.addEventListener('focus', () => { if(user && loaded) loadFriends(); });

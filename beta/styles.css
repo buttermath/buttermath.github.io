@@ -721,17 +721,12 @@ button.savebtn.done{cursor:pointer}
 .hero{overflow:visible}.hero>.art{border-radius:14px 14px 0 0;overflow:hidden}
 .ing-col .ing.ro{padding-left:30px}
 .factrow{align-items:center;gap:12px}
-.savedlbl{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:6px 2px;font:700 15px Inter,sans-serif;color:var(--ink);cursor:pointer}
-.savedlbl .bi{width:17px;height:17px;stroke:#1F8A70}
-.savedlbl:hover{text-decoration:underline}
-.bookload{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:rgba(251,250,247,.94);transition:opacity .2s}.bookload.out{opacity:0}
-.book{position:relative;width:132px;height:86px;margin:6px auto 14px;perspective:700px}
-.book i{position:absolute;display:block;box-sizing:border-box}
-.book .cv{left:0;right:0;top:6px;bottom:-5px;background:#D7263D;border:2px solid #141414;border-radius:6px}
-.book .pl,.book .pr,.book .pg{top:0;bottom:3px;width:50%;background:#fff;border:2px solid #141414;background-image:repeating-linear-gradient(#fff 0 9px,#E3DFDA 9px 10.5px);background-clip:content-box;padding:12px 10px 10px}
-.book .pl{left:4px;width:calc(50% - 4px);border-radius:5px 0 0 5px}
-.book .pr{right:4px;width:calc(50% - 4px);border-radius:0 5px 5px 0}
-.book .pg{left:50%;width:calc(50% - 4px);border-radius:0 5px 5px 0;transform-origin:left center;animation:bookflip 1.2s ease-in-out infinite;backface-visibility:visible}
-.book .p2{animation-delay:.18s}.book .p3{animation-delay:.36s}
-.book .sp{left:calc(50% - 1px);top:0;bottom:3px;width:2px;background:#141414}
-@keyframes bookflip{0%{transform:rotateY(0)}55%,100%{transform:rotateY(-180deg)}}
+.savebtn.inl{position:static;font-size:15px;padding:10px 18px 10px 14px;box-shadow:none;gap:7px}.savebtn.inl .bi{width:18px;height:18px}
+.golink{border:0;background:none;padding:6px 2px;font:600 15px Inter,sans-serif;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.golink:hover{color:var(--accent)}
+.bookload{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:rgba(251,250,247,.94);transition:opacity .35s ease;animation:bookfade .35s ease-out}.bookload.out{opacity:0}
+@keyframes bookfade{from{opacity:0}to{opacity:1}}
+.loader svg.book{width:170px}
+.book .pg{transform-origin:80px 73px;animation:bookflip 1.5s ease-in-out infinite;opacity:0}
+.book .p2{animation-delay:.5s}.book .p3{animation-delay:1s}
+@keyframes bookflip{0%{transform:rotate(0);opacity:0}12%{opacity:1}50%{transform:rotate(-78deg) scaleX(.9)}88%{opacity:1}100%{transform:rotate(-156deg) scaleX(1);opacity:0}}

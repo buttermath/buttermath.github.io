@@ -375,7 +375,7 @@ function autoTags(d){
 const tagsOf = r => ((P().tags || {})[r.id]) || autoTags(D(r));
 const favOf = id => !!((P().fav || {})[id]);
 const allTags = () => { const used = recipes.flatMap(r => tagsOf(r)); return [...new Set(TAGS0.concat(P().ctags || [], used))]; };
-let recTag = 'all', recFav = false, recQ = '', catOpen = false, sortOpen = false, tagEdit = null;
+let recTags = [], recFav = false, recQ = '', catOpen = false, sortOpen = false, tagEdit = null;
 const SORTS = {recent:'Recent', az:'A–Z', made:'Most made', progress:'In progress'};
 const ICON_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
 const ICON_SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>';
@@ -388,22 +388,25 @@ function renderRecipes(){
   const archBox = arch.length ? `<details class="card archbox" id="archbox"><summary>Archived <span class="fc">${arch.length}</span><span class="chev">▾</span></summary>${arch.map(r => `<div class="arow" data-q="${esc((D(r).title + ' ' + (D(r).short || '')).toLowerCase())}"><button class="aname" data-act="go" data-h="r-${esc(r.id)}"><i class="sw" style="--c:${esc(D(r).color || '#888')}"></i>${esc(D(r).title)}</button><button class="btn" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button></div>`).join('')}</details>` : '';
   const sortK = SORTS[ui.rsort] ? ui.rsort : 'recent';
   const counts = {}; live.forEach(r => tagsOf(r).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
-  const cats = allTags().filter(t => counts[t]);
-  if(recTag !== 'all' && !counts[recTag]) recTag = 'all';
+  const cats = allTags().filter(t => counts[t]).sort((x, y) => x.localeCompare(y));
+  recTags = recTags.filter(t => counts[t]);
   const nFav = live.filter(r => favOf(r.id)).length; if(!nFav) recFav = false;
-  const catOn = recTag !== 'all';
-  const fbar = live.length > 1 ? `<div class="fbar2"><div class="fwrap"><button class="fpill ${catOn ? 'on' : ''}" data-act="catmenu" aria-haspopup="menu" aria-expanded="${catOpen}">${catOn ? esc(recTag) : 'Category'}${catOn ? `<span class="fx" data-act="catclear" role="button" aria-label="Clear category">✕</span>` : ICON_CHEV}</button>
-    ${catOpen ? `<div class="fmenu" role="menu"><button role="menuitem" class="${!catOn ? 'on' : ''}" data-act="catpick" data-t="all">All categories <span>${live.length}</span></button>${cats.map(t => `<button role="menuitem" class="${recTag === t ? 'on' : ''}" data-act="catpick" data-t="${esc(t)}">${esc(t)} <span>${counts[t]}</span></button>`).join('')}</div>` : ''}</div>
+  const catOn = recTags.length > 0;
+  const hasAll = (r, list) => { const tg = tagsOf(r); return list.every(t => tg.includes(t)); };
+  const catLabel = recTags.length > 2 ? `${esc(recTags[0])} + ${recTags.length - 1} more` : recTags.map(esc).join(' + ');
+  const fbar = live.length > 1 ? `<div class="fbar2"><div class="fwrap"><button class="fpill ${catOn ? 'on' : ''}" data-act="catmenu" aria-haspopup="true" aria-expanded="${catOpen}">${catOn ? catLabel : 'Category'}${catOn ? `<span class="fx" data-act="catclear" role="button" aria-label="Clear categories">✕</span>` : ICON_CHEV}</button>
+    ${catOpen ? `<div class="fmenu" role="group" aria-label="Categories"><button class="fall ${!catOn ? 'on' : ''}" data-act="catclear">All categories <span>${live.length}</span></button>${cats.map(t => { const on = recTags.includes(t); const n = on ? live.filter(r => hasAll(r, recTags)).length : live.filter(r => hasAll(r, recTags.concat(t))).length; return `<button class="fck ${on ? 'on' : ''} ${!on && !n ? 'dim' : ''}" data-act="catpick" data-t="${esc(t)}" role="checkbox" aria-checked="${on}"><i class="cb">${on ? CHECK : ''}</i><b>${esc(t)}</b><span>${on ? '' : n}</span></button>`; }).join('')}</div>` : ''}</div>
     ${nFav ? `<button class="fpill favp ${recFav ? 'on' : ''}" data-act="favfilter" aria-pressed="${recFav}">${ICON_HEART}Favorites</button>` : ''}
     <div class="fwrap fright"><button class="fpill sortp" data-act="sortmenu" aria-haspopup="menu" aria-expanded="${sortOpen}" aria-label="Sort: ${SORTS[sortK]}">${ICON_SORT}${SORTS[sortK]}</button>
     ${sortOpen ? `<div class="fmenu right" role="menu">${Object.entries(SORTS).map(([k, l]) => `<button role="menuitem" class="${k === sortK ? 'on' : ''}" data-act="sortpick" data-k="${k}">${l}${k === sortK ? '<span>✓</span>' : ''}</button>`).join('')}</div>` : ''}</div></div>` : '';
   const rank = r => { const p = progressOf(r); return p.done > 0 && p.done < p.total ? 0 : p.done === 0 ? 1 : 2; };
-  let shown = live.filter(r => (!catOn || tagsOf(r).includes(recTag)) && (!recFav || favOf(r.id)) && (sortK !== 'progress' || rank(r) === 0));
+  let shown = live.filter(r => (!catOn || hasAll(r, recTags)) && (!recFav || favOf(r.id)) && (sortK !== 'progress' || rank(r) === 0));
   const pos = new Map(live.map((r, i) => [r.id, i]));
   shown = shown.slice().sort((a, b) => (favOf(b.id) - favOf(a.id)) || (sortK === 'az' ? D(a).title.localeCompare(D(b).title) : sortK === 'made' ? (madeOf(b.id).n || 0) - (madeOf(a.id).n || 0) : sortK === 'progress' ? rank(a) - rank(b) : 0) || pos.get(a.id) - pos.get(b.id));
   const q = recQ.trim().toLowerCase();
   const filtered = catOn || recFav || sortK === 'progress';
-  return starters + search + fbar + `<div class="grid" id="rgrid">` + (filtered ? '' : q ? addTile.replace('<button class="tile addtile"', '<button hidden class="tile addtile"') : addTile) + shown.map(r => {
+  const fnote = recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : '';
+  return starters + search + fbar + fnote + `<div class="grid" id="rgrid">` + (filtered ? '' : q ? addTile.replace('<button class="tile addtile"', '<button hidden class="tile addtile"') : addTile) + shown.map(r => {
     const d = D(r), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
     const st = p.done === 0 ? 'Not started' : p.done === p.total ? 'Finished ✓' : `Step ${p.cur + 1} of ${p.total}`;
     const tq = (d.title + ' ' + (d.short || '') + ' ' + tagsOf(r).join(' ')).toLowerCase(), tt = tagsOf(r).slice(0, 3);
@@ -411,7 +414,7 @@ function renderRecipes(){
       <span class="art">${pic(d)}</span><button class="tilefav ${favOf(r.id) ? 'on' : ''}" data-act="fav" data-id="${esc(r.id)}" aria-pressed="${favOf(r.id)}" aria-label="${favOf(r.id) ? 'Remove from favorites' : 'Add to favorites'}" title="${favOf(r.id) ? 'Favorite' : 'Add to favorites'}">${ICON_HEART}</button><button class="tilex" data-act="recipex" data-id="${esc(r.id)}" aria-label="Archive or delete ${esc(d.title)}" title="Archive or delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.total ? `<span>⏱ ${esc(d.total)}</span>` : ''}${d.yield ? `<span>🍽 ${esc(d.yield)}</span>` : ''}</span>
       <span class="st">${st}</span><span class="bar"><i style="width:${pct}%"></i></span></span></div>`;
-  }).join('') + `</div><div class="card empty" id="rnone" ${filtered && !shown.length ? '' : 'hidden'}>${sortK === 'progress' && !shown.length && !catOn && !recFav ? 'Nothing in progress right now. Open a recipe and check off a step to start.' : 'No recipes match.'}</div>` + archBox;
+  }).join('') + `</div><div class="card empty" id="rnone" ${filtered && !shown.length ? '' : 'hidden'}>${sortK === 'progress' && !shown.length && !catOn && !recFav ? 'Nothing in progress right now. Open a recipe and check off a step to start.' : recTags.length > 1 ? `No recipes have ${recTags.length === 2 ? 'both' : 'all'} of these tags. Remove one to see more.` : 'No recipes match.'}</div>` + archBox;
 }
 
 function renderRecipe(id){
@@ -1070,14 +1073,14 @@ document.addEventListener('click', async e => {
   if(a === 'finishok'){ const c = !!($('#clearRest') || {}).checked; $('#modalRoot').innerHTML = ''; newTrip(c); return; }
   if(a === 'fav'){ e.stopPropagation(); const v = !favOf(id); mutate(k => { const f = k.progress.fav = k.progress.fav || {}; if(v) f[id] = true; else delete f[id]; }); return; }
   if(a === 'catmenu'){ catOpen = !catOpen; sortOpen = false; render(); return; }
-  if(a === 'catclear'){ recTag = 'all'; catOpen = false; render(); return; }
-  if(a === 'catpick'){ recTag = el.dataset.t; catOpen = false; render(); return; }
+  if(a === 'catclear'){ e.stopPropagation(); recTags = []; catOpen = false; render(); return; }
+  if(a === 'catpick'){ const t = el.dataset.t; recTags = recTags.includes(t) ? recTags.filter(x => x !== t) : recTags.concat(t); render(); return; }
   if(a === 'favfilter'){ recFav = !recFav; render(); return; }
   if(a === 'sortmenu'){ sortOpen = !sortOpen; catOpen = false; render(); return; }
   if(a === 'sortpick'){ ui.rsort = el.dataset.k; saveUi(); sortOpen = false; render(); return; }
   if(a === 'tagedit'){ tagEdit = id; render(); return; }
   if(a === 'tagdel'){ const t = el.dataset.t, n = recipes.filter(r => tagsOf(r).includes(t)).length;
-    confirmBox(`Delete the “${t}” tag?`, n ? `It comes off ${n} recipe${n === 1 ? '' : 's'}. The recipes stay.` : 'It isn’t on any recipes.', 'Delete tag', () => mutate(k => { k.progress.ctags = (k.progress.ctags || []).filter(x => x !== t); const tg = k.progress.tags = k.progress.tags || {}; recipes.forEach(r => { const cur = tg[r.id] || autoTags(D(r)); if(cur.includes(t)) tg[r.id] = cur.filter(x => x !== t); }); if(recTag === t) recTag = 'all'; })); return; }
+    confirmBox(`Delete the “${t}” tag?`, n ? `It comes off ${n} recipe${n === 1 ? '' : 's'}. The recipes stay.` : 'It isn’t on any recipes.', 'Delete tag', () => mutate(k => { k.progress.ctags = (k.progress.ctags || []).filter(x => x !== t); const tg = k.progress.tags = k.progress.tags || {}; recipes.forEach(r => { const cur = tg[r.id] || autoTags(D(r)); if(cur.includes(t)) tg[r.id] = cur.filter(x => x !== t); }); recTags = recTags.filter(x => x !== t); })); return; }
   if(a === 'tagdone'){ tagEdit = null; render(); return; }
   if(a === 'tagtog'){ const r = R(id); if(!r) return; const t = el.dataset.t, cur = tagsOf(r), nx = cur.includes(t) ? cur.filter(x => x !== t) : cur.concat(t); mutate(k => { (k.progress.tags = k.progress.tags || {})[id] = nx; }); return; }
   if(a === 'sclear'){ shopQ = ''; const qi = $('#shopq'); if(qi) qi.value = ''; render(); const q = $('#shopq'); if(q) q.focus({preventScroll:true}); return; }

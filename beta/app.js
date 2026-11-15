@@ -275,7 +275,7 @@ const ICON_OK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d=
 const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg>';
 const ICON_RIGHT = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const AVC = ['#C8553D', '#4B57A8', '#3F7A55', '#B5142B', '#D9772B', '#6E4FA8'];
-const avColor = id => AVC[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % AVC.length];
+const avColor = () => '#3F7A55';
 const avatar = (id, name, cls = '') => `<span class="av ${cls}" style="--a:${avColor(id)}">${esc((name || '?').trim().charAt(0).toUpperCase())}</span>`;
 const kitchenOf = n => `${n}'s Kitchen`;
 const isPriv = id => !!(P().private || {})[id];

@@ -426,6 +426,7 @@ function renderInviteCard(){
 }
 
 let lastView = '';
+const viewKey = h => h.replace(/([#"])a\d+-/g, '$1a-');
 function render(){
   const kept = {}; document.querySelectorAll('[data-keep]').forEach(el => { if(el.id) kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
   const icol = document.querySelector('.ing-col'), icolTop = icol ? icol.scrollTop : 0;
@@ -444,11 +445,11 @@ function render(){
   else if(!loaded){ app.innerHTML = `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   else {
     renderTabs(r);
+    if(r.v !== 'fbook' && r.v !== 'frecipe') app.__h = null;
     if(r.v === 'shopping') app.innerHTML = renderShopping();
     else if(r.v === 'recipes') app.innerHTML = renderRecipes();
     else if(r.v === 'friends') app.innerHTML = renderFriends() + (inviteToken() ? renderInviteCard() : '');
-    else if(r.v === 'fbook') app.innerHTML = renderFbook(r.id);
-    else if(r.v === 'frecipe') app.innerHTML = renderFrecipe(r.id);
+    else if(r.v === 'fbook' || r.v === 'frecipe'){ const h = r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id), hk = viewKey(h); if(app.__h !== hk){ app.innerHTML = h; app.__h = hk; } }
     else if(r.v === 'form') app.innerHTML = renderForm(r.id);
     else if(r.v === 'account') app.innerHTML = renderAccount();
     else if(r.v === 'settings') app.innerHTML = renderSettings();
@@ -1253,7 +1254,10 @@ document.addEventListener('click', async e => {
   if(a === 'fsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id);
     if(!row || !f){ toast("Couldn't save it. Refresh and try again."); return; } if(savedCopy(fid, id) || el.disabled) return;
     const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
-    try{ await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); toast('Recipe saved!'); render(); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
+    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name});
+      el.outerHTML = el.dataset.open ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(mine.id)}">${ICON_OK}Saved · Open yours</button>` : `<span class="savebtn done">${ICON_OK}Saved</span>`;
+      const r = route(); if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id));
+      toast('Recipe saved!'); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see it.' : 'Friends can see this recipe'); return; }
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }

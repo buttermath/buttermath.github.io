@@ -394,7 +394,7 @@ function renderRecipes(){
   const catOn = recTags.length > 0;
   const hasAll = (r, list) => { const tg = tagsOf(r); return list.every(t => tg.includes(t)); };
   const catLabel = recTags.length > 2 ? `${esc(recTags[0])} + ${recTags.length - 1} more` : recTags.map(esc).join(' + ');
-  const fbar = live.length > 1 ? `<div class="fbar2"><div class="fwrap"><button class="fpill ${catOn ? 'on' : ''}" data-act="catmenu" aria-haspopup="true" aria-expanded="${catOpen}">${catOn ? catLabel : 'Category'}${catOn ? `<span class="fx" data-act="catclear" role="button" aria-label="Clear categories">✕</span>` : ICON_CHEV}</button>
+  const fbar = live.length > 1 ? `<div class="fbar2"><div class="fwrap"><button class="fpill ${catOn ? 'act' : ''}" data-act="catmenu" aria-haspopup="true" aria-expanded="${catOpen}">Category${catOn ? `<span class="fcount">${recTags.length}</span>` : ''}${ICON_CHEV}</button>
     ${catOpen ? `<div class="fmenu" role="group" aria-label="Categories"><button class="fall ${!catOn ? 'on' : ''}" data-act="catclear">All categories <span>${live.length}</span></button>${cats.map(t => { const on = recTags.includes(t); const n = on ? live.filter(r => hasAll(r, recTags)).length : live.filter(r => hasAll(r, recTags.concat(t))).length; return `<button class="fck ${on ? 'on' : ''} ${!on && !n ? 'dim' : ''}" data-act="catpick" data-t="${esc(t)}" role="checkbox" aria-checked="${on}"><i class="cb">${on ? CHECK : ''}</i><b>${esc(t)}</b><span>${on ? '' : n}</span></button>`; }).join('')}</div>` : ''}</div>
     ${nFav ? `<button class="fpill favp ${recFav ? 'on' : ''}" data-act="favfilter" aria-pressed="${recFav}">${ICON_HEART}Favorites</button>` : ''}
     <div class="fwrap fright"><button class="fpill sortp" data-act="sortmenu" aria-haspopup="menu" aria-expanded="${sortOpen}" aria-label="Sort: ${SORTS[sortK]}">${ICON_SORT}${SORTS[sortK]}</button>
@@ -405,7 +405,7 @@ function renderRecipes(){
   shown = shown.slice().sort((a, b) => (favOf(b.id) - favOf(a.id)) || (sortK === 'az' ? D(a).title.localeCompare(D(b).title) : sortK === 'made' ? (madeOf(b.id).n || 0) - (madeOf(a.id).n || 0) : sortK === 'progress' ? rank(a) - rank(b) : 0) || pos.get(a.id) - pos.get(b.id));
   const q = recQ.trim().toLowerCase();
   const filtered = catOn || recFav || sortK === 'progress';
-  const fnote = recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : '';
+  const fnote = catOn ? `<div class="selchips">${recTags.map(t => `<span class="selchip">${esc(t)}<button data-act="catpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">✕</button></span>`).join('')}${recTags.length > 1 ? `<button class="clearall" data-act="catclear">Clear all</button>` : ''}</div>${recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : ''}` : '';
   return starters + search + fbar + fnote + `<div class="grid" id="rgrid">` + (filtered ? '' : q ? addTile.replace('<button class="tile addtile"', '<button hidden class="tile addtile"') : addTile) + shown.map(r => {
     const d = D(r), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
     const st = p.done === 0 ? 'Not started' : p.done === p.total ? 'Finished ✓' : `Step ${p.cur + 1} of ${p.total}`;
@@ -413,7 +413,7 @@ function renderRecipes(){
     return `<div class="tile" ${q && !tq.includes(q) ? 'hidden' : ''} role="link" tabindex="0" style="--c:${esc(d.color)}" data-act="go" data-h="r-${esc(r.id)}" data-q="${esc(tq)}">
       <span class="art">${pic(d)}</span><button class="tilefav ${favOf(r.id) ? 'on' : ''}" data-act="fav" data-id="${esc(r.id)}" aria-pressed="${favOf(r.id)}" aria-label="${favOf(r.id) ? 'Remove from favorites' : 'Add to favorites'}" title="${favOf(r.id) ? 'Favorite' : 'Add to favorites'}">${ICON_HEART}</button><button class="tilex" data-act="recipex" data-id="${esc(r.id)}" aria-label="Archive or delete ${esc(d.title)}" title="Archive or delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.total ? `<span>⏱ ${esc(d.total)}</span>` : ''}${d.yield ? `<span>🍽 ${esc(d.yield)}</span>` : ''}</span>
-      <span class="st">${st}</span><span class="bar"><i style="width:${pct}%"></i></span></span></div>`;
+      <span class="st ${p.done === 0 ? 'new' : p.done === p.total ? 'done' : 'prog'}">${st}</span><span class="bar"><i style="width:${pct}%"></i></span></span></div>`;
   }).join('') + `</div><div class="card empty" id="rnone" ${filtered && !shown.length ? '' : 'hidden'}>${sortK === 'progress' && !shown.length && !catOn && !recFav ? 'Nothing in progress right now. Open a recipe and check off a step to start.' : recTags.length > 1 ? `No recipes have ${recTags.length === 2 ? 'both' : 'all'} of these tags. Remove one to see more.` : 'No recipes match.'}</div>` + archBox;
 }
 

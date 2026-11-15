@@ -266,7 +266,7 @@ function route(){
 // ---------- friends & shared cookbooks ----------
 let fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';
 const FSORTS = {recent:'Recent', az:'A–Z'};
-let friends = null, inbox = [], friendsAt = 0, addFriendOpen = false, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
+let friends = null, inbox = [], saves = [], friendsAt = 0, addFriendOpen = false, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
 const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M19 8v6M16 11h6"/></svg>';
 const ICON_LINK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
 const ICON_LOCK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -282,14 +282,15 @@ const isPriv = id => !!(P().private || {})[id];
 const friendBy = id => (friends || []).find(f => f.friend_id === id);
 const savedFrom = f => recipes.filter(r => { const s = D(r).savedFrom; return s && (s.owner === f.friend_id || (!s.owner && s.name === f.name)); });
 const savedCopy = (fid, rid) => recipes.find(r => (D(r).savedFrom || {}).id === rid);
-const friendsNew = () => (friends || []).filter(f => f.status === 'pending' && f.incoming).length + inbox.length;
+const friendsNew = () => (friends || []).filter(f => f.status === 'pending' && f.incoming).length + inbox.length + saves.length;
 
 async function loadFriends(force){
   if(!user || (!force && Date.now() - friendsAt < 20000)) return;
   friendsAt = Date.now();
-  const [f, i] = await Promise.all([sb.rpc('my_friends'), sb.rpc('my_inbox')]);
+  const [f, i, sv] = await Promise.all([sb.rpc('my_friends'), sb.rpc('my_inbox'), sb.rpc('my_save_notices')]);
   if(!f.error) friends = f.data || []; else if(friends === null) friends = [];
   if(!i.error) inbox = i.data || [];
+  if(!sv.error) saves = sv.data || [];
   render();
 }
 async function loadFbook(fid){
@@ -301,7 +302,7 @@ async function loadFbook(fid){
 function renderFriends(){
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   const inc = friends.filter(f => f.status === 'pending' && f.incoming), acc = friends.filter(f => f.status === 'accepted'), out = friends.filter(f => f.status === 'pending' && !f.incoming);
-  const n = inc.length + inbox.length;
+  const n = inc.length + inbox.length + saves.length;
   const isEmpty = !acc.length && !n && !out.length;
   const head = `<div class="fr-h"><h2>Friends</h2>${isEmpty ? '' : `<button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button>`}</div>`;
   const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share cookbooks</b><span>You'll be able to see each other's recipes</span></div></div>
@@ -309,10 +310,11 @@ function renderFriends(){
   const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
     ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
     <div class="fbtns"><button class="btn primary" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
+  const saved = saves.map(s => `<div class="fcard savedn"><div class="frow">${avatar(s.saver_id, s.saver_name)}<div class="ftx"><b>${esc(s.saver_name)} saved your recipe!</b><span>${esc(s.title)}</span></div><button class="rmfr2" data-act="svdismiss" data-id="${esc(s.id)}" aria-label="Dismiss" title="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>`).join('');
   const books = acc.map(f => `<div class="cbk crow" role="link" tabindex="0" data-act="go" data-h="f-${esc(f.friend_id)}" aria-label="Open ${esc(kitchenOf(f.name))}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span><button class="rmfr2" data-act="frremove" data-id="${esc(f.friend_id)}" aria-label="Remove ${esc(f.name)} as a friend" title="Remove friend"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 11h6"/></svg></button></div>`).join('');
   const waiting = out.map(f => `<div class="cbk wait">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(f.name)}</b><span>Waiting for them to accept</span></span><button class="linkbtn" data-act="frcancel" data-id="${esc(f.friend_id)}">Cancel</button></div>`).join('');
   const empty = isEmpty ? `<div class="card empty frempty"><b>Share cookbooks with friends and family</b><span>When they accept, you can browse each other's recipes and save their recipes to your cookbook.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
-  return head + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}` : '')
+  return head + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}${saved}` : '')
     + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
     + (addFriendOpen ? renderAddFriend() : '');
 }
@@ -1178,7 +1180,7 @@ function renderPrivacy(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← Back</button>
   <div class="card panel prose"><h3>Your privacy</h3>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
-    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked Private or archived, and save copies to your own kitchen. Friends never see your shopping list, cooking progress or favorites. A recipe you send to a friend is shared with them as a copy. Friend requests are sent by email address, and the site never shows whether an email has an account. You can remove a friend at any time, and copies they've already saved stay in their kitchen.</p>
+    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked Private or archived, and save copies to your own kitchen. When you save a friend's recipe, they see a note that you saved it. Friends never see your shopping list, cooking progress or favorites. A recipe you send to a friend is shared with them as a copy. Friend requests are sent by email address, and the site never shows whether an email has an account. You can remove a friend at any time, and copies they've already saved stay in their kitchen.</p>
     <p><b>Passwords stay secret.</b> Passwords are stored encrypted. No one, including the site administrator, can see yours.</p>
     <p><b>Photos.</b> Uploaded photos are stored at private, unguessable web addresses that aren't listed anywhere. Anyone with a photo's exact address could open it, so avoid uploading anything sensitive.</p>
     <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages.</p>
@@ -1248,6 +1250,7 @@ document.addEventListener('click', async e => {
   if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); const {error} = await sb.rpc('remove_friend', {friend: id}); if(error){ toast("Couldn't remove them. Try again."); return; }
     let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
     delete fbook[id]; toast(f ? `Removed ${f.name}${gone ? ` and ${gone} recipe${gone === 1 ? '' : 's'}` : ''}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
+  if(a === 'svdismiss'){ saves = saves.filter(x => x.id !== id); render(); sb.rpc('dismiss_save_notice', {notice: id}).then(() => {}, () => {}); return; }
   if(a === 'shsave' || a === 'shdismiss'){ const sh = inbox.find(x => x.id === id); if(!sh) return; el.disabled = true;
     if(a === 'shsave'){ try{ const fr = (friends || []).find(x => x.status === 'accepted' && x.name === sh.sender_name); const row = await saveCopy(sh.data, fr ? {owner: fr.friend_id, name: sh.sender_name} : {name: sh.sender_name}); toast('Recipe saved!'); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; return; } }
     await sb.rpc('dismiss_share', {share: id}); inbox = inbox.filter(x => x.id !== id); render(); return; }
@@ -1255,6 +1258,7 @@ document.addEventListener('click', async e => {
     if(!row || !f){ toast("Couldn't save it. Refresh and try again."); return; } if(savedCopy(fid, id) || el.disabled) return;
     const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
     try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name});
+      sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
       el.outerHTML = el.dataset.open ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(mine.id)}">${ICON_OK}Saved · Open yours</button>` : `<span class="savebtn done">${ICON_OK}Saved</span>`;
       const r = route(); if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id));
       toast('Recipe saved!'); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }

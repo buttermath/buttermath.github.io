@@ -548,3 +548,26 @@ button.rtag.add{padding-right:10px}
 .tpw{display:inline-flex;align-items:center;position:relative}
 .tpdel{border:0;background:none;color:var(--muted);font-size:11px;width:22px;height:22px;border-radius:50%;margin-left:-4px;cursor:pointer;padding:0}
 .tpdel:hover{color:#C8102E;background:#F6F2EB}
+
+/* multi-select categories */
+.fmenu .fck{justify-content:flex-start;gap:10px}
+.fmenu .fck b{flex:1;font-weight:500}.fmenu .fck.on b{font-weight:700}.fmenu .fck.on{background:none}
+.fmenu .cb{flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid #CFC8BC;display:grid;place-items:center;background:#fff}
+.fmenu .fck.on .cb{background:#141414;border-color:#141414}.fmenu .cb svg{width:12px;height:12px}
+.fmenu .fck.dim{opacity:.4}
+.fmenu .fall{border-bottom:1px solid var(--line);border-radius:9px 9px 0 0;margin-bottom:4px}
+.fnote{font:500 13px Inter,sans-serif;color:var(--muted);margin:-6px 2px 12px}
+.fpill.on{max-width:62vw}.fpill.on{overflow:hidden;text-overflow:ellipsis}
+.fmenu .fck{padding:8px 12px}.fmenu .fck.dim:hover{background:none}
+
+/* selected category chips + consistent status colors */
+.fpill.act{border-color:#141414}
+.fcount{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#D7263D;color:#fff;font:700 12px/1 Inter,sans-serif}
+.selchips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-6px 0 10px}
+.selchip{display:inline-flex;align-items:center;gap:2px;background:#141414;color:#fff;border-radius:99px;padding:5px 4px 5px 12px;font:600 14px Inter,sans-serif}
+.selchip button{border:0;background:none;color:#fff;opacity:.75;width:22px;height:22px;border-radius:50%;font-size:11px;cursor:pointer;padding:0}
+.selchip button:hover{opacity:1;background:rgba(255,255,255,.15)}
+.clearall{border:0;background:none;color:var(--muted);font:600 13px Inter,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px 6px}
+.fnote{margin-top:-2px}
+.tile .st.new{color:var(--muted)}.tile .st.prog{color:#D7263D}.tile .st.done{color:var(--green)}
+.tile .bar i{background:#D7263D}

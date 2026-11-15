@@ -487,7 +487,7 @@ function renderHeader(r){
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
   $('#tabs').innerHTML = `<button class="tab ${r.v === 'shopping' ? 'on' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
-  <button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
+  <button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Cookbook${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
   <button class="tab ${['friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="friends">Friends${friendsNew() ? '<span class="rdot" aria-label="New"></span>' : ''}</button>`;
 }
 
@@ -605,7 +605,7 @@ function renderRecipes(){
 
 function renderRecipe(id){
   const r = R(id);
-  if(!r) return `<button class="back" data-act="go" data-h="recipes">← All recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
+  if(!r) return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
   const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${fmt(t)}</span></button>`;
     if(choosing !== r.id || !splitIngredient(t).key) return row;
@@ -620,7 +620,7 @@ function renderRecipe(id){
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
   const notes = hasNotes || srcs.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${srcs.map((l, li) => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${li === 0 ? 'View original recipe' : esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
-  return `<button class="back" data-act="go" data-h="recipes">← All recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn editpill" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe">${ICON_PEN}<span>Edit</span></button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu"><button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Remove recipe</button></div>` : ''}</div></div>
     ${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
@@ -658,12 +658,12 @@ function ensureForm(id){
 }
 function renderForm(id){
   const r = id ? R(id) : null;
-  if(id && !r) return `<button class="back" data-act="go" data-h="recipes">← All recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
+  if(id && !r) return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const f = ensureForm(id), d = r ? D(r) : {};
   const link = (d.links || []).find(l => l.url) || {};
   const v = (k, dv) => esc(dv == null ? '' : dv);
   const photoNow = f.photoUrl || (!f.removePhoto && d.photo) || null;
-  return `<button class="back" data-act="go" data-h="${r ? 'r-' + esc(r.id) : 'recipes'}">← ${r ? 'Back to recipe' : 'All recipes'}</button>
+  return `<button class="back" data-act="go" data-h="${r ? 'r-' + esc(r.id) : 'recipes'}">← ${r ? 'Back to recipe' : 'Cookbook'}</button>
   <div class="card panel form">
     <h3>${r ? 'Edit recipe' : 'Add a recipe'}</h3>
     <div class="lbl2">Recipe website link <span class="hint">recommended</span></div>
@@ -1097,7 +1097,7 @@ function renderMenu(){
   </div>`;
 }
 function renderSettings(){
-  return `<button class="back" data-act="go" data-h="recipes">← All recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
   <div class="card panel"><h3>Settings</h3>
     <div class="lbl2">Your name </div>
     <form data-form="name" class="row"><input class="tin" id="acc-name" data-keep style="flex:1;min-width:160px" value="${esc(firstName())}" maxlength="40" required><button class="btn primary" type="submit">Save name</button></form>
@@ -1118,7 +1118,7 @@ function renderSettings(){
 }
 function renderAccount(){
   const since = user.created_at ? new Date(user.created_at).toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'}) : '';
-  return `<button class="back" data-act="go" data-h="recipes">← All recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
   <div class="card panel"><h3>Account</h3>
     <div class="lbl2">Email</div><div>${esc(user.email)}</div>
     ${since ? `<div class="lbl2">Member since</div><div>${esc(since)}</div>` : ''}
@@ -1136,7 +1136,7 @@ function renderAccount(){
 const FB_EMAIL = 'mixingbowl.admin@gmail.com';
 function renderFeedback(){
   const su = encodeURIComponent('Mixing Bowl feedback');
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'All recipes' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Cookbook' : 'Sign in'}</button>
   <div class="card panel prose fb"><h3>Send feedback</h3>
     <p>Ideas, bugs or questions? Email us at <b>${FB_EMAIL}</b>.</p>
     <div class="fbbtns"><button class="btn primary sm" data-act="copyemail">Copy email address</button></div>
@@ -1147,7 +1147,7 @@ const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add to shopping list</b>. Add as many recipes as you like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Recipes page as your own personal cookbook to store as many recipes as you\'d like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Cookbook tab as your own personal cookbook to store as many recipes as you\'d like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your cookbook, or send them one of yours.'},
 ];
 let tourStep = -1;
@@ -1166,7 +1166,7 @@ function maybeTour(){
 }
 function renderHelp(){
   const step = (n, t) => `<div class="hstep"><div class="hnum">${n}</div><div><h4>${t.title}</h4><p>${t.text}</p></div></div>`;
-  return `<button class="back" data-act="go" data-h="recipes">← All recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
   <div class="card panel prose help"><h3>How Mixing Bowl works</h3>
     <p class="muted">Plan, shop and cook from one place.</p>
     ${TOUR.map((t, i) => step(i + 1, t)).join('')}
@@ -1187,11 +1187,12 @@ function renderHelp(){
   </div>`;
 }
 function renderTerms(){
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'All recipes' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Cookbook' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Terms of Use</h3>
-    <p class="muted">Last updated November 13, 2026</p>
+    <p class="muted">Last updated November 15, 2026</p>
     <p><b>Using Mixing Bowl.</b> Mixing Bowl is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
     <p><b>Your content.</b> What you add is yours, and you're responsible for it. Only save content you have the right to use. Recipes saved from other websites still belong to their creators and are for your own personal use.</p>
+    <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Mixing Bowl infringes your copyright, email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
     <p><b>Fair use of the site.</b> Don't upload anything illegal, harmful or abusive, and don't try to break, overload or misuse the site or other people's accounts.</p>
     <p><b>Provided as is.</b> Mixing Bowl is offered as is, without warranties of any kind. Features may change, and the site may be paused or shut down. Keep your own copy of anything important.</p>
     <p><b>Liability.</b> To the fullest extent permitted by law, Mixing Bowl is not liable for any loss or damage resulting from your use of the site.</p>
@@ -1201,7 +1202,7 @@ function renderTerms(){
   </div>`;
 }
 function renderPrivacy(){
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'All recipes' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Cookbook' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Your privacy</h3>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
     <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own cookbook, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from their cookbook. Any copies a friend has saved of your recipes will stay in their cookbook, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Mixing Bowl doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>

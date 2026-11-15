@@ -704,4 +704,3 @@ button.rtag.add{padding-right:10px}
   .asksheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 40px));border:2px solid #141414;border-radius:20px;box-shadow:0 6px 0 #141414;padding:22px 22px 24px;margin:0}
 }
 
-.frsheet .bigbtn{width:auto;align-self:flex-start;padding:12px 22px;font-size:15px}

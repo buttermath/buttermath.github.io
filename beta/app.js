@@ -264,7 +264,7 @@ function route(){
   return {v:'shopping'};
 }
 // ---------- friends & shared cookbooks ----------
-let fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';
+let fSavedOnly = false, fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';
 const FSORTS = {recent:'Recent', az:'A–Z'};
 let friends = null, inbox = [], saves = [], friendsAt = 0, addFriendOpen = false, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
 const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M19 8v6M16 11h6"/></svg>';
@@ -302,19 +302,19 @@ async function loadFbook(fid){
 function renderFriends(){
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   const inc = friends.filter(f => f.status === 'pending' && f.incoming), acc = friends.filter(f => f.status === 'accepted'), out = friends.filter(f => f.status === 'pending' && !f.incoming);
-  const n = inc.length + inbox.length + saves.length;
-  const isEmpty = !acc.length && !n && !out.length;
+  const n = inc.length + inbox.length;
+  const isEmpty = !acc.length && !n && !out.length && !saves.length;
   const head = `<div class="fr-h"><h2>Friends</h2>${isEmpty ? '' : `<button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button>`}</div>`;
   const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share cookbooks</b><span>You'll be able to see each other's recipes</span></div></div>
     <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
   const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
     ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
     <div class="fbtns"><button class="btn primary" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
-  const saved = saves.map(s => `<div class="fcard savedn"><div class="frow">${avatar(s.saver_id, s.saver_name)}<div class="ftx"><b>${esc(s.saver_name)} saved your recipe!</b><span>${esc(s.title)}</span></div><button class="rmfr2" data-act="svdismiss" data-id="${esc(s.id)}" aria-label="Dismiss" title="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>`).join('');
+  const saved = saves.map(s => `<div class="savebar" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.500C19 15.600 12 20 12 20z"/></svg><span><b>${esc(s.saver_name)}</b> saved your recipe <b>${esc(s.title)}</b>!</span><button data-act="svdismiss" data-id="${esc(s.id)}" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('');
   const books = acc.map(f => `<div class="cbk crow" role="link" tabindex="0" data-act="go" data-h="f-${esc(f.friend_id)}" aria-label="Open ${esc(kitchenOf(f.name))}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span><button class="rmfr2" data-act="frremove" data-id="${esc(f.friend_id)}" aria-label="Remove ${esc(f.name)} as a friend" title="Remove friend"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 11h6"/></svg></button></div>`).join('');
   const waiting = out.map(f => `<div class="cbk wait">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(f.name)}</b><span>Waiting for them to accept</span></span><button class="linkbtn" data-act="frcancel" data-id="${esc(f.friend_id)}">Cancel</button></div>`).join('');
   const empty = isEmpty ? `<div class="card empty frempty"><b>Share cookbooks with friends and family</b><span>When they accept, you can browse each other's recipes and save their recipes to your cookbook.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
-  return head + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}${saved}` : '')
+  return head + saved + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}` : '')
     + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
     + (addFriendOpen ? renderAddFriend() : '');
 }
@@ -324,12 +324,12 @@ function renderAddFriend(){
     <div class="frhint">They'll see your request in their Friends tab.</div>
     <div class="ordiv">or</div>
     <button class="btn outline bigbtn" data-act="frlink">${ICON_LINK}Share invite link</button>
-    <div class="frhint">For friends who aren't on Mixing Bowl yet.</div></div>`;
+    <div class="frhint">For friends who aren't on Mixing Bowl yet. After they sign up with your link, they'll be asked to accept your friend request.</div></div>`;
 }
 function fTile(fid, row){
   const d = row.data || {}, saved = savedCopy(fid, row.id), tt = autoTags(d).slice(0, 3);
   return `<div class="tile" role="link" tabindex="0" style="--c:${esc(d.color || '#888')}" data-act="go" data-h="fr-${esc(fid)}~${esc(row.id)}" data-q="${esc((d.title + ' ' + autoTags(d).join(' ')).toLowerCase())}">
-    <span class="art">${pic(d)}</span>${saved ? `<span class="savebtn done">${ICON_OK}Saved</span>` : `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(row.id)}">${ICON_PLUS2}Save</button>`}
+    <span class="art">${pic(d)}</span>${saved ? `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(row.id)}" aria-label="Saved. Tap to remove from your recipes" title="Tap to unsave">${ICON_OK}Saved</button>` : `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(row.id)}">${ICON_PLUS2}Save</button>`}
     <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : ''}</span></span></div>`;
 }
 function renderFbook(fid){
@@ -340,23 +340,25 @@ function renderFbook(fid){
   const rows = (b && b.rows) || [];
   return `<button class="back" data-act="go" data-h="friends">← Friends</button>
     <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span></div>
-    ${rows.length > 4 ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
-    ${rows.length > 1 ? fFilterBar(rows) : ''}
+    ${rows.length ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
+    ${rows.length > 1 ? fFilterBar(rows, fid) : ''}
     ${!b || b.loading && !rows.length ? `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>` : b.err ? `<div class="card empty">Couldn't load this cookbook. Try again in a moment.</div>` : rows.length ? fGrid(fid, rows) : `<div class="card empty">${esc(f.name)} hasn't shared any recipes yet.</div>`}`;
 }
-function fFilterBar(rows){
+function fFilterBar(rows, fid){
+  const nSaved = rows.filter(r => savedCopy(fid, r.id)).length; if(!nSaved) fSavedOnly = false;
   const counts = {}; rows.forEach(r => autoTags(r.data || {}).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
   const cats = Object.keys(counts).sort((x, y) => x.localeCompare(y)); fCat = fCat.filter(t => counts[t]);
   const on = fCat.length > 0, hasAll = (r, list) => { const tg = autoTags(r.data || {}); return list.every(t => tg.includes(t)); };
   return `<div class="fbar2"><div class="fwrap"><button class="fpill ${on ? 'act' : ''}" data-act="fcatmenu" aria-haspopup="true" aria-expanded="${fCatOpen}">Category${on ? `<span class="fcount">${fCat.length}</span>` : ''}${ICON_CHEV}</button>
     ${fCatOpen ? `<div class="fmenu" role="group" aria-label="Categories"><button class="fall ${!on ? 'on' : ''}" data-act="fcatclear">All categories <span>${rows.length}</span></button>${cats.map(t => { const o = fCat.includes(t); const n = o ? rows.filter(r => hasAll(r, fCat)).length : rows.filter(r => hasAll(r, fCat.concat(t))).length; return `<button class="fck ${o ? 'on' : ''} ${!o && !n ? 'dim' : ''}" data-act="fcatpick" data-t="${esc(t)}" role="checkbox" aria-checked="${o}"><i class="cb">${o ? CHECK : ''}</i><b>${esc(t)}</b><span>${o ? '' : n}</span></button>`; }).join('')}</div>` : ''}</div>
+    ${nSaved ? `<button class="fpill savedp ${fSavedOnly ? 'on' : ''}" data-act="fsavedtog" aria-pressed="${fSavedOnly}">Saved<span class="fcount">${nSaved}</span></button>` : ''}
     <div class="fwrap fright"><button class="fpill sortp" data-act="fsortmenu" aria-haspopup="menu" aria-expanded="${fSortOpen}" aria-label="Sort: ${FSORTS[fSortK]}">${ICON_SORT}${FSORTS[fSortK]}</button>
     ${fSortOpen ? `<div class="fmenu right" role="menu">${Object.entries(FSORTS).map(([k, l]) => `<button role="menuitem" class="${k === fSortK ? 'on' : ''}" data-act="fsortpick" data-k="${k}">${l}${k === fSortK ? '<span>✓</span>' : ''}</button>`).join('')}</div>` : ''}</div></div>
     ${on ? `<div class="selchips">${fCat.map(t => `<span class="selchip">${esc(t)}<button data-act="fcatpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">✕</button></span>`).join('')}${fCat.length > 1 ? `<button class="clearall" data-act="fcatclear">Clear all</button>` : ''}</div>${fCat.length > 1 ? `<div class="fnote">Showing recipes with ${fCat.length === 2 ? 'both' : 'all ' + fCat.length} tags</div>` : ''}` : ''}`;
 }
 function fGrid(fid, rows){
   const tg = r => autoTags(r.data || {});
-  let shown = rows.filter(r => fCat.every(t => tg(r).includes(t)));
+  let shown = rows.filter(r => fCat.every(t => tg(r).includes(t)) && (!fSavedOnly || savedCopy(fid, r.id)));
   if(fSortK === 'az') shown = shown.slice().sort((a, b) => (a.data.title || '').localeCompare(b.data.title || ''));
   return `<div class="grid" id="fgrid">${shown.map(r => fTile(fid, r)).join('')}</div><div class="card empty" id="fnone" ${shown.length ? 'hidden' : ''}>No recipes match.</div>`;
 }
@@ -399,6 +401,7 @@ async function saveCopy(data, from){
   const id = crypto.randomUUID(), src = d.photo;
   const {data: row, error} = await sb.from('recipes').insert({id, user_id: user.id, sort: Date.now(), data: d}).select('id, sort, data').single();
   if(error) throw error;
+  mutate(k => { k.progress.active[id] = false; });
   if(src) (async () => { try{
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
     const blob = await (await fetch(src, {signal: ctl.signal})).blob(); clearTimeout(t);
@@ -414,7 +417,7 @@ async function copyInviteLink(){
   const url = location.origin + location.pathname + '#invite-' + data;
   const text = `${firstName() || 'I'} invited you to share recipes on Mixing Bowl`;
   if(navigator.share && matchMedia('(pointer: coarse)').matches){ try{ await navigator.share({title: 'Mixing Bowl', text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
-  try{ await navigator.clipboard.writeText(url); toast('Invite link copied'); }catch(e){ prompt('Copy this invite link', url); }
+  try{ await navigator.clipboard.writeText(url); toast('Invite link copied. Send it to your friend.'); }catch(e){ prompt('Copy this invite link', url); }
 }
 // invite links: remember the token through sign-up / email confirmation
 function inviteToken(){ try{ return localStorage.getItem('mb_invite'); }catch(e){ return null; } }
@@ -428,6 +431,8 @@ function renderInviteCard(){
 }
 
 let lastView = '';
+const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
+function syncFbar(fid){ const r = route(), bar = document.querySelector('.fbar2'), rows = (fbook[fid] || {}).rows || []; if(r.v === 'fbook' && bar){ const sc = document.querySelector('.selchips'), fn = document.querySelector('.fnote'); if(sc) sc.remove(); if(fn) fn.remove(); bar.outerHTML = fFilterBar(rows, fid); } if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id)); }
 const viewKey = h => h.replace(/([#"])a\d+-/g, '$1a-');
 function render(){
   const kept = {}; document.querySelectorAll('[data-keep]').forEach(el => { if(el.id) kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
@@ -490,7 +495,7 @@ function renderShopping(){
   const items = visibleItems(), all = allItems(), shop = P().shop, f = ui.filter;
   const done = items.filter(it => shop[it.id]).length;
   const pct = items.length ? Math.round(done / items.length * 100) : 0;
-  const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id));
+  const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && (P().active[r.id] === true || all.some(i => (i.recipes || []).includes(r.id))));
   const chips = chipRecipes.map(r => `<button class="chip ${isActive(r.id) ? 'on' : ''}" style="--c:${esc(D(r).color || '#888')}" data-act="active" data-drag="1" data-id="${esc(r.id)}"><i class="sw"></i>${esc(D(r).short || D(r).title)}</button>`).join(' ');
   const Q = shopQ.trim().toLowerCase();
   const pool = Q ? all.filter(i => i.name.toLowerCase().includes(Q) && (items.includes(i) || shop[i.id])) : f === 'have' ? all : items;
@@ -1051,7 +1056,7 @@ function renderTrips(){
     const seen = new Map(); all.forEach(i => { const key = i.id || i.n; if(!seen.has(key)) seen.set(key, i); });
     const uniq = [...seen.values()], gt = uniq.filter(i => i.s === 'bought'), hd = uniq.filter(i => i.s === 'have');
     const ats = g.trips.map(t => t.at).join('|');
-    return `<details class="card trip" ${n === 0 ? 'open' : ''}><summary><div><b>${esc(when)}</b><div class="muted">${gt.length} bought · ${hd.length} already had</div></div><span class="chev">▾</span></summary>
+    return `<details class="card trip" ${n === 0 ? 'open' : ''}><summary><div><b>${esc(when)}</b><div class="muted">${gt.length} bought · ${hd.length} already had</div></div><button class="tripx" data-act="deltrip" data-at="${esc(ats)}" aria-label="Remove this trip" title="Remove trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="chev">▾</span></summary>
       <div class="tbody">${names.length ? `<div class="tname">${esc(names.join(', '))}</div>` : ''}
       ${uniq.length ? `<details class="tings"><summary>See ingredients</summary>${gt.length ? `<h4>Bought</h4>${list(gt)}` : ''}${hd.length ? `<h4>Already had</h4>${list(hd)}` : ''}</details>` : '<div class="muted" style="font-size:14px">Nothing was marked.</div>'}
       <div class="row" style="margin-top:12px"><button class="btn" data-act="untrip" data-at="${esc(ats)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Back to shopping list</button></div></div></details>`;
@@ -1206,8 +1211,8 @@ function drawTimers(){
 }
 let wakeLock = null, wantWake = false;
 async function reWake(){ if(wantWake && !wakeLock){ try{ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; render(); }); }catch(e){} } }
-function confirmBox(title, body, okText, fn){
-  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>${esc(title)}</h3><div class="muted">${esc(body)}</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="mok">${esc(okText)}</button></div></div></div>`;
+function confirmBox(title, body, okText, fn, html){
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>${esc(title)}</h3><div class="muted">${html ? body : esc(body)}</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="mok">${esc(okText)}</button></div></div></div>`;
   confirmFn = fn;
 }
 let confirmFn = null;
@@ -1259,9 +1264,18 @@ document.addEventListener('click', async e => {
     const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
     try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name});
       sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
-      el.outerHTML = el.dataset.open ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(mine.id)}">${ICON_OK}Saved · Open yours</button>` : `<span class="savebtn done">${ICON_OK}Saved</span>`;
-      const r = route(); if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id));
+      el.outerHTML = el.dataset.open ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(mine.id)}">${ICON_OK}Saved · Open yours</button>` : `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your recipes" title="Tap to unsave">${ICON_OK}Saved</button>`;
+      syncFbar(fid);
       toast('Recipe saved!'); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
+  if(a === 'fsavedtog'){ fSavedOnly = !fSavedOnly; render(); return; }
+  if(a === 'funsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, mine = savedCopy(fid, id); if(!mine || el.disabled) return; el.disabled = true;
+    const {error} = await sb.from('recipes').delete().eq('id', mine.id).eq('user_id', user.id); if(error){ toast("Couldn't remove it. Try again."); el.disabled = false; return; }
+    recipes = recipes.filter(x => x.id !== mine.id); const before = {active: P().active[mine.id], cook: P().cook[mine.id]}; mutate(k => removeRecipeFrom(k, mine.id));
+    const pp = D(mine).photoPath, pt = setTimeout(() => { if(pp) sb.storage.from('photos').remove([pp]).catch(() => {}); }, 7000);
+    const tile = el.closest('.tile'); if(fSavedOnly && tile && rowsSaved(fid) > 0) tile.remove(); else el.outerHTML = `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(id)}">${ICON_PLUS2}Save</button>`;
+    if(fSavedOnly && !rowsSaved(fid)){ fSavedOnly = false; render(); } else syncFbar(fid);
+    toast('Removed from your recipes', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
+    return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see it.' : 'Friends can see this recipe'); return; }
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
@@ -1286,6 +1300,7 @@ document.addEventListener('click', async e => {
   }
   if(a === 'tourgo'){ showTour(+el.dataset.i); return; }
   if(a === 'tourend'){ $('#modalRoot').innerHTML = ''; tourStep = -1; if(!P().tourDone) mutate(k => { k.progress.tourDone = true; }); return; }
+  if(a === 'deltrip'){ e.preventDefault(); const ats = el.dataset.at.split('|'), old = (P().trips || []).slice(); mutate(k => { k.progress.trips = (k.progress.trips || []).filter(t => !ats.includes(String(t.at))); }); toast('Trip removed', () => mutate(k => { k.progress.trips = old; })); return; }
   if(a === 'untrip'){ el.dataset.at.split('|').forEach(at => restoreTrip(at)); return; }
   if(a === 'authmode'){ authView = {mode: el.dataset.m, msg:'', err:'', busy:false}; render(); return; }
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
@@ -1341,7 +1356,7 @@ document.addEventListener('click', async e => {
     return; }
   if(a === 'archive'){ $('#modalRoot').innerHTML = ''; const r = R(id); mutate(k => { (k.progress.archived = k.progress.archived || {})[id] = true; }); toast(D(r).title + ' archived'); if(location.hash !== '#recipes') location.hash = 'recipes'; return; }
   if(a === 'unarch'){ const r = R(id); mutate(k => { if(k.progress.archived) delete k.progress.archived[id]; }); toast(D(r).title + ' is back'); return; }
-  if(a === 'delrecipe'){ const r = R(id); confirmBox('Delete this recipe?', 'Deletes ' + D(r).title + ', its photo, progress and list items only it needed. Can\'t be undone.', 'Delete recipe', () => deleteRecipe(id)); return; }
+  if(a === 'delrecipe'){ const r = R(id); confirmBox('Delete this recipe?', `Deletes <b class="delname">${esc(D(r).title)}</b> from your cookbook. This action can't be undone.`, 'Delete recipe', () => deleteRecipe(id), true); return; }
   if(a === 'starters'){ el.disabled = true; addStarters(); return; }
   if(a === 'parse'){ fillFromPaste(); return; }
   if(a === 'addopen'){ ui.addOpen = true; render(); setTimeout(() => { const n = $('#addName'); if(n) n.focus(); }, 30); return; }
@@ -1458,7 +1473,7 @@ document.addEventListener('submit', async e => {
     if(error) toast("Couldn't save your name"); else { user = data.user; toast('Saved'); render(); }
   }
 });
-window.addEventListener('hashchange', () => { addSheet = null; addFriendOpen = false; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)) fCat = []; if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null; render(); });
+window.addEventListener('hashchange', () => { addSheet = null; addFriendOpen = false; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null; render(); });
 
 boot();
 

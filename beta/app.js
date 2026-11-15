@@ -280,6 +280,7 @@ const avatar = (id, name, cls = '') => `<span class="av ${cls}" style="--a:${avC
 const kitchenOf = n => `${n}'s Kitchen`;
 const isPriv = id => !!(P().private || {})[id];
 const friendBy = id => (friends || []).find(f => f.friend_id === id);
+const savedFrom = f => recipes.filter(r => { const s = D(r).savedFrom; return s && (s.owner === f.friend_id || (!s.owner && s.name === f.name)); });
 const savedCopy = (fid, rid) => recipes.find(r => (D(r).savedFrom || {}).id === rid);
 const friendsNew = () => (friends || []).filter(f => f.status === 'pending' && f.incoming).length + inbox.length;
 
@@ -303,7 +304,7 @@ function renderFriends(){
   const n = inc.length + inbox.length;
   const head = `<div class="fr-h"><h2>Friends</h2><button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button></div>`;
   const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share cookbooks</b><span>You'll be able to see each other's recipes</span></div></div>
-    <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Not now</button></div></div>`).join('');
+    <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
   const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
     ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
     <div class="fbtns"><button class="btn primary" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
@@ -335,7 +336,7 @@ function renderFbook(fid){
   const b = fbook[fid]; if(!b) { setTimeout(() => loadFbook(fid)); }
   const rows = (b && b.rows) || [];
   return `<button class="back" data-act="go" data-h="friends">← Friends</button>
-    <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span><button class="ibtn dark" data-act="frremove" data-id="${esc(fid)}" aria-label="Remove friend" title="Remove friend">${ICON_MORE}</button></div>
+    <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span><button class="btn sm rmfr" data-act="frremove" data-id="${esc(fid)}">Remove friend</button></div>
     ${rows.length > 4 ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
     ${rows.length > 1 ? fFilterBar(rows) : ''}
     ${!b || b.loading && !rows.length ? `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>` : b.err ? `<div class="card empty">Couldn't load this cookbook. Try again in a moment.</div>` : rows.length ? fGrid(fid, rows) : `<div class="card empty">${esc(f.name)} hasn't shared any recipes yet.</div>`}`;
@@ -1170,7 +1171,8 @@ function renderTerms(){
 function renderPrivacy(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← Back</button>
   <div class="card panel prose"><h3>Your privacy</h3>
-    <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Other members can't see them, and nothing is browsable through the site. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
+    <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
+    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked Private or archived, and save copies to your own kitchen. Friends never see your shopping list, cooking progress or favorites. A recipe you send to a friend is shared with them as a copy. Friend requests are sent by email address, and the site never shows whether an email has an account. You can remove a friend at any time, and copies they've already saved stay in their kitchen.</p>
     <p><b>Passwords stay secret.</b> Passwords are stored encrypted. No one, including the site administrator, can see yours.</p>
     <p><b>Photos.</b> Uploaded photos are stored at private, unguessable web addresses that aren't listed anywhere. Anyone with a photo's exact address could open it, so avoid uploading anything sensitive.</p>
     <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages.</p>
@@ -1232,12 +1234,16 @@ document.addEventListener('click', async e => {
   if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); return; }
   if(a === 'addfriendclose'){ addFriendOpen = false; render(); return; }
   if(a === 'frlink'){ copyInviteLink(); return; }
-  if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); await loadFriends(true); return; }
+  if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
-  if(a === 'frremove'){ const f = friendBy(id); if(!f) return; $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Remove ${esc(f.name)}?</h3><div class="muted">You'll stop seeing each other's cookbooks. Recipes you already saved stay in your kitchen.</div><div class="row" style="margin-top:14px;gap:8px"><button class="btn outline" data-act="mclose">Cancel</button><button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove</button></div></div></div>`; return; }
-  if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); await sb.rpc('remove_friend', {friend: id}); delete fbook[id]; toast(f ? `Removed ${f.name}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
+  if(a === 'frremove'){ const f = friendBy(id); if(!f) return; const n = savedFrom(f).length;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's cookbooks.${n ? ` You saved ${n} recipe${n === 1 ? '' : 's'} from ${esc(kitchenOf(f.name))}. Keep them in your cookbook, or delete them too?` : ''}</div>
+      <div class="rmbtns">${n ? `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove and keep recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove and delete ${n} recipe${n === 1 ? '' : 's'}</button>` : `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn ghost" data-act="mclose">Cancel</button></div></div></div>`; return; }
+  if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); const {error} = await sb.rpc('remove_friend', {friend: id}); if(error){ toast("Couldn't remove them. Try again."); return; }
+    let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
+    delete fbook[id]; toast(f ? `Removed ${f.name}${gone ? ` and ${gone} recipe${gone === 1 ? '' : 's'}` : ''}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
   if(a === 'shsave' || a === 'shdismiss'){ const sh = inbox.find(x => x.id === id); if(!sh) return; el.disabled = true;
-    if(a === 'shsave'){ try{ const row = await saveCopy(sh.data, {name: sh.sender_name}); toast(`Saved ${D(row).title}`); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; return; } }
+    if(a === 'shsave'){ try{ const fr = (friends || []).find(x => x.status === 'accepted' && x.name === sh.sender_name); const row = await saveCopy(sh.data, fr ? {owner: fr.friend_id, name: sh.sender_name} : {name: sh.sender_name}); toast(`Saved ${D(row).title}`); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; return; } }
     await sb.rpc('dismiss_share', {share: id}); inbox = inbox.filter(x => x.id !== id); render(); return; }
   if(a === 'fsave'){ e.stopPropagation(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id); if(!row || !f || savedCopy(fid, id)) return; el.disabled = true;
     try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); toast(`Saved to your recipes`); render(); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; } return; }

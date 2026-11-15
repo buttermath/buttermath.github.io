@@ -93,6 +93,7 @@ function stopUser(){ isAdmin = false; adminData = null; if(channel){ try{ sb.rem
 async function startUser(){
   stopUser(); render();
   await loadAll();
+  loadFriends(true).then(afterInviteLogin);
   try{
     channel = sb.channel('kitchen-' + user.id)
       .on('postgres_changes', {event:'*', schema:'public', table:'kitchens', filter:'user_id=eq.' + user.id}, p => { if(!queue.length && !flushing && p.new && p.new.user_id){ kitchen = normalize(p.new); render(); } })
@@ -101,14 +102,14 @@ async function startUser(){
   }catch(e){ console.warn('realtime off', e); }
 }
 async function loadRecipes(){
-  const {data, error} = await sb.from('recipes').select('id, sort, data').order('sort', {ascending:true});
+  const {data, error} = await sb.from('recipes').select('id, sort, data').eq('user_id', user.id).order('sort', {ascending:true});
   if(!error){ recipes = data || []; render(); }
 }
 async function loadAll(quiet){
   if(!quiet) setStatus('busy', 'Loading…');
   try{
     const [r, k] = await Promise.all([
-      sb.from('recipes').select('id, sort, data').order('sort', {ascending:true}),
+      sb.from('recipes').select('id, sort, data').eq('user_id', user.id).order('sort', {ascending:true}),
       sb.from('kitchens').select('*').eq('user_id', user.id).maybeSingle()
     ]);
     if(r.error) throw r.error; if(k.error) throw k.error;
@@ -129,11 +130,12 @@ function renderAuth(){
       <button class="btn primary big" type="submit">${v.busy ? 'Saving…' : 'Save password'}</button></form>
       ${v.err ? `<div class="err">${esc(v.err)}</div>` : ''}</div></div>`;
   }
-  const title = m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
+  const inv = inviteToken() && inviteInfo && inviteInfo.name && inviteInfo.name !== '__self' ? inviteInfo.name : '';
+  const title = inv && m === 'signup' ? `Join ${esc(inv)} on Mixing Bowl` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
   return `<div class="authwrap">
     <div class="authhero">${AUTH_ART}</div>
-    <div class="card panel auth"><h2>${title}</h2>
-    <p class="muted" style="margin:4px 0 14px">${m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
+    <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : ''}<h2>${title}</h2>
+    <p class="muted" style="margin:4px 0 14px">${inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
     <form data-form="${m}">
       ${m === 'signup' ? `<input class="tin" id="au-name" data-keep placeholder="First name" maxlength="40" required autocomplete="given-name">` : ''}
       <input class="tin" id="au-email" data-keep type="email" placeholder="Email" required autocomplete="email">
@@ -143,7 +145,7 @@ function renderAuth(){
     ${m === 'signup' ? `<div class="fine">By creating an account, you confirm you're 13 or older and agree to the <a href="#terms">Terms</a> and <a href="#privacy">Privacy</a> notice.</div>` : ''}
     ${v.err ? `<div class="err">${esc(v.err)}</div>` : ''}${v.msg ? `<div class="ok">${esc(v.msg)}</div>` : ''}
     <div class="authlinks">
-      ${m !== 'signin' ? `<button class="linkbtn" data-act="authmode" data-m="signin">I have an account — sign in</button>` : `<button class="linkbtn" data-act="authmode" data-m="signup">New here? Create an account</button><button class="linkbtn" data-act="authmode" data-m="forgot">Forgot password?</button>`}
+      ${m !== 'signin' ? `<button class="linkbtn" data-act="authmode" data-m="signin">${inv ? 'Already on Mixing Bowl? Sign in' : 'I have an account — sign in'}</button>` : `<button class="linkbtn" data-act="authmode" data-m="signup">New here? Create an account</button><button class="linkbtn" data-act="authmode" data-m="forgot">Forgot password?</button>`}
     </div></div></div>`;
 }
 async function handleAuthForm(kind){
@@ -253,18 +255,181 @@ const ICON_PLUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M
 function route(){
   const h = (location.hash || '').slice(1);
   if(h.startsWith('r-')) return {v:'recipe', id:h.slice(2)};
+  if(h.startsWith('fr-')) return {v:'frecipe', id:h.slice(3)};
+  if(h.startsWith('f-')) return {v:'fbook', id:h.slice(2)};
+  if(h.startsWith('invite-')) return {v:'invite', id:h.slice(7)};
   if(h.startsWith('edit-')) return {v:'form', id:h.slice(5)};
   if(h === 'add') return {v:'form'};
-  if(['recipes','account','settings','privacy','trips','admin','terms','feedback','help'].includes(h)) return {v:h};
+  if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help'].includes(h)) return {v:h};
   return {v:'shopping'};
 }
+// ---------- friends & shared cookbooks ----------
+let fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';
+const FSORTS = {recent:'Recent', az:'A–Z'};
+let friends = null, inbox = [], friendsAt = 0, addFriendOpen = false, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
+const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M19 8v6M16 11h6"/></svg>';
+const ICON_LINK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+const ICON_LOCK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+const ICON_PLUS2 = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+const ICON_OK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg>';
+const ICON_RIGHT = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const AVC = ['#C8553D', '#4B57A8', '#3F7A55', '#B5142B', '#D9772B', '#6E4FA8'];
+const avColor = id => AVC[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % AVC.length];
+const avatar = (id, name, cls = '') => `<span class="av ${cls}" style="--a:${avColor(id)}">${esc((name || '?').trim().charAt(0).toUpperCase())}</span>`;
+const kitchenOf = n => `${n}'s Kitchen`;
+const isPriv = id => !!(P().private || {})[id];
+const friendBy = id => (friends || []).find(f => f.friend_id === id);
+const savedFrom = f => recipes.filter(r => { const s = D(r).savedFrom; return s && (s.owner === f.friend_id || (!s.owner && s.name === f.name)); });
+const savedCopy = (fid, rid) => recipes.find(r => (D(r).savedFrom || {}).id === rid);
+const friendsNew = () => (friends || []).filter(f => f.status === 'pending' && f.incoming).length + inbox.length;
+
+async function loadFriends(force){
+  if(!user || (!force && Date.now() - friendsAt < 20000)) return;
+  friendsAt = Date.now();
+  const [f, i] = await Promise.all([sb.rpc('my_friends'), sb.rpc('my_inbox')]);
+  if(!f.error) friends = f.data || []; else if(friends === null) friends = [];
+  if(!i.error) inbox = i.data || [];
+  render();
+}
+async function loadFbook(fid){
+  fbook[fid] = {loading: true, rows: (fbook[fid] || {}).rows || []}; render();
+  const {data, error} = await sb.rpc('friend_recipes', {friend: fid});
+  fbook[fid] = {loading: false, rows: data || [], err: !!error}; render();
+}
+
+function renderFriends(){
+  if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>`; }
+  const inc = friends.filter(f => f.status === 'pending' && f.incoming), acc = friends.filter(f => f.status === 'accepted'), out = friends.filter(f => f.status === 'pending' && !f.incoming);
+  const n = inc.length + inbox.length;
+  const isEmpty = !acc.length && !n && !out.length;
+  const head = `<div class="fr-h"><h2>Friends</h2>${isEmpty ? '' : `<button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button>`}</div>`;
+  const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share cookbooks</b><span>You'll be able to see each other's recipes</span></div></div>
+    <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
+  const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
+    ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
+    <div class="fbtns"><button class="btn primary" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
+  const books = acc.map(f => `<div class="cbk crow" role="link" tabindex="0" data-act="go" data-h="f-${esc(f.friend_id)}" aria-label="Open ${esc(kitchenOf(f.name))}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span><button class="rmfr2" data-act="frremove" data-id="${esc(f.friend_id)}" aria-label="Remove ${esc(f.name)} as a friend" title="Remove friend"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 11h6"/></svg></button></div>`).join('');
+  const waiting = out.map(f => `<div class="cbk wait">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(f.name)}</b><span>Waiting for them to accept</span></span><button class="linkbtn" data-act="frcancel" data-id="${esc(f.friend_id)}">Cancel</button></div>`).join('');
+  const empty = isEmpty ? `<div class="card empty frempty"><b>Share cookbooks with friends and family</b><span>When they accept, you can browse each other's recipes and save their recipes to your cookbook.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
+  return head + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}` : '')
+    + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
+    + (addFriendOpen ? renderAddFriend() : '');
+}
+function renderAddFriend(){
+  return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add a friend"><div class="askt">Add a friend</div>
+    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Friend's email" required><button class="btn primary" type="submit">Send</button></form>
+    <div class="frhint">They'll see your request in their Friends tab.</div>
+    <div class="ordiv">or</div>
+    <button class="btn outline bigbtn" data-act="frlink">${ICON_LINK}Share invite link</button>
+    <div class="frhint">For friends who aren't on Mixing Bowl yet.</div></div>`;
+}
+function fTile(fid, row){
+  const d = row.data || {}, saved = savedCopy(fid, row.id), tt = autoTags(d).slice(0, 3);
+  return `<div class="tile" role="link" tabindex="0" style="--c:${esc(d.color || '#888')}" data-act="go" data-h="fr-${esc(fid)}~${esc(row.id)}" data-q="${esc((d.title + ' ' + autoTags(d).join(' ')).toLowerCase())}">
+    <span class="art">${pic(d)}</span>${saved ? `<span class="savebtn done">${ICON_OK}Saved</span>` : `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(row.id)}">${ICON_PLUS2}Save</button>`}
+    <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : ''}</span></span></div>`;
+}
+function renderFbook(fid){
+  const f = friendBy(fid);
+  if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div></div>`; }
+  if(!f || f.status !== 'accepted') return `<button class="back" data-act="go" data-h="friends">← Friends</button><div class="card empty">This cookbook isn't shared with you.</div>`;
+  const b = fbook[fid]; if(!b) { setTimeout(() => loadFbook(fid)); }
+  const rows = (b && b.rows) || [];
+  return `<button class="back" data-act="go" data-h="friends">← Friends</button>
+    <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span></div>
+    ${rows.length > 4 ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
+    ${rows.length > 1 ? fFilterBar(rows) : ''}
+    ${!b || b.loading && !rows.length ? `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>` : b.err ? `<div class="card empty">Couldn't load this cookbook. Try again in a moment.</div>` : rows.length ? fGrid(fid, rows) : `<div class="card empty">${esc(f.name)} hasn't shared any recipes yet.</div>`}`;
+}
+function fFilterBar(rows){
+  const counts = {}; rows.forEach(r => autoTags(r.data || {}).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  const cats = Object.keys(counts).sort((x, y) => x.localeCompare(y)); fCat = fCat.filter(t => counts[t]);
+  const on = fCat.length > 0, hasAll = (r, list) => { const tg = autoTags(r.data || {}); return list.every(t => tg.includes(t)); };
+  return `<div class="fbar2"><div class="fwrap"><button class="fpill ${on ? 'act' : ''}" data-act="fcatmenu" aria-haspopup="true" aria-expanded="${fCatOpen}">Category${on ? `<span class="fcount">${fCat.length}</span>` : ''}${ICON_CHEV}</button>
+    ${fCatOpen ? `<div class="fmenu" role="group" aria-label="Categories"><button class="fall ${!on ? 'on' : ''}" data-act="fcatclear">All categories <span>${rows.length}</span></button>${cats.map(t => { const o = fCat.includes(t); const n = o ? rows.filter(r => hasAll(r, fCat)).length : rows.filter(r => hasAll(r, fCat.concat(t))).length; return `<button class="fck ${o ? 'on' : ''} ${!o && !n ? 'dim' : ''}" data-act="fcatpick" data-t="${esc(t)}" role="checkbox" aria-checked="${o}"><i class="cb">${o ? CHECK : ''}</i><b>${esc(t)}</b><span>${o ? '' : n}</span></button>`; }).join('')}</div>` : ''}</div>
+    <div class="fwrap fright"><button class="fpill sortp" data-act="fsortmenu" aria-haspopup="menu" aria-expanded="${fSortOpen}" aria-label="Sort: ${FSORTS[fSortK]}">${ICON_SORT}${FSORTS[fSortK]}</button>
+    ${fSortOpen ? `<div class="fmenu right" role="menu">${Object.entries(FSORTS).map(([k, l]) => `<button role="menuitem" class="${k === fSortK ? 'on' : ''}" data-act="fsortpick" data-k="${k}">${l}${k === fSortK ? '<span>✓</span>' : ''}</button>`).join('')}</div>` : ''}</div></div>
+    ${on ? `<div class="selchips">${fCat.map(t => `<span class="selchip">${esc(t)}<button data-act="fcatpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">✕</button></span>`).join('')}${fCat.length > 1 ? `<button class="clearall" data-act="fcatclear">Clear all</button>` : ''}</div>${fCat.length > 1 ? `<div class="fnote">Showing recipes with ${fCat.length === 2 ? 'both' : 'all ' + fCat.length} tags</div>` : ''}` : ''}`;
+}
+function fGrid(fid, rows){
+  const tg = r => autoTags(r.data || {});
+  let shown = rows.filter(r => fCat.every(t => tg(r).includes(t)));
+  if(fSortK === 'az') shown = shown.slice().sort((a, b) => (a.data.title || '').localeCompare(b.data.title || ''));
+  return `<div class="grid" id="fgrid">${shown.map(r => fTile(fid, r)).join('')}</div><div class="card empty" id="fnone" ${shown.length ? 'hidden' : ''}>No recipes match.</div>`;
+}
+function renderFrecipe(key){
+  const [fid, rid] = key.split('~'), f = friendBy(fid), b = fbook[fid];
+  if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div></div>`; }
+  if(!b){ setTimeout(() => loadFbook(fid)); return `<div class="grid"><div class="skeleton"></div></div>`; }
+  const row = (b.rows || []).find(r => r.id === rid);
+  if(!f || !row) return `<button class="back" data-act="go" data-h="${f ? 'f-' + esc(fid) : 'friends'}">← Back</button><div class="card empty">${b.loading ? 'Loading…' : "This recipe isn't shared anymore."}</div>`;
+  const d = row.data, saved = savedCopy(fid, rid);
+  const ings = (d.ingredients || []).map(g => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map(t => `<div class="ing ro"><span>${fmt(t)}</span></div>`).join('')).join('');
+  let n = 0;
+  const steps = (d.steps || []).map(sec => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map(st => { n++; return `<div class="step ro"><span class="num">${n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p></span></div>`; }).join('')).join('');
+  const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
+  const notes = (d.notes && d.notes.length) || srcs.length ? `<div class="card panel extras">${d.notes && d.notes.length ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${srcs.map((l, li) => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${li === 0 ? 'View original recipe' : esc(l.label || 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
+  return `<button class="back" data-act="go" data-h="f-${esc(fid)}">← ${esc(kitchenOf(f.name))}</button>
+  <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}</div><div class="body">
+    <div class="ttlrow"><h2>${esc(d.title)}</h2></div>
+    <div class="byl">${avatar(fid, f.name, 'xs')}From ${esc(kitchenOf(f.name))}</div>
+    <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}</div>
+    ${autoTags(d).length ? `<div class="rtags">${autoTags(d).map(t => `<span class="rtag ro">${esc(t)}</span>`).join('')}</div>` : ''}
+    <div class="actrow">${saved ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(saved.id)}">${ICON_OK}Saved · Open yours</button>` : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my recipes</button>`}</div>
+  </div></div>
+  <div class="layout">
+    <div class="card panel ing-col"><div class="inghead"><h3>Ingredients</h3></div>${ings || '<div class="muted">No ingredients listed.</div>'}</div>
+    <div><h3 style="font-size:19px;margin:0 4px 10px">Steps</h3>${steps || '<div class="card empty">No steps listed.</div>'}${notes}</div>
+  </div>`;
+}
+function renderSendSheet(r){
+  const acc = (friends || []).filter(f => f.status === 'accepted');
+  return `<div class="sheetbg" data-act="sendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Send to a friend"><div class="askt">Send ${esc(D(r).title)}</div>
+    ${acc.length ? `<div class="sendlist">${acc.map(f => `<label class="sendrow">${avatar(f.friend_id, f.name, 'sm')}<span>${esc(f.name)}</span><input type="checkbox" class="sendck" value="${esc(f.friend_id)}" ${acc.length === 1 ? 'checked' : ''}></label>`).join('')}</div>
+    <textarea class="tin" id="send-note" data-keep rows="2" maxlength="280" placeholder="Add a note (optional)"></textarea>
+    <button class="btn primary bigbtn" data-act="sendgo" data-id="${esc(r.id)}">Send</button>`
+    : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add a friend</button>`}</div>`;
+}
+
+async function saveCopy(data, from){
+  const d = JSON.parse(JSON.stringify(data || {})); d.savedFrom = from;
+  const id = crypto.randomUUID();
+  if(d.photo){
+    try{ const blob = await (await fetch(d.photo)).blob(); const up = await uploadPhoto(id, blob); d.photo = up.url; d.photoPath = up.path; }
+    catch(e){ delete d.photo; delete d.photoPath; }
+  } else delete d.photoPath;
+  const {data: row, error} = await sb.from('recipes').insert({id, user_id: user.id, sort: Date.now(), data: d}).select('id, sort, data').single();
+  if(error) throw error;
+  recipes.push(row); return row;
+}
+async function copyInviteLink(){
+  const {data, error} = await sb.rpc('create_invite_link');
+  if(error || !data){ toast("Couldn't make a link. Try again."); return; }
+  const url = location.origin + location.pathname + '#invite-' + data;
+  const text = `${firstName() || 'I'} invited you to share recipes on Mixing Bowl`;
+  if(navigator.share && matchMedia('(pointer: coarse)').matches){ try{ await navigator.share({title: 'Mixing Bowl', text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
+  try{ await navigator.clipboard.writeText(url); toast('Invite link copied'); }catch(e){ prompt('Copy this invite link', url); }
+}
+// invite links: remember the token through sign-up / email confirmation
+function inviteToken(){ try{ return localStorage.getItem('mb_invite'); }catch(e){ return null; } }
+function rememberInvite(t){ try{ localStorage.setItem('mb_invite', t); }catch(e){} if(!inviteInfo || inviteInfo.t !== t){ inviteInfo = {t, name: null}; sb.rpc('invite_link_info', {t}).then(({data}) => { inviteInfo = {t, name: data || null, bad: !data}; render(); }); } }
+function forgetInvite(){ try{ localStorage.removeItem('mb_invite'); }catch(e){} }
+function renderInviteCard(){
+  if(!inviteInfo || inviteInfo.bad) return '';
+  if(inviteInfo.name === '__self'){ setTimeout(() => { forgetInvite(); inviteInfo = null; toast("That's your own invite link. Share it with a friend."); render(); }); return ''; }
+  return `<div class="modal"><div class="card mcard" data-stop>${avatar(inviteInfo.t, inviteInfo.name || '?', 'big')}<h3>${esc(inviteInfo.name || 'Someone')} wants to be friends</h3><p>You'll be able to see each other's recipes and save copies.</p>
+    <button class="btn primary bigbtn" data-act="invaccept">Accept</button><button class="btn outline bigbtn" data-act="invno">Decline</button></div></div>`;
+}
+
 let lastView = '';
 function render(){
   const kept = {}; document.querySelectorAll('[data-keep]').forEach(el => { if(el.id) kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
   const icol = document.querySelector('.ing-col'), icolTop = icol ? icol.scrollTop : 0;
   const ae = document.activeElement && document.activeElement.id && document.activeElement.hasAttribute('data-keep') ? document.activeElement : null;
   let sel = null; try{ sel = ae && ae.selectionStart != null ? [ae.selectionStart, ae.selectionEnd] : null; }catch(e){}
-  const r = route();
+  let r = route();
+  if(r.v === 'invite' && sb){ rememberInvite(r.id); if(!user && authView.mode === 'signin' && !authView.invSet){ authView = {mode:'signup', msg:'', err:'', busy:false, invSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); } }
   if(!(user && !recovering && gate !== 'in')) delete app.dataset.gate;
   $('#hdr').innerHTML = renderHeader(r);
   if(!sb){ return; }
@@ -278,6 +443,9 @@ function render(){
     renderTabs(r);
     if(r.v === 'shopping') app.innerHTML = renderShopping();
     else if(r.v === 'recipes') app.innerHTML = renderRecipes();
+    else if(r.v === 'friends') app.innerHTML = renderFriends() + (inviteToken() ? renderInviteCard() : '');
+    else if(r.v === 'fbook') app.innerHTML = renderFbook(r.id);
+    else if(r.v === 'frecipe') app.innerHTML = renderFrecipe(r.id);
     else if(r.v === 'form') app.innerHTML = renderForm(r.id);
     else if(r.v === 'account') app.innerHTML = renderAccount();
     else if(r.v === 'settings') app.innerHTML = renderSettings();
@@ -292,6 +460,7 @@ function render(){
   }
   const sameView = (r.v + (r.id || '')) === lastView;
   if(sameView && icolTop){ const ic = document.querySelector('.ing-col'); if(ic) ic.scrollTop = icolTop; }
+  setTimeout(() => { stepPreview(); onNavScroll(); }, 0);
   if(sameView) document.querySelectorAll('[data-keep]').forEach(el => { if(el.id && kept[el.id] != null && el.type !== 'file'){ if(el.type === 'checkbox') el.checked = kept[el.id]; else el.value = kept[el.id]; } });
   { const fp = $('#f-paste'), fb = $('#f-parsebtn'); if(fp && fb) fb.disabled = !fp.value.trim(); }
   if(ae && sameView){ const el = document.getElementById(ae.id); if(el){ el.focus({preventScroll:true}); if(sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
@@ -307,7 +476,8 @@ function renderHeader(r){
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
   $('#tabs').innerHTML = `<button class="tab ${r.v === 'shopping' ? 'on' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
-  <button class="tab ${r.v !== 'shopping' && r.v !== 'account' ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>`;
+  <button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
+  <button class="tab ${['friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="friends">Friends${friendsNew() ? '<span class="rdot" aria-label="New"></span>' : ''}</button>`;
 }
 
 function renderShopping(){
@@ -355,7 +525,7 @@ function renderShopping(){
       <button class="btn" type="button" data-act="addclose">Done</button>
     </form>` : `<button class="addrow" data-act="addopen"><span>+</span> Add an item</button>`}
   <div class="f-${f}">${secs || (Q ? '' : `<div class="card empty">${!all.length ? 'Nothing here yet. Open a recipe and tap <b>Add to shopping list</b>, or add an item above.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
-  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<div class="tripfoot2"><div class="tf2-ic" aria-hidden="true">🛒</div><div class="tf2-t"><b>Back from the store?</b><span>${cnt.cart} in your cart · ${cnt.need} still needed</span></div><button class="btn primary" data-act="resetshop">Finish trip</button></div>` : ''}<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>` : ''}
+  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<div class="tripfoot2"><div class="tf2-ic" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></div><div class="tf2-t"><span><b>${cnt.cart}</b> in your cart</span><span><b>${cnt.need}</b> still needed</span></div><button class="btn primary" data-act="resetshop">Finish trip</button></div>` : ''}<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}`;
 }
 
@@ -377,6 +547,11 @@ const favOf = id => !!((P().fav || {})[id]);
 const allTags = () => { const used = recipes.flatMap(r => tagsOf(r)); return [...new Set(TAGS0.concat(P().ctags || [], used))]; };
 let recTags = [], recFav = false, recQ = '', catOpen = false, sortOpen = false, tagEdit = null;
 const SORTS = {recent:'Recent', az:'A–Z', made:'Most made', progress:'In progress'};
+const ICON_SERV = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v7M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 21V3c-2 1.5-3 4-3 7v3h3"/></svg>';
+const ICON_TIME = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+const ICON_AGAIN = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg>';
+const ICON_EXT = '<svg class="ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+function finCard(r){ return `<button class="btn primary again" data-act="again" data-id="${esc(r.id)}">${ICON_AGAIN}Make it again</button>`; }
 const ICON_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
 const ICON_SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>';
 const ICON_CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -412,8 +587,8 @@ function renderRecipes(){
     const tq = (d.title + ' ' + (d.short || '') + ' ' + tagsOf(r).join(' ')).toLowerCase(), tt = tagsOf(r).slice(0, 3);
     return `<div class="tile" ${q && !tq.includes(q) ? 'hidden' : ''} role="link" tabindex="0" style="--c:${esc(d.color)}" data-act="go" data-h="r-${esc(r.id)}" data-q="${esc(tq)}">
       <span class="art">${pic(d)}</span><button class="tilefav ${favOf(r.id) ? 'on' : ''}" data-act="fav" data-id="${esc(r.id)}" aria-pressed="${favOf(r.id)}" aria-label="${favOf(r.id) ? 'Remove from favorites' : 'Add to favorites'}" title="${favOf(r.id) ? 'Favorite' : 'Add to favorites'}">${ICON_HEART}</button><button class="tilex" data-act="recipex" data-id="${esc(r.id)}" aria-label="Archive or delete ${esc(d.title)}" title="Archive or delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.total ? `<span>⏱ ${esc(d.total)}</span>` : ''}${d.yield ? `<span>🍽 ${esc(d.yield)}</span>` : ''}</span>
-      <span class="st ${p.done === 0 ? 'new' : p.done === p.total ? 'done' : 'prog'}">${st}</span><span class="bar"><i style="width:${pct}%"></i></span></span></div>`;
+      <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : ''}</span>
+      ${isPriv(r.id) ? `<span class="privtag sm">${ICON_LOCK}Private</span>` : ''}<span class="st ${p.done === 0 ? 'new' : p.done === p.total ? 'done' : 'prog'}">${st}</span><span class="bar"><i style="width:${pct}%"></i></span></span></div>`;
   }).join('') + `</div><div class="card empty" id="rnone" ${filtered && !shown.length ? '' : 'hidden'}>${sortK === 'progress' && !shown.length && !catOn && !recFav ? 'Nothing in progress right now. Open a recipe and check off a step to start.' : recTags.length > 1 ? `No recipes have ${recTags.length === 2 ? 'both' : 'all'} of these tags. Remove one to see more.` : 'No recipes match.'}</div>` + archBox;
 }
 
@@ -432,14 +607,14 @@ function renderRecipe(id){
     return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? '✓' : n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
-  const links = srcs.map(l => `<a class="lchip" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || 'Original recipe')} ↗</a>`).join('');
-  const notes = d.notes && d.notes.length ? `<div class="notes"><b>Good to know</b><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul></div>` : '';
+  const hasNotes = d.notes && d.notes.length;
+  const notes = hasNotes || srcs.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${srcs.map((l, li) => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${li === 0 ? 'View original recipe' : esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
   return `<button class="back" data-act="go" data-h="recipes">← All recipes</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
-    <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn" data-act="go" data-h="edit-${esc(r.id)}" aria-label="Edit recipe" title="Edit recipe">${ICON_PEN}</button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu"><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete recipe</button></div>` : ''}</div></div>
-    <div class="meta">${d.yield ? `<span>🍽 ${esc(d.yield)}</span>` : ''}${d.total ? `<span>⏱ ${esc(d.total)}</span>` : d.cook ? `<span>⏱ ${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
+    <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn editpill" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe">${ICON_PEN}<span>Edit</span></button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu"><button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete recipe</button></div>` : ''}</div></div>
+    ${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · only you can see this</div>` : ''}
+    <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
     <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">✕</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
-    ${srcs.length ? `<div class="srcline">From ${srcs.map((l, li) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(li === 0 ? hostOf(l.url) : (l.label || hostOf(l.url)))} ↗</a>`).join(' · ')}</div>` : ''}
     <div class="prog-line" style="margin-top:14px"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div>
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Add to shopping list</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>Screen on</button></div>
@@ -447,11 +622,12 @@ function renderRecipe(id){
   <div class="layout">
     <div class="card panel ing-col"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${ings || '<div class="muted">No ingredients yet.</div>'}</div>
     <div><h3 style="font-size:19px;margin:0 4px 10px">Steps</h3>${steps || '<div class="card empty">No steps yet.</div>'}
-    ${p.total && p.done === p.total ? `<div class="card finish">🎉 You made ${esc(d.title)}!${madeOf(r.id).n > 1 ? `<div class="fsub">That's ${madeOf(r.id).n} times so far</div>` : '<div class="fsub">Enjoy every bite</div>'}<button class="btn primary" data-act="again" data-id="${esc(r.id)}">↻ Make it again</button></div>` : ''}${notes}
-    ${links ? `<div class="card panel origbox"><b>Photos and tips</b><div class="lchips">${links}</div></div>` : ''}</div>
+    ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
+</div>
   </div>
   ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b><span>Everything starts unchecked</span></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Choose ingredients</b><span>Tap + next to the ones you need</span></button><button class="linkbtn askcancel" data-act="sheetclose">${addSheet.again ? 'Not now' : 'Cancel'}</button></div>` : ''}
   ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="askt">Tags</div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">✕</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="New tag, e.g. Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
+  ${sendSheet === r.id ? renderSendSheet(r) : ''}
   ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap + to add'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
 }
 function renderFab(r){
@@ -465,7 +641,7 @@ let form = null; // {forId, photoBlob, photoUrl, removePhoto, busy, err}
 function ensureForm(id){
   if(!form || form.forId !== (id || 'new')){
     if(form && form.photoUrl) URL.revokeObjectURL(form.photoUrl);
-    form = {forId: id || 'new', photoBlob: null, photoUrl: null, removePhoto: false, busy: false, err: '', filled: false, importing: false, importMsg: '', importOk: false};
+    form = {forId: id || 'new', review: null, photoBlob: null, photoUrl: null, removePhoto: false, busy: false, err: '', filled: false, importing: false, importMsg: '', importOk: false};
   }
   return form;
 }
@@ -481,7 +657,7 @@ function renderForm(id){
     <h3>${r ? 'Edit recipe' : 'Add a recipe'}</h3>
     <div class="lbl2">Recipe website link <span class="hint">recommended</span></div>
     <div class="linkrow"><input class="tin" id="f-link" data-keep type="url" inputmode="url" placeholder="Paste a recipe link" value="${v('link', link.url)}"></div>
-    ${!r && f.importing ? `<div class="importmsg">Importing…</div>` : !r && f.importMsg ? `<div class="importmsg ${f.importOk ? 'ok' : ''}">${esc(f.importMsg)}</div>` : ''}
+    ${!r && f.importing ? `<div class="importmsg">Importing…</div>` : !r && f.review ? reviewCard(f.review) : !r && f.importMsg ? `<div class="importmsg ${f.importOk ? 'ok' : ''}">${esc(f.importMsg)}</div>` : ''}
     <div class="lbl2">Recipe title <span class="hint">required</span></div>
     <input class="tin" id="f-title" data-keep maxlength="90" placeholder="e.g. Grandma's apple crisp" value="${v('title', d.title)}">
     ${r ? '' : `
@@ -497,8 +673,9 @@ function renderForm(id){
     </div>
     <div class="lbl2">Ingredients</div>
     <textarea class="tin" id="f-ing" data-keep rows="9">${esc(groupsToIngText(d.ingredients))}</textarea>
-    <div class="lbl2">Steps</div>
+    <div class="lbl2">Steps <span class="hint">one per line · <span id="f-stepcount"></span></span></div>
     <textarea class="tin" id="f-steps" data-keep rows="9">${esc(sectionsToStepText(d.steps))}</textarea>
+    <details class="steprev"><summary>See them numbered</summary><ol id="f-steplist"></ol></details>
     <div class="lbl2">Notes <span class="hint">optional</span></div>
     <textarea class="tin" id="f-notes" data-keep rows="3">${esc((d.notes || []).join('\n'))}</textarea>
     <div class="lbl2">Image</div>
@@ -521,7 +698,7 @@ function fillFromPaste(){
   set('#f-title', p.title); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
   set('#f-ing', p.ingredients, true); set('#f-steps', p.steps, true); set('#f-notes', p.notes);
   if(!p.ingredients){ toast("Couldn't find ingredients. Paste just the recipe."); return; }
-  form.filled = true; render();
+  form.filled = true; form.review = {n: stepLines(p.steps).length, url: (($('#f-link') || {}).value || '').trim(), warn: stepCheck(p.steps, false), src: 'paste'}; render();
   toast('Filled in');
 }
 async function importLink(){
@@ -559,8 +736,17 @@ async function importLink(){
   set('#f-title', p.title); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
   set('#f-ing', p.ingredients, true); set('#f-steps', p.steps, true); set('#f-notes', p.notes);
   if(p.title) $('#f-title').value = p.title;
-  form.filled = true; form.importOk = true; form.importMsg = '✓ Imported'; render();
+  form.filled = true; form.importOk = true; form.importMsg = ''; form.review = {n: stepLines(p.steps).length, url: ($('#f-link') || {}).value.trim(), warn: stepCheck(p.steps, true), src: 'link'}; render();
 }
+function reviewCard(rv){ if(!rv.url && !rv.warn) return ''; return `<div class="importrev">${rv.url ? `<a class="ir-link" href="${esc(rv.url)}" target="_blank" rel="noopener">Compare with original${ICON_EXT}</a>` : ''}${rv.warn ? `<div class="ir-warn">${esc(rv.warn)}</div>` : ''}</div>`; }
+function stepLines(t){ return String(t || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !/:$/.test(l)); }
+function stepCheck(t, fromSite){
+  const ls = stepLines(t), long = ls.some(l => l.length > 450);
+  if(fromSite && (ls.length <= 3 || long)) return 'Some steps may be missing or combined. Check them against the original before you save.';
+  if(long) return 'A few steps look combined. Give each step its own line.';
+  return '';
+}
+function stepPreview(){ const ls = stepLines(($('#f-steps') || {}).value); const c = $('#f-stepcount'); if(c) c.textContent = ls.length ? `${ls.length} step${ls.length === 1 ? '' : 's'}` : ''; const o = $('#f-steplist'); if(o) o.innerHTML = ls.map(l => `<li>${esc(l)}</li>`).join(''); }
 function guessArt(t){ return guessKind(t); }
 async function shrink(file, max){
   try{
@@ -930,7 +1116,9 @@ const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 16c-6-5-14-6-22-5v38c8-1 16 0 22 5c6-5 14-6 22-5V11c-8-1-16 0-22 5z"/><path d="M32 16v38"/><path d="M18 22h8M18 30h8M38 22h8" class="accl"/></svg>`, title: 'Plan your recipes', text: 'Save your recipes by pasting the URL or the recipe steps into the recipe form.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add to shopping list</b>. Add as many recipes as you like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go. Use the Recipes page as your own personal cookbook to store as many recipes as you\'d like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Recipes page as your own personal cookbook to store as many recipes as you\'d like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your cookbook, or send them one of yours.'},
 ];
 let tourStep = -1;
 function showTour(i){
@@ -939,7 +1127,7 @@ function showTour(i){
     <div class="tourart">${t.art()}</div>
     <div class="tourbody"><div class="tourdots">${TOUR.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
     <h3>${t.title}</h3><p>${t.text}</p>
-    <div class="row tourbtns">${i ? `<button class="btn" data-act="tourgo" data-i="${i - 1}">Back</button>` : `<button class="btn ghost" data-act="tourend">Skip</button>`}<button class="btn primary" data-act="${last ? 'tourend' : 'tourgo'}" data-i="${i + 1}">${last ? 'Let\'s cook' : 'Next'}</button></div></div>
+    <div class="row tourbtns">${i ? `<button class="btn" data-act="tourgo" data-i="${i - 1}">Back</button>` : `<button class="btn outline" data-act="tourend">Skip</button>`}<button class="btn primary" data-act="${last ? 'tourend' : 'tourgo'}" data-i="${i + 1}">${last ? 'Let\'s cook' : 'Next'}</button></div></div>
   </div></div>`;
 }
 function maybeTour(){
@@ -956,9 +1144,13 @@ function renderHelp(){
     <ul>
       <li><b>Add a recipe</b> from a website link, or paste the text and tap <b>Download into form</b>.</li>
       <li>Tap <b>Add to shopping list</b> on a recipe when you plan to shop for it. Ingredients will not automatically get added to your shopping list.</li>
-      <li>Tap <b>Start a new trip</b> when you're starting a new shopping run. Finished recipes move to <b>Past trips</b>, and anything you still need stays on your list.</li>
+      <li>Tap <b>Finish trip</b> when you're back from the store. The trip is saved to <b>Past trips</b>, and you can clear anything left on your list.</li>
       <li><b>Reorder aisles</b> with the arrows next to each section so the list matches your store.</li>
       <li><b>Archive</b> recipes you're not making right now, and unarchive them anytime.</li>
+      <li><b>Add a friend</b> from the <b>Friends</b> tab using their email or an invite link. Once they accept, you can see each other's recipes.</li>
+      <li>Tap <b>+ Save</b> on a friend's recipe to get your own copy. You can edit it without changing theirs.</li>
+      <li><b>Send a recipe</b> to a friend from its <b>⋯</b> menu, with a note if you like.</li>
+      <li>Turn on <b>Private</b> in a recipe's <b>⋯</b> menu to keep it out of your friends' view. Your shopping list and progress are always private.</li>
       <li><b>Add to your Home Screen</b> from Settings so it opens like an app.</li>
     </ul>
     <div class="row" style="margin-top:14px"><button class="btn" data-act="tourgo" data-i="0">Replay the quick tour</button></div>
@@ -981,7 +1173,8 @@ function renderTerms(){
 function renderPrivacy(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← Back</button>
   <div class="card panel prose"><h3>Your privacy</h3>
-    <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Other members can't see them, and nothing is browsable through the site. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
+    <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
+    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked Private or archived, and save copies to your own kitchen. Friends never see your shopping list, cooking progress or favorites. A recipe you send to a friend is shared with them as a copy. Friend requests are sent by email address, and the site never shows whether an email has an account. You can remove a friend at any time, and copies they've already saved stay in their kitchen.</p>
     <p><b>Passwords stay secret.</b> Passwords are stored encrypted. No one, including the site administrator, can see yours.</p>
     <p><b>Photos.</b> Uploaded photos are stored at private, unguessable web addresses that aren't listed anywhere. Anyone with a photo's exact address could open it, so avoid uploading anything sensitive.</p>
     <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages.</p>
@@ -1022,6 +1215,8 @@ document.addEventListener('click', async e => {
   if(moreOpen && !(el && el.dataset.act === 'more')){ moreOpen = false; render(); }
   if(catOpen && !(el && ['catmenu','catpick','catclear'].includes(el.dataset.act))){ catOpen = false; render(); }
   if(sortOpen && !(el && ['sortmenu','sortpick'].includes(el.dataset.act))){ sortOpen = false; render(); }
+  if(fCatOpen && !(el && ['fcatmenu','fcatpick','fcatclear'].includes(el.dataset.act))){ fCatOpen = false; render(); }
+  if(fSortOpen && !(el && ['fsortmenu','fsortpick'].includes(el.dataset.act))){ fSortOpen = false; render(); }
   if(!el) return;
   const a = el.dataset.act, id = el.dataset.id, shop = user ? P().shop : {};
   if(a === 'menu'){ menuOpen = !menuOpen; render(); return; }
@@ -1033,6 +1228,36 @@ document.addEventListener('click', async e => {
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
+  if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
+  if(a === 'fcatpick'){ const t = el.dataset.t; fCat = fCat.includes(t) ? fCat.filter(x => x !== t) : fCat.concat(t); render(); return; }
+  if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }
+  if(a === 'fsortmenu'){ fSortOpen = !fSortOpen; fCatOpen = false; render(); return; }
+  if(a === 'fsortpick'){ fSortK = el.dataset.k; fSortOpen = false; render(); return; }
+  if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); return; }
+  if(a === 'addfriendclose'){ addFriendOpen = false; render(); return; }
+  if(a === 'frlink'){ copyInviteLink(); return; }
+  if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
+  if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
+  if(a === 'frremove'){ const f = friendBy(id); if(!f) return; const n = savedFrom(f).length;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's cookbooks.</div>
+      <div class="rmbtns">${n ? `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend but keep shared recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove friend and delete shared recipes</button>` : `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn ghost" data-act="mclose">Cancel</button></div></div></div>`; return; }
+  if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); const {error} = await sb.rpc('remove_friend', {friend: id}); if(error){ toast("Couldn't remove them. Try again."); return; }
+    let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
+    delete fbook[id]; toast(f ? `Removed ${f.name}${gone ? ` and ${gone} recipe${gone === 1 ? '' : 's'}` : ''}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
+  if(a === 'shsave' || a === 'shdismiss'){ const sh = inbox.find(x => x.id === id); if(!sh) return; el.disabled = true;
+    if(a === 'shsave'){ try{ const fr = (friends || []).find(x => x.status === 'accepted' && x.name === sh.sender_name); const row = await saveCopy(sh.data, fr ? {owner: fr.friend_id, name: sh.sender_name} : {name: sh.sender_name}); toast(`Saved ${D(row).title}`); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; return; } }
+    await sb.rpc('dismiss_share', {share: id}); inbox = inbox.filter(x => x.id !== id); render(); return; }
+  if(a === 'fsave'){ e.stopPropagation(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id); if(!row || !f || savedCopy(fid, id)) return; el.disabled = true;
+    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); toast(`Saved to your recipes`); render(); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; } return; }
+  if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see it.' : 'Friends can see this recipe'); return; }
+  if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
+  if(a === 'sendclose'){ sendSheet = null; render(); return; }
+  if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;
+    const {data, error} = await sb.rpc('send_recipe', {recipe: id, friends: to, msg: (($('#send-note') || {}).value || '').trim()});
+    if(error || !data){ toast("Couldn't send it. Try again."); el.disabled = false; return; }
+    sendSheet = null; render(); toast(to.length === 1 ? `Sent to ${(friendBy(to[0]) || {}).name || 'your friend'}` : `Sent to ${to.length} friends`); return; }
+  if(a === 'invaccept'){ el.disabled = true; await acceptInvite(); return; }
+  if(a === 'invno'){ forgetInvite(); inviteInfo = null; render(); return; }
   if(a === 'copyemail'){ try{ await navigator.clipboard.writeText(FB_EMAIL); toast('Email address copied'); }catch(err){ toast(FB_EMAIL); } return; }
   if(a === 'readd'){
     const iid = el.dataset.iid, nm = el.dataset.n, q = el.dataset.q;
@@ -1095,7 +1320,7 @@ document.addEventListener('click', async e => {
     chosenN++; mutate(k => addFresh(k, id, [line])); return; }
   if(a === 'markall'){ const r = R(id); if(!r) return; const prev = JSON.parse(JSON.stringify(cookOf(id).s)); const keys = stepList(D(r)).map(x => x.key);
     mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; o.s = o.s || {}; o.before = Object.assign({}, prev); keys.forEach(x => { o.s[x] = true; }); syncMade(k, id); });
-    toast('Marked complete 🎉'); return; }
+    toast('Marked complete'); return; }
   if(a === 'unmark'){ mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; if(!o.before) return; o.s = Object.assign({}, o.before); delete o.before; syncMade(k, id); }); toast('Back to where you were'); return; }
   if(a === 'again'){ mutate(k => { bankLegacy(k, id); k.progress.cook[id] = {i:{}, s:{}}; }); addSheet = {id, again: true}; render(); window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   if(a === 'recipex'){ const r = R(id); if(!r) return;
@@ -1137,6 +1362,8 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('input', e => {
   if(e.target.id === 'shopq'){ shopQ = e.target.value; render(); return; }
+  if(e.target.id === 'f-steps') stepPreview();
+  if(e.target.id === 'fsearch'){ const q = e.target.value.trim().toLowerCase(); let n = 0; document.querySelectorAll('#fgrid .tile').forEach(t => { const m = !q || t.dataset.q.includes(q); t.hidden = !m; if(m) n++; }); const no = $('#fnone'); if(no) no.hidden = !!n; return; }
   if(e.target.id === 'f-paste'){ const b = $('#f-parsebtn'); if(b) b.disabled = !e.target.value.trim(); }
   if(e.target.id === 'rsearch'){
     recQ = e.target.value; const q = e.target.value.trim().toLowerCase(); let n = 0;
@@ -1180,7 +1407,12 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('submit', async e => {
   const kind = e.target.dataset.form; if(!kind) return; e.preventDefault();
-  if(['signin','signup','forgot','newpass'].includes(kind)) return handleAuthForm(kind);
+  if(['signin','signup','forgot','newpass'].includes(kind)){ return handleAuthForm(kind); }
+  if(kind === 'frsend'){ const em = (($('#fr-email') || {}).value || '').trim(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Enter their email address'); return; }
+    const btn = e.target.querySelector('button'); btn.disabled = true;
+    const {error} = await sb.rpc('send_friend_request', {target_email: em});
+    btn.disabled = false; if(error){ toast(/slow down/.test(error.message || '') ? "That's a lot of requests today. Try again tomorrow." : "Couldn't send it. Try again."); return; }
+    addFriendOpen = false; const ei = $('#fr-email'); if(ei) ei.value = ''; toast('Request sent'); loadFriends(true); return; }
   if(kind === 'newtag'){
     const id = e.target.dataset.id, r = R(id), raw = ($('#newtag').value || '').replace(/\s+/g, ' ').trim(); if(!r || !raw) return;
     const t = raw.charAt(0).toUpperCase() + raw.slice(1), ex = allTags().find(x => x.toLowerCase() === t.toLowerCase()) || t;
@@ -1213,6 +1445,30 @@ document.addEventListener('submit', async e => {
     if(error) toast("Couldn't save your name"); else { user = data.user; toast('Saved'); render(); }
   }
 });
-window.addEventListener('hashchange', () => { addSheet = null; choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null; render(); });
+window.addEventListener('hashchange', () => { addSheet = null; addFriendOpen = false; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)) fCat = []; if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null; render(); });
 
 boot();
+
+// --- recipe page: back to top ---
+let toTop = null;
+function onNavScroll(){
+  const tb = document.getElementById('timers'); document.documentElement.style.setProperty('--navlift', (tb && tb.children.length ? tb.offsetHeight : 0) + 'px');
+  if(!toTop){ toTop = document.createElement('button'); toTop.className = 'totop'; toTop.type = 'button'; toTop.setAttribute('aria-label', 'Back to top'); toTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>'; toTop.addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'})); document.body.appendChild(toTop); }
+  toTop.classList.toggle('show', route().v === 'recipe' && window.scrollY > innerHeight * 1.5);
+}
+window.addEventListener('scroll', onNavScroll, {passive: true});
+window.addEventListener('resize', onNavScroll);
+
+async function acceptInvite(){
+  const t = inviteToken(); if(!t) return;
+  const {data, error} = await sb.rpc('accept_invite_link', {t});
+  forgetInvite(); inviteInfo = null;
+  if(error){ toast("Couldn't accept the invite. Ask for a new link."); render(); return; }
+  if(data) toast(`You and ${data} are now friends`); else toast("That's your own invite link");
+  await loadFriends(true);
+}
+function afterInviteLogin(){
+  if(!inviteToken()) return;
+  rememberInvite(inviteToken()); if(location.hash !== '#friends') location.hash = 'friends'; else render();
+}
+window.addEventListener('focus', () => { if(user && loaded) loadFriends(); });

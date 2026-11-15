@@ -35,7 +35,7 @@ export const STARTERS = [
   {section:"Roast",items:[
    {title:"Preheat",text:"Heat the oven to 400°F."},
    {title:"Prep the veggies",text:"On a parchment-lined sheet, toss the peppers, onion, mushrooms and zucchini with the olive oil, garlic powder, salt and pepper. Spread out evenly."},
-   {title:"Prep the squash",text:"Trim the ends, halve the squash lengthwise, then split each half again. Scoop out the seeds and lay the pieces flesh-side down on a second lined sheet."},
+   {title:"Prep the squash",text:"Trim ¼–½ inch off both ends, then stand the squash upright and cut it in half lengthwise. Scoop out the seeds and lay both halves flesh-side down on a second lined sheet."},
    {title:"Roast both trays",text:"Pull the veggies after about 30 minutes, once lightly golden. Roast the squash about 1 hour, until very tender. Leave the oven on.",timers:[{label:"Veggies",min:30},{label:"Squash",min:60}]}]},
   {section:"While it roasts",items:[
    {title:"Cook the noodles",text:"Boil the noodles 5–6 minutes, drain, and lay them flat on an oiled sheet so they don't stick.",timers:[{label:"Noodles",min:6}]},
@@ -60,12 +60,12 @@ export const STARTERS = [
    {title:"Dry ingredients",text:"Whisk the flour, baking powder, baking soda and salt."},
    {title:"Cream",text:"Beat the butter and sugar until fluffy, about 3 minutes. Beat in the egg and vanilla.",timers:[{label:"Creaming",min:3}]},
    {title:"Combine",text:"Add the dry ingredients and milk and mix on low. Stir out any lumps by hand and spread in the pan."},
-   {title:"Bake",text:"Bake 30–36 minutes, until a toothpick comes out clean.",timers:[{label:"Cake",min:30},{label:"+6 min",min:6}]},
+   {title:"Bake",text:"Bake 30–36 minutes, until a toothpick comes out clean. If the top browns too fast, tent it loosely with foil.",timers:[{label:"Cake",min:30},{label:"+6 min",min:6}]},
    {title:"Cool completely",text:"Let the cake cool all the way in the pan on a rack."}]},
   {section:"Frosting & cake balls",items:[
-   {title:"Frosting",text:"Beat the butter until creamy, add the confectioners' sugar, cream and vanilla, then beat on high 3 minutes."},
+   {title:"Frosting",text:"Beat the butter on medium about 2 minutes, until creamy. On low, mix in the confectioners' sugar, cream and vanilla, then beat on high 3 minutes."},
    {title:"Mix in the cake",text:"Crumble the cooled cake over the frosting and beat on low until combined."},
-   {title:"Roll",text:"Scoop 1-tablespoon portions and roll into balls."},
+   {title:"Roll",text:"Scoop 1-tablespoon portions, roll into balls and set them on a lined baking sheet."},
    {title:"Chill",text:"Chill 2 hours (or freeze 1 hour), then re-roll smooth. Keep them cold.",timers:[{label:"Fridge chill",min:120}]}]},
   {section:"Dip & decorate",items:[
    {title:"Melt the coating",text:"Microwave the candy melts in 20-second bursts, stirring between, until smooth."},

@@ -559,3 +559,15 @@ button.rtag.add{padding-right:10px}
 .fnote{font:500 13px Inter,sans-serif;color:var(--muted);margin:-6px 2px 12px}
 .fpill.on{max-width:62vw}.fpill.on{overflow:hidden;text-overflow:ellipsis}
 .fmenu .fck{padding:8px 12px}.fmenu .fck.dim:hover{background:none}
+
+/* selected category chips + consistent status colors */
+.fpill.act{border-color:#141414}
+.fcount{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#D7263D;color:#fff;font:700 12px/1 Inter,sans-serif}
+.selchips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-6px 0 10px}
+.selchip{display:inline-flex;align-items:center;gap:2px;background:#141414;color:#fff;border-radius:99px;padding:5px 4px 5px 12px;font:600 14px Inter,sans-serif}
+.selchip button{border:0;background:none;color:#fff;opacity:.75;width:22px;height:22px;border-radius:50%;font-size:11px;cursor:pointer;padding:0}
+.selchip button:hover{opacity:1;background:rgba(255,255,255,.15)}
+.clearall{border:0;background:none;color:var(--muted);font:600 13px Inter,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px 6px}
+.fnote{margin-top:-2px}
+.tile .st.new{color:var(--muted)}.tile .st.prog{color:#D7263D}.tile .st.done{color:var(--green)}
+.tile .bar i{background:#D7263D}

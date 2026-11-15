@@ -693,3 +693,13 @@ button.rtag.add{padding-right:10px}
 .btn.rmfr{flex:none;background:transparent;border:1.5px solid #555;color:#fff;padding:0 12px}
 .fbanner .ftx{min-width:0}
 .btn.rmfr{font-size:13px;height:34px}
+/* friends round 5 */
+.frhint{font:500 13px Inter,sans-serif;color:var(--muted);margin:-2px 2px 0}
+.frsheet .ordiv{margin:6px 0 4px}
+.crow{padding:0;gap:0}
+.cbkgo{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:none;padding:14px 8px 14px 16px;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.rmlink{flex:none;color:var(--muted);font:600 14px Inter,sans-serif;padding:14px 16px 14px 8px;border-left:1px solid #EEE7DD;align-self:stretch}
+.rmlink:hover{color:#B5142B}
+@media(min-width:720px){
+  .asksheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 40px));border:2px solid #141414;border-radius:20px;box-shadow:0 6px 0 #141414;padding:22px 22px 24px;margin:0}
+}

@@ -147,7 +147,7 @@ function renderAuth(){
     </div></div></div>`;
 }
 async function handleAuthForm(kind){
-  const email = ($('#au-email') || {}).value, pass = ($('#au-pass') || {}).value;
+  const email = ($('#au-email') || {}).value, pass = ($('#au-pass') || {}).value, newPass = ($('#np') || {}).value || '';
   authView.err = ''; authView.msg = ''; authView.busy = true; render();
   try{
     if(kind === 'signin'){
@@ -161,7 +161,7 @@ async function handleAuthForm(kind){
       const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname}); if(error) throw error;
       authView.msg = 'If that email has an account, a reset link is on its way.';
     } else if(kind === 'newpass'){
-      const {error} = await sb.auth.updateUser({password: $('#np').value}); if(error) throw error;
+      const {error} = await sb.auth.updateUser({password: newPass}); if(error) throw error;
       recovering = false; toast('Password updated'); if(user) startUser();
     }
   }catch(e){

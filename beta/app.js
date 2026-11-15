@@ -393,14 +393,17 @@ function renderSendSheet(r){
 }
 
 async function saveCopy(data, from){
-  const d = JSON.parse(JSON.stringify(data || {})); d.savedFrom = from;
-  const id = crypto.randomUUID();
-  if(d.photo){
-    try{ const blob = await (await fetch(d.photo)).blob(); const up = await uploadPhoto(id, blob); d.photo = up.url; d.photoPath = up.path; }
-    catch(e){ delete d.photo; delete d.photoPath; }
-  } else delete d.photoPath;
+  const d = JSON.parse(JSON.stringify(data || {})); d.savedFrom = from; delete d.photoPath;
+  const id = crypto.randomUUID(), src = d.photo;
   const {data: row, error} = await sb.from('recipes').insert({id, user_id: user.id, sort: Date.now(), data: d}).select('id, sort, data').single();
   if(error) throw error;
+  if(src) (async () => { try{
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
+    const blob = await (await fetch(src, {signal: ctl.signal})).blob(); clearTimeout(t);
+    const up = await uploadPhoto(id, blob); const nd = Object.assign({}, row.data, {photo: up.url, photoPath: up.path});
+    const {error: e2} = await sb.from('recipes').update({data: nd}).eq('id', id).eq('user_id', user.id);
+    if(!e2) row.data = nd; else sb.storage.from('photos').remove([up.path]).catch(() => {});
+  }catch(e){ console.warn('photo copy skipped', e); } })();
   recipes.push(row); return row;
 }
 async function copyInviteLink(){
@@ -1245,10 +1248,12 @@ document.addEventListener('click', async e => {
     let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
     delete fbook[id]; toast(f ? `Removed ${f.name}${gone ? ` and ${gone} recipe${gone === 1 ? '' : 's'}` : ''}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
   if(a === 'shsave' || a === 'shdismiss'){ const sh = inbox.find(x => x.id === id); if(!sh) return; el.disabled = true;
-    if(a === 'shsave'){ try{ const fr = (friends || []).find(x => x.status === 'accepted' && x.name === sh.sender_name); const row = await saveCopy(sh.data, fr ? {owner: fr.friend_id, name: sh.sender_name} : {name: sh.sender_name}); toast(`Saved ${D(row).title}`); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; return; } }
+    if(a === 'shsave'){ try{ const fr = (friends || []).find(x => x.status === 'accepted' && x.name === sh.sender_name); const row = await saveCopy(sh.data, fr ? {owner: fr.friend_id, name: sh.sender_name} : {name: sh.sender_name}); toast('Recipe saved!'); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; return; } }
     await sb.rpc('dismiss_share', {share: id}); inbox = inbox.filter(x => x.id !== id); render(); return; }
-  if(a === 'fsave'){ e.stopPropagation(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id); if(!row || !f || savedCopy(fid, id)) return; el.disabled = true;
-    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); toast(`Saved to your recipes`); render(); }catch(err){ toast("Couldn't save it. Try again."); el.disabled = false; } return; }
+  if(a === 'fsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id);
+    if(!row || !f){ toast("Couldn't save it. Refresh and try again."); return; } if(savedCopy(fid, id) || el.disabled) return;
+    const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
+    try{ await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); toast('Recipe saved!'); render(); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see it.' : 'Friends can see this recipe'); return; }
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }

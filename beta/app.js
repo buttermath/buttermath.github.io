@@ -364,17 +364,17 @@ function fGrid(fid, rows){
 }
 function fActRow(fid, rid){
   const saved = savedCopy(fid, rid);
-  return saved ? `<button class="savedlbl" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(rid)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button><button class="btn primary" data-act="openmine" data-id="${esc(saved.id)}">Open yours</button>`
+  return saved ? `<button class="savebtn done inl" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(rid)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button><button class="golink" data-act="openmine" data-id="${esc(saved.id)}">Go to your cookbook →</button>`
     : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my cookbook</button>`;
 }
-const BOOK_ART = `<div class="book" aria-hidden="true"><i class="cv"></i><i class="pl"></i><i class="pr"></i><i class="pg p1"></i><i class="pg p2"></i><i class="pg p3"></i><i class="sp"></i></div>`;
+const BOOK_ART = `<svg class="book" viewBox="0 0 160 96" aria-hidden="true"><ellipse cx="80" cy="90" rx="66" ry="4" fill="#141414" opacity=".12"/><rect x="8" y="76" width="144" height="9" rx="4" fill="#D7263D" stroke="#141414" stroke-width="2.5"/><path d="M14 76 L14 70 Q46 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M146 76 L146 70 Q114 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 73 Q47 64 78 74M142 73 Q113 64 82 74" fill="none" stroke="#CFC8B6" stroke-width="1.5"/><g fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"><path class="pg p1" d="M80 73 Q112 60 144 68"/><path class="pg p2" d="M80 73 Q112 60 144 68"/><path class="pg p3" d="M80 73 Q112 60 144 68"/></g></svg>`;
 function openMine(id){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){ location.hash = 'r-' + id; return; }
   const o = document.createElement('div'); o.className = 'bookload'; o.setAttribute('role', 'status');
   o.innerHTML = `<div class="loader">${BOOK_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
   document.body.appendChild(o);
-  setTimeout(() => { location.hash = 'r-' + id; }, 950);
-  setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 220); }, 1150);
+  setTimeout(() => { location.hash = 'r-' + id; }, 1950);
+  setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 2150);
 }
 function renderFrecipe(key){
   const [fid, rid] = key.split('~'), f = friendBy(fid), b = fbook[fid];

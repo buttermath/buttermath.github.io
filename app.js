@@ -1061,7 +1061,7 @@ function enterKitchen(){
   }, Math.max(0, 1600 - (Date.now() - t0))); };
   go();
 }
-let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null;
+let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null, adminFr = null, admSort = 'new', admQ = '';
 function renderAdmin(){
   const back = `<button class="back" data-act="go" data-h="shopping">← Shopping list</button><h2 class="ptitle">Admin</h2>`;
   if(!isAdmin) return back + `<div class="card empty">This page is only for the site administrator.</div>`;
@@ -1069,12 +1069,26 @@ function renderAdmin(){
     adminBusy = true;
     sb.rpc('admin_users').then(({data, error}) => { adminBusy = false; adminData = error ? {err: true} : (data || []); render(); });
     sb.rpc('admin_usage').then(({data, error}) => { adminUsage = error ? {err: true} : data; render(); }, () => {});
+    sb.rpc('admin_friend_counts').then(({data, error}) => { adminFr = {}; if(!error) (data || []).forEach(f => { adminFr[String(f.email || '').toLowerCase()] = f; }); render(); }, () => {});
   }
   if(!adminData) return back + `<div class="card empty">Loading…</div>`;
   if(adminData.err) return back + `<div class="card empty">Couldn't load members.</div>`;
   const fmtD = t => t ? new Date(t).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : '—';
+  const fr = u => (adminFr || {})[String(u.email || '').toLowerCase()];
+  const nm = u => String(u.name || u.email || '').toLowerCase();
+  const sorts = {new: (a, b) => new Date(b.created_at) - new Date(a.created_at), old: (a, b) => new Date(a.created_at) - new Date(b.created_at), az: (a, b) => nm(a).localeCompare(nm(b)), active: (a, b) => new Date(b.last_sign_in_at || 0) - new Date(a.last_sign_in_at || 0), friends: (a, b) => ((fr(b) || {}).friends || 0) - ((fr(a) || {}).friends || 0) || nm(a).localeCompare(nm(b))};
+  const list = adminData.slice().sort(sorts[admSort] || sorts.new);
+  setTimeout(() => { const s = document.querySelector('.ascroll'); if(!s) return; const r = [...s.querySelectorAll('.arow')].find(x => x.offsetHeight); if(r && adminData.length > 5) s.style.maxHeight = r.offsetHeight * 5 + 'px'; });
+  const using = adminFr ? adminData.filter(u => (fr(u) || {}).friends > 0).length : null;
+  const q = admQ.trim().toLowerCase();
+  const friendLine = u => { const f = fr(u); if(!adminFr) return ''; if(!f) return ' · 0 friends';
+    return ` · ${f.friends} friend${f.friends == 1 ? '' : 's'}${f.pending ? ` (${f.pending} waiting)` : ''}${f.shared ? ` · ${f.shared} recipe${f.shared == 1 ? '' : 's'} sent` : ''}`; };
   return back + renderHealth() + `<div class="card panel"><h3>Members <small>${adminData.length}</small></h3>
-    <div class="atable">${adminData.map(u => `<div class="arow"><div><b>${esc(u.name || '—')}</b><div class="muted">${esc(u.email)}</div></div><div class="muted">Joined ${fmtD(u.created_at)}<br>Last in ${fmtD(u.last_sign_in_at)}<br>${u.recipes} recipe${u.recipes == 1 ? '' : 's'}</div></div>`).join('')}</div></div>`;
+    ${using !== null ? `<div class="muted afr">${using} of ${adminData.length} member${adminData.length === 1 ? ' has' : 's have'} at least one friend.</div>` : ''}
+    <div class="atools"><input class="tin" id="adm-q" data-keep type="search" placeholder="Search members" value="${esc(admQ)}" autocomplete="off" aria-label="Search members">
+    <select class="tin" id="adm-sort" aria-label="Sort members">${[['new', 'Newest joined'], ['old', 'Oldest joined'], ['az', 'A–Z'], ['active', 'Last signed in'], ['friends', 'Most friends']].map(([k, l]) => `<option value="${k}"${admSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="atable ascroll">${list.map(u => { const s = (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase(); return `<div class="arow amem" data-s="${esc(s)}"${q && !s.includes(q) ? ' hidden' : ''}><div class="amtop"><b>${esc(u.name || '—')}</b><span class="muted">${esc(u.email)}</span></div><div class="muted">Joined ${fmtD(u.created_at)} · Last in ${fmtD(u.last_sign_in_at)}</div><div class="muted">${u.recipes} recipe${u.recipes == 1 ? '' : 's'}${friendLine(u)}</div></div>`; }).join('')}
+    <div class="muted anone"${q && !list.some(u => (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase().includes(q)) ? '' : ' hidden'}>No members match.</div></div></div>`;
 }
 function renderHealth(){
   const u = adminUsage;
@@ -1093,8 +1107,8 @@ function renderHealth(){
     ${rows.map(([n, v, max, label]) => { const p = Math.min(100, v / max * 100); return `<div class="hrow"><div class="hlbl"><span>${n}</span><span class="muted">${label}</span></div><div class="hbar ${p >= 80 ? 'red' : p >= 60 ? 'amber' : ''}"><i style="width:${Math.max(p, 1.5)}%"></i></div></div>`; }).join('')}
     <div class="muted" style="font-size:14px;margin-top:6px">Last sign-in: ${days === null ? '—' : days === 0 ? 'today' : days + ' day' + (days === 1 ? '' : 's') + ' ago'}. Supabase pauses free sites after 7 quiet days.</div>
     ${(() => { const lb = P().lastBackup, bd = lb ? Math.floor((Date.now() - lb) / 864e5) : null, late = bd === null || bd > 14; return `<div class="hbk${late ? ' late' : ''}">Last backup: ${bd === null ? 'none recorded yet' : (bd === 0 ? 'today' : bd === 1 ? 'yesterday' : bd + ' days ago') + ' (' + new Date(lb).toLocaleDateString(undefined, {month: 'long', day: 'numeric'}) + ')'}${bd !== null && bd > 14 ? '. Overdue. Download a new one.' : bd === null ? '. Download one now.' : ''}</div>`; })()}
-    <div class="row" style="margin-top:12px"><button class="btn" data-act="backup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download backup</button></div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos and friend connections to one zip file. Aim for one every two weeks.</div></div>`;
+    <div class="row" style="margin-top:12px"><button class="btn" data-act="backup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download backup</button><label class="btn" id="f-restorelbl"><input type="file" id="f-restore" accept=".zip,.json,application/zip,application/json" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>Restore from backup</label></div>
+    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div>`;
 }
 const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
@@ -1125,6 +1139,73 @@ async function downloadBackup(){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Backup downloaded${ok ? ` with ${ok} photo${ok === 1 ? '' : 's'}` : ''}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
   mutate(k => { k.progress.lastBackup = Date.now(); });
+}
+// ---- Restore from a backup (admin). Adds what is missing; never overwrites or deletes. ----
+async function unzip(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder(), out = [];
+  let e = u8.length - 22; while(e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if(e < 0) throw new Error('zip');
+  const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+  for(let i = 0; i < n; i++){
+    if(dv.getUint32(p, true) !== 0x02014b50) throw new Error('zip');
+    const method = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nl)); p += 46 + nl + el + cl;
+    if(name.endsWith('/')) continue;
+    const start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+    let data = u8.subarray(start, start + csz);
+    if(method === 8) data = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    else if(method !== 0) throw new Error('zip');
+    out.push({name, data});
+  }
+  return out;
+}
+let restoreBusy = false;
+async function readBackupFile(file){
+  if(/\.json$/i.test(file.name)) return {backup: JSON.parse(await file.text()), photos: {}};
+  const files = await unzip(await file.arrayBuffer());
+  const j = files.find(f => /(^|\/)backup\.json$/.test(f.name)); if(!j) throw new Error('no backup.json');
+  const photos = {}; files.forEach(f => { const m = f.name.match(/(?:^|\/)photos\/(.+)$/); if(m) photos[m[1]] = f.data; });
+  return {backup: JSON.parse(new TextDecoder().decode(j.data)), photos};
+}
+async function startRestore(file){
+  if(restoreBusy || !file) return; restoreBusy = true;
+  try{
+    toast('Reading the backup…');
+    let bk, photos;
+    try{ ({backup: bk, photos} = await readBackupFile(file)); }catch(e){ console.error(e); toast("That doesn't look like a Mixing Bowl backup"); return; }
+    const {data: pv, error} = await sb.rpc('admin_restore', {bk, apply: false});
+    if(error){ console.error(error); toast(/not a mixing bowl|does not look/i.test(error.message || '') ? "That doesn't look like a Mixing Bowl backup" : "Couldn't read that backup"); return; }
+    const a = pv.add, wait = pv.waiting || [];
+    const bits = [[a.recipes, 'recipe'], [a.kitchens, 'shopping list', 'shopping lists'], [a.friendships, 'friend connection'], [a.shares, 'shared recipe'], [a.invites, 'invite'], [a.notices, 'save notice']].filter(x => x[0]).map(x => `${x[0]} ${x[0] === 1 ? x[1] : (x[2] || x[1] + 's')}`);
+    const waitNote = wait.length ? `<p>${wait.length} ${wait.length === 1 ? 'person has' : 'people have'} no account yet (${wait.map(esc).join(', ')}). Their recipes stay in the backup. Run this again after they sign up.</p>` : '';
+    if(!bits.length){ if(wait.length) confirmBox('Nothing to restore yet', `<p>Everything for the people who have accounts is already here.</p>${waitNote}`, 'OK', () => {}, true); else toast('Nothing to restore. Everything in this backup is already here.'); return; }
+    const kept = pv.recipes_already_there ? `<p>${pv.recipes_already_there} recipe${pv.recipes_already_there === 1 ? ' is' : 's are'} already here and will be left alone. Nothing is overwritten or deleted.</p>` : '<p>Nothing is overwritten or deleted.</p>';
+    const addIds = new Set(pv.recipe_ids || []), owners = [...new Set((bk.recipes || []).filter(r => addIds.has(r.id)).map(r => pv.user_map[r.user_id]))];
+    const whoGets = !owners.length ? '' : owners.length === 1 && owners[0] === user.id ? ' Recipes go back into your own account only.' : ` Recipes go back to ${owners.length === 1 ? 'the account they came from' : `the ${owners.length} accounts they came from`}. Nobody else sees them.`;
+    const nm = (pv.matched || []).length;
+    confirmBox('Restore this backup?', `<p>This will add ${bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0]}.${whoGets}</p><p>${nm} member${nm === 1 ? '' : 's'} in the backup ${nm === 1 ? 'was' : 'were'} matched to ${nm === 1 ? 'an account' : 'accounts'} here by email.</p>${kept}${waitNote}`, 'Restore', () => runRestore(bk, photos, pv), true);
+  }finally{ restoreBusy = false; }
+}
+async function runRestore(bk, photos, pv){
+  if(restoreBusy) return; restoreBusy = true;
+  try{
+    const ids = new Set(pv.recipe_ids || []); let up = 0, miss = 0;
+    for(const r of bk.recipes || []){
+      const oldPath = r && r.data && r.data.photoPath; if(!ids.has(r.id) || !oldPath) continue;
+      const bytes = photos[oldPath]; if(!bytes){ miss++; continue; }
+      const owner = pv.user_map[r.user_id], path = owner && owner !== r.user_id ? oldPath.split(r.user_id).join(owner) : oldPath;
+      const type = /\.png$/i.test(path) ? 'image/png' : /\.webp$/i.test(path) ? 'image/webp' : 'image/jpeg';
+      toast(`Restoring photos… ${up + miss + 1}`);
+      const {error} = await sb.storage.from('photos').upload(path, new Blob([bytes], {type}), {contentType: type, cacheControl: '31536000', upsert: false});
+      if(error && !/exist|duplicate/i.test(error.message || '')) miss++; else up++;
+    }
+    toast('Restoring…');
+    const {data, error} = await sb.rpc('admin_restore', {bk, apply: true});
+    if(error){ console.error(error); toast("Couldn't finish the restore. Nothing was changed. Try again."); return; }
+    await loadAll(true);
+    const n = data.add;
+    toast(`Restored ${n.recipes} recipe${n.recipes === 1 ? '' : 's'}${up ? ` and ${up} photo${up === 1 ? '' : 's'}` : ''}${miss ? `. ${miss} photo${miss === 1 ? '' : 's'} weren't in the backup` : ''}.`);
+  }finally{ restoreBusy = false; }
 }
 let dlBusy = false;
 async function downloadMine(){
@@ -1382,7 +1463,7 @@ document.addEventListener('click', async e => {
   if(a === 'delopen'){ delOpen = true; render(); setTimeout(() => { const w = $('#del-word'); if(w) w.focus(); }, 50); return; }
   if(a === 'delclose'){ if(e.target.closest('[data-stop]') && el.classList.contains('modal')) return; delOpen = false; render(); return; }
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
-  if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; } location.hash = el.dataset.h; return; }
+  if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
@@ -1555,13 +1636,17 @@ function autoImport(el){
   const u = el.value.trim();
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
+document.addEventListener('input', e => { if(e.target.id !== 'adm-q') return; admQ = e.target.value; const q = admQ.trim().toLowerCase(); let n = 0;
+  document.querySelectorAll('.ascroll .arow').forEach(r => { const hit = !q || r.dataset.s.includes(q); r.hidden = !hit; if(hit) n++; }); const z = document.querySelector('.anone'); if(z) z.hidden = n > 0; });
 document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'f-link'){ e.preventDefault(); autoImport(e.target); } });
 document.addEventListener('focusout', e => { if(e.target.id === 'f-link') autoImport(e.target); });
 document.addEventListener('paste', e => {
   if(e.target.id === 'f-link' && form && form.forId === 'new') setTimeout(() => autoImport(e.target), 0);
 });
 document.addEventListener('change', async e => {
+  if(e.target.id === 'adm-sort'){ admSort = e.target.value; render(); return; }
   if(e.target.id === 'f-paste'){ autoFill(); return; }
+  if(e.target.id === 'f-restore'){ const f = e.target.files[0]; e.target.value = ''; if(f && isAdmin) startRestore(f); return; }
   if(e.target.id === 'f-ocr'){ const f = e.target.files[0]; e.target.value = ''; if(f) readPhoto(f); return; }
   if(e.target.dataset && e.target.dataset.photoFor && e.target.files[0]){
     const id = e.target.dataset.photoFor, row = R(id); if(!row) return;

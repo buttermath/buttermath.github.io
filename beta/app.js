@@ -446,6 +446,7 @@ function renderInviteCard(){
 
 let lastView = '';
 const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
+function fadeSwap(id){ document.querySelectorAll(`.factrow > *, .tile [data-act="fsave"][data-id="${id}"], .tile [data-act="funsave"][data-id="${id}"]`).forEach(x => x.classList.add('fadein')); }
 function syncFbar(fid){ const r = route(), bar = document.querySelector('.fbar2'), rows = (fbook[fid] || {}).rows || []; if(r.v === 'fbook' && bar){ const sc = document.querySelector('.selchips'), fn = document.querySelector('.fnote'); if(sc) sc.remove(); if(fn) fn.remove(); bar.outerHTML = fFilterBar(rows, fid); } if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id)); }
 const viewKey = h => h.replace(/([#"])a\d+-/g, '$1a-');
 /* Keep pictures that didn't change across a re-draw, so photos and drawings don't flash. */
@@ -1347,12 +1348,12 @@ document.addEventListener('click', async e => {
     await sb.rpc('dismiss_share', {share: id}); inbox = inbox.filter(x => x.id !== id); render(); return; }
   if(a === 'fsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id);
     if(!row || !f){ toast("Couldn't save it. Refresh and try again."); return; } if(savedCopy(fid, id) || el.disabled) return;
-    const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
-    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name});
+    const was = el.innerHTML; el.disabled = true; const slow = setTimeout(() => { el.classList.add('busy'); el.textContent = 'Saving…'; }, 500);
+    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); clearTimeout(slow);
       sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
       const ar = el.closest('.factrow'); if(ar) ar.innerHTML = fActRow(fid, id); else el.outerHTML = `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button>`;
-      syncFbar(fid);
-      toast('Recipe saved!'); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
+      syncFbar(fid); fadeSwap(id);
+      toast('Recipe saved!'); }catch(err){ clearTimeout(slow); console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
   if(a === 'openmine'){ openMine(id); return; }
   if(a === 'fsavedtog'){ fSavedOnly = !fSavedOnly; render(); return; }
   if(a === 'funsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, mine = savedCopy(fid, id); if(!mine || el.disabled) return; el.disabled = true;
@@ -1361,6 +1362,7 @@ document.addEventListener('click', async e => {
     const pp = D(mine).photoPath, pt = setTimeout(() => { if(pp) sb.storage.from('photos').remove([pp]).catch(() => {}); }, 7000);
     const ar = el.closest('.factrow'), tile = el.closest('.tile'); if(ar) ar.innerHTML = fActRow(fid, id); else if(fSavedOnly && tile && rowsSaved(fid) > 0) tile.remove(); else el.outerHTML = `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(id)}">${ICON_PLUS2}Save</button>`;
     if(fSavedOnly && !rowsSaved(fid)){ fSavedOnly = false; render(); } else syncFbar(fid);
+    fadeSwap(id);
     toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }

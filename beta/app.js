@@ -171,11 +171,12 @@ function renderLanding(){
   </section>
   <section class="lp-sec">
     <span class="lp-eyebrow">How it works</span>
-    <h2 class="lp-h2">Three steps from recipe to cart.</h2>
-    <ol class="lp-three lp-steps">
-      ${step(1, 'Save a recipe', 'Paste a link from any recipe site or social media post, add a photo of a cookbook page, or type in the recipe steps on your own.')}
-      ${step(2, 'Select your recipe', 'On a recipe page, you can select <b>Add ingredients to my list.</b> You can also add recipe ingredients while you are on the shopping list. Add multiple recipes and watch as the ingredients land on one list, sorted by aisle and are tallied up by recipes that share ingredients.')}
-      ${step(3, 'Shop, then cook', 'Check things off at the store. At home, follow the recipe step by step with your screen kept on.')}
+    <h2 class="lp-h2">Four steps from recipe to dinner.</h2>
+    <ol class="lp-three lp-four lp-steps">
+      ${step(1, 'Save a recipe', 'Paste a link from any recipe site or social media post, add a photo of a cookbook page, or type in your own.')}
+      ${step(2, 'Build your list', 'Tap <b>Add ingredients to my list</b> on a recipe, or add recipes from your shopping list. Ingredients land on one list, sorted by aisle, with shared ones added up.')}
+      ${step(3, 'Shop', 'Check things off as you go, and tap <b>Have it</b> for anything already in your kitchen.')}
+      ${step(4, 'Cook', "Follow the recipe step by step and check off each one. Tap <b>Screen on</b> so your phone doesn't go dark mid-recipe.")}
     </ol>
   </section>
   <section class="lp-sec lp-white">
@@ -183,7 +184,7 @@ function renderLanding(){
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
       ${feat('<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/>', 'Share cookbooks', "Add friends and family to see each other's cookbooks and save a copy of their best recipes to your own cookbook.")}
-      ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag recipes to sort them', 'Tag recipes however you like to filter them. By occasion (birthday, holidays), flavor (savory, sweet), or type (bread, soup, dessert).')}
+      ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few. Possibilities are endless.')}
       ${feat('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>
   </section>

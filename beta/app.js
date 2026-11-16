@@ -246,7 +246,7 @@ function addFresh(k, id, lines){
   if(k.progress.archived) delete k.progress.archived[id];
 }
 const ingListed = (id, line) => { const key = splitIngredient(line).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]) && isActive(id) && !(P().done || {})[id]; };
-let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '';
+let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null;
 const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./, ''); }catch(e){ return 'website'; } };
 const ICON_PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
 const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
@@ -556,10 +556,30 @@ function renderShopping(){
       <select id="addFor" data-keep aria-label="Which recipe is it for?"><option value="">No recipe</option>${recipes.map(r => `<option value="${esc(r.id)}">For ${esc(D(r).short || D(r).title)}</option>`).join('')}</select>
       <button class="btn primary" type="submit">+ Add</button>
       <button class="btn" type="button" data-act="addclose">Done</button>
-    </form>` : `<button class="addrow" data-act="addopen"><span>+</span> Add an item</button>`}
-  <div class="f-${f}">${secs || (Q ? '' : `<div class="card empty">${!all.length ? 'Nothing here yet. Open a recipe and tap <b>Add to shopping list</b>, or add an item above.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
+    </form>` : all.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from a recipe</button><button class="btn" data-act="addopen">+ Type an item</button></div>` : ''}
+  ${!all.length && !Q ? `<section class="shopstart"><h3>Your list is currently empty</h3><p class="muted">Add ingredients from your recipe(s) or add individual ingredients.</p>
+    <ol><li><i>1</i><span>Add a recipe from your cookbook.</span></li><li><i>2</i><span>The recipe ingredients land here, sorted by aisle and added up across recipes.</span></li><li><i>3</i><span>Check things off as you shop.</span></li></ol>
+    <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Type an item</button>'}</section>
+    <p class="muted shophint">You can also tap <b>Add ingredients to my list</b> while you are on any recipe page.</p>` : ''}
+  <div class="f-${f}">${secs || (Q || !all.length ? '' : `<div class="card empty">${f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
   ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<div class="tripfoot2"><div class="tf2-ic" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></div><div class="tf2-t"><span><b>${cnt.cart}</b> in your cart</span><span><b>${cnt.need}</b> still needed</span></div><button class="btn primary" data-act="resetshop">Finish trip</button></div>` : ''}<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>` : ''}
-  ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}`;
+  ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
+  ${pickSheet ? renderPickSheet(all) : ''}`;
+}
+const ICON_BOOKADD = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a3 3 0 0 1 3 3v12H7a3 3 0 0 1-3-3z"/><path d="M4 17a3 3 0 0 1 3-3h11"/><path d="M11 8v4M9 10h4"/></svg>';
+function renderPickSheet(all){
+  // Recipes already on the list show as "Already on your list" (open the recipe itself to add more of it).
+  const onList = id => P().active[id] === true && !(P().done || {})[id] && all.some(i => (i.recipes || []).includes(id));
+  const list = recipes.filter(r => !isArch(r.id)).slice().sort((a, b) => (onList(a.id) - onList(b.id)) || String(D(a).title || '').localeCompare(String(D(b).title || '')));
+  const n = Object.keys(pickSheet.sel).length;
+  return `<div class="sheetbg" data-act="pickclose"></div><div class="asksheet picksheet" role="dialog" aria-label="Add from a recipe">
+    <div class="pickhead"><div class="askt">Add from a recipe</div><button class="ibtn" data-act="pickclose" aria-label="Close">✕</button></div>
+    <p class="muted pickp">Pick what you're cooking. Its ingredients go on your list, grouped by aisle.</p>
+    ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your cookbook" aria-label="Search your cookbook">` : ''}
+    <div class="picklist">${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
+      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><i class="sw" style="--c:${esc(d.color || '#888')}"></i><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">Your cookbook is empty. Add a recipe first.</div>`}</div>
+    <button class="btn primary pickgo" data-act="pickgo" ${n ? '' : 'disabled'}>${n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'}</button>
+  </div>`;
 }
 
 /* ---- tags, favorites, sorting (stored per person in kitchen.progress) ---- */
@@ -650,7 +670,7 @@ function renderRecipe(id){
     <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">✕</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
     <div class="prog-line" style="margin-top:14px"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div>
     <div class="bar"><i style="width:${pct}%"></i></div>
-    <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Add to shopping list</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" aria-label="Keep screen on" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span class="wl">Screen on</span></button><button class="btn wake sendbtn" data-act="sendopen" data-id="${esc(r.id)}" aria-label="Send to a friend" title="Send to a friend">${ICON_SEND}</button></div>
+    <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Add ingredients to my list</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" aria-label="Keep screen on" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span class="wl">Screen on</span></button><button class="btn wake sendbtn" data-act="sendopen" data-id="${esc(r.id)}" aria-label="Send to a friend" title="Send to a friend">${ICON_SEND}</button></div>
   </div></div>
   <div class="layout">
     <div class="card panel ing-col"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${ings || '<div class="muted">No ingredients yet.</div>'}</div>
@@ -888,7 +908,7 @@ async function saveForm(id){
     if(!id) mutate(k => { k.progress.active[recId] = false; });
     if(addList) mutate(k => { addIngredientsTo(k, recId, ingredients); k.progress.active[recId] = true; if(k.progress.done) delete k.progress.done[recId]; });
     if(f.photoUrl) URL.revokeObjectURL(f.photoUrl);
-    form = null; toast(id ? 'Saved changes' : 'Saved! Tap Add to shopping list when you\'re ready.');
+    form = null; toast(id ? 'Saved changes' : 'Saved! Tap Add ingredients to my list when you\'re ready.');
     location.hash = 'r-' + recId; loadRecipes();
   }catch(e){
     console.error(e); f.busy = false; f.err = "Couldn't save: " + ((e && e.message) || 'check your connection and try again.'); render();
@@ -1351,7 +1371,7 @@ function renderFeedback(){
 }
 const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 16c-6-5-14-6-22-5v38c8-1 16 0 22 5c6-5 14-6 22-5V11c-8-1-16 0-22 5z"/><path d="M32 16v38"/><path d="M18 22h8M18 30h8M38 22h8" class="accl"/></svg>`, title: 'Plan your recipes', text: 'Save your recipes by pasting the URL or the recipe steps into the recipe form.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add to shopping list</b>. Add as many recipes as you like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add ingredients to my list</b>. Add as many recipes as you like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Recipes tab as your own personal cookbook to store as many recipes as you\'d like.'},
@@ -1380,7 +1400,7 @@ function renderHelp(){
     <h4 class="htips">Good to know</h4>
     <ul>
       <li><b>Add a recipe</b> from a website link, or paste the text and tap <b>Download into form</b>.</li>
-      <li>Tap <b>Add to shopping list</b> on a recipe when you plan to shop for it. Ingredients will not automatically get added to your shopping list.</li>
+      <li>Tap <b>Add ingredients to my list</b> on a recipe when you plan to shop for it. Ingredients will not automatically get added to your shopping list.</li>
       <li>Tap <b>Finish trip</b> when you're back from the store. The trip is saved to <b>Past trips</b>, and you can clear anything left on your list.</li>
       <li><b>Reorder aisles</b> with the arrows next to each section so the list matches your store.</li>
       <li><b>Archive</b> recipes you're not making right now, and unarchive them anytime.</li>
@@ -1575,6 +1595,14 @@ document.addEventListener('click', async e => {
   if(a === 'sclear'){ shopQ = ''; const qi = $('#shopq'); if(qi) qi.value = ''; render(); const q = $('#shopq'); if(q) q.focus({preventScroll:true}); return; }
   if(a === 'more'){ moreOpen = !moreOpen; render(); return; }
   if(a === 'addask'){ addSheet = {id}; render(); return; }
+  if(a === 'pickopen'){ pickSheet = {sel: {}}; ui.addOpen = false; render(); return; }
+  if(a === 'pickclose'){ pickSheet = null; render(); return; }
+  if(a === 'picktog'){ if(!pickSheet || el.disabled) return; if(pickSheet.sel[id]) delete pickSheet.sel[id]; else pickSheet.sel[id] = true;
+    const sel = !!pickSheet.sel[id], n = Object.keys(pickSheet.sel).length; el.classList.toggle('sel', sel); el.setAttribute('aria-pressed', sel); el.querySelector('.pbox').textContent = sel ? '✓' : '';
+    const go = $('.pickgo'); if(go){ go.disabled = !n; go.textContent = n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'; } return; }
+  if(a === 'pickgo'){ if(!pickSheet) return; const ids = Object.keys(pickSheet.sel).filter(x => R(x)); pickSheet = null; if(!ids.length){ render(); return; }
+    let total = 0; mutate(k => { ids.forEach(rid => { const lines = ingLines(D(R(rid))); total += lines.length; addFresh(k, rid, lines); }); });
+    toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`); return; }
   if(a === 'sheetclose'){ addSheet = null; render(); return; }
   if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`); return; }
   if(a === 'choose'){ addSheet = null; choosing = id; chosenN = 0; mutate(k => unlinkRecipe(k, id)); setTimeout(() => { const c = $('.ing-col'); if(c) window.scrollTo({top: c.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth'}); }, 30); return; }
@@ -1643,6 +1671,7 @@ function autoImport(el){
   const u = el.value.trim();
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
+document.addEventListener('input', e => { if(e.target.id !== 'pickq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pickrow').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
 document.addEventListener('input', e => { if(e.target.id !== 'adm-q') return; admQ = e.target.value; const q = admQ.trim().toLowerCase(); let n = 0;
   document.querySelectorAll('.ascroll .arow').forEach(r => { const hit = !q || r.dataset.s.includes(q); r.hidden = !hit; if(hit) n++; }); const z = document.querySelector('.anone'); if(z) z.hidden = n > 0; });
 document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'f-link'){ e.preventDefault(); autoImport(e.target); } });
@@ -1716,7 +1745,7 @@ document.addEventListener('submit', async e => {
   }
 });
 document.addEventListener('change', e => { if(!e.target.classList || !e.target.classList.contains('sendck')) return; const n = document.querySelectorAll('.sendck:checked').length, b = $('#send-go'); if(b){ b.disabled = !n; b.textContent = n ? 'Send' : 'Pick a friend to send'; } });
-window.addEventListener('hashchange', () => { addSheet = null; addFriendOpen = false; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
+window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; addFriendOpen = false; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
   if(form && !/^#(add|edit-)/.test(location.hash)){ if(form.photoUrl) URL.revokeObjectURL(form.photoUrl); form = null; } // leaving the form without saving: next visit starts fresh
   render(); });
 

@@ -695,7 +695,7 @@ function renderForm(id){
     ${r ? '' : `
     ${f.importOk ? '' : `<div class="lbl2">Or paste the recipe</div>
     <textarea class="tin" id="f-paste" data-keep rows="5" placeholder="Copy the recipe from the site and paste it here"></textarea>
-    <div class="row" style="margin-top:8px"><button class="btn primary sm" type="button" data-act="parse" id="f-parsebtn" disabled><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download into form</button><label class="btn sm" id="f-ocrlbl"><input type="file" id="f-ocr" accept="image/*" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read from a photo</label></div><div class="ocrmsg" id="f-ocrmsg">Reads the text on your device. The photo isn't uploaded.</div>`}`}
+    <div class="row" style="margin-top:8px"><label class="btn sm" id="f-ocrlbl"><input type="file" id="f-ocr" accept="image/*" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read from a photo</label></div><div class="ocrmsg" id="f-ocrmsg">Paste a recipe or add a photo and it fills in below. Photos are read on your device and not uploaded.</div>`}`}
     <fieldset class="lockable" ${!r && !f.filled ? 'disabled' : ''}>
     <div class="g4">
       <div><div class="lbl2">Serves / makes</div><input class="tin" id="f-yield" data-keep maxlength="40" value="${v('y', d.yield)}"></div>
@@ -744,9 +744,21 @@ function ocrTidy(t){
   }
   return out.join('\n');
 }
+function ocrSay(t){ const e = $('#f-ocrmsg'); if(e){ e.textContent = t; e.classList.toggle('bad', /^Couldn/.test(t)); } }
+function autoFill(){
+  // Pasting (or leaving the box) fills the form. Ask first if the person already typed ingredients or steps.
+  const pa = $('#f-paste'), raw = pa ? pa.value : '';
+  if(!raw.trim() || !form || raw === form.lastParsed) return;
+  const p = parseRecipeText(raw);
+  if(!p.ingredients){ ocrSay("Couldn't find ingredients in that text. Make sure it includes the ingredient list."); return; }
+  const ing = $('#f-ing'), st = $('#f-steps');
+  const hand = (ing && ing.value.trim() && ing.value.trim() !== (form.autoIng || '')) || (st && st.value.trim() && st.value.trim() !== (form.autoSteps || ''));
+  if(hand) confirmBox('Replace what you typed?', 'This fills the form from the pasted text and replaces the ingredients and steps you entered.', 'Replace', fillFromPaste);
+  else fillFromPaste();
+}
 async function readPhoto(file){
   if(ocrBusy || !file) return; ocrBusy = true;
-  const say = t => { const e = $('#f-ocrmsg'); if(e){ e.textContent = t; e.classList.toggle('bad', /^Couldn/.test(t)); } };
+  const say = ocrSay;
   say('Getting ready to read the photo…');
   try{
     const T = await loadTess();
@@ -763,16 +775,17 @@ async function readPhoto(file){
 document.addEventListener('paste', e => {
   if(!e.target || e.target.id !== 'f-paste') return;
   const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => /^image\//.test(x.type));
-  if(f){ e.preventDefault(); readPhoto(f); }
+  if(f){ e.preventDefault(); readPhoto(f); } else setTimeout(autoFill, 60);
 });
 function fillFromPaste(){
   const raw = ($('#f-paste') || {}).value || '';
   if(!raw.trim()){ toast('Paste the recipe first'); return; }
   const p = parseRecipeText(raw);
   const set = (id, val, force) => { const el = $(id); if(el && val && (force || !el.value.trim())) el.value = val; };
-  set('#f-title', p.title); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
+  set('#f-title', p.title, !(($('#f-title') || {}).value || '').trim() || $('#f-title').value === form.autoTitle); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
   set('#f-ing', p.ingredients, true); set('#f-steps', p.steps, true); set('#f-notes', p.notes);
   if(!p.ingredients){ toast("Couldn't find ingredients. Paste just the recipe."); return; }
+  form.lastParsed = raw; form.autoIng = p.ingredients; form.autoSteps = p.steps; form.autoTitle = p.title;
   form.filled = true; form.review = {n: stepLines(p.steps).length, url: (($('#f-link') || {}).value || '').trim(), warn: stepCheck(p.steps, false), src: 'paste'}; render();
   toast('Filled in');
 }
@@ -1548,6 +1561,7 @@ document.addEventListener('paste', e => {
   if(e.target.id === 'f-link' && form && form.forId === 'new') setTimeout(() => autoImport(e.target), 0);
 });
 document.addEventListener('change', async e => {
+  if(e.target.id === 'f-paste'){ autoFill(); return; }
   if(e.target.id === 'f-ocr'){ const f = e.target.files[0]; e.target.value = ''; if(f) readPhoto(f); return; }
   if(e.target.dataset && e.target.dataset.photoFor && e.target.files[0]){
     const id = e.target.dataset.photoFor, row = R(id); if(!row) return;

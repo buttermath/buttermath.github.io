@@ -1410,12 +1410,18 @@ function renderTerms(){
 function renderPrivacy(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Your privacy</h3>
+    <p class="muted">Last updated November 16, 2026</p>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
     <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own cookbook, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from their cookbook. Any copies a friend has saved of your recipes will stay in their cookbook, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Mixing Bowl doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
+    <p><b>Adding recipes from a link.</b> When you paste a recipe link, Mixing Bowl's server visits that page to copy the recipe into your form. The website you linked sees a visit from Mixing Bowl, not from you. The link isn't saved unless you save the recipe.</p>
+    <p><b>Adding recipes from a screenshot.</b> Screenshots are read on your own device to pull out the recipe text. The image is never uploaded or stored. The reading tool is downloaded from jsDelivr, a public code library, the first time you use it. Your screenshot is never sent there.</p>
+    <p><b>Pasted text.</b> Recipe text you paste is sorted into the form on your device. Only what you save is stored.</p>
     <p><b>Passwords stay secret.</b> Passwords are stored encrypted. No one, including the site administrator, can see yours.</p>
     <p><b>Photos.</b> Uploaded photos are stored at private, unguessable web addresses that aren't listed anywhere. Anyone with a photo's exact address could open it, so avoid uploading anything sensitive.</p>
-    <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages.</p>
-    <p><b>Leaving.</b> You can delete your account at any time from <b>Account</b>, which permanently removes your account and everything you've saved.</p>
+    <p><b>Emails.</b> Mixing Bowl only sends account emails, such as confirming your address or resetting your password. There are no newsletters or marketing emails.</p>
+    <p><b>Backups.</b> To protect against data loss, the site administrator regularly downloads a backup copy of the site's data, including member names, email addresses, recipes, shopping lists and photos. Backups are kept privately, protected by two-step sign-in, and deleted after 90 days. They're only used to restore data after a problem.</p>
+    <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages, and its fonts are loaded from Google Fonts. Account emails are sent through Supabase.</p>
+    <p><b>Leaving.</b> You can delete your account at any time from <b>Account</b>, which permanently removes your account and everything you've saved. Copies in older backups are deleted when those backups expire, within 90 days.</p>
     <p><b>Age.</b> Mixing Bowl is for ages 13 and up.</p>
     <p><b>Questions.</b> Email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a>.</p>
   </div>`;

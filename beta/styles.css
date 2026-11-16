@@ -739,6 +739,7 @@ button.savebtn.done{cursor:pointer}
 .card.hero>.body{padding:26px 28px 26px;display:flex;flex-direction:column;justify-content:center;min-width:0}
 .hero .ttlrow{flex-wrap:wrap}.hero .ttlrow h2{flex:1 1 220px}
 }
-.fadein{animation:fadein .22s ease-out}
-@keyframes fadein{from{opacity:0}to{opacity:1}}
+.fadein{animation:softin .25s ease-out}
+@keyframes softin{from{opacity:0}to{opacity:1}}
+.factrow .btn[disabled],.factrow .savebtn[disabled],.tile .savebtn[disabled]{opacity:1;cursor:default}
 @media(prefers-reduced-motion:reduce){.fadein{animation:none}}

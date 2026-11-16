@@ -695,7 +695,7 @@ function renderForm(id){
     ${r ? '' : `
     ${f.importOk ? '' : `<div class="lbl2">Or paste the recipe</div>
     <textarea class="tin" id="f-paste" data-keep rows="5" placeholder="Copy the recipe from the site and paste it here"></textarea>
-    <div class="row" style="margin-top:8px"><button class="btn primary sm" type="button" data-act="parse" id="f-parsebtn" disabled><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download into form</button></div>`}`}
+    <div class="row" style="margin-top:8px"><button class="btn primary sm" type="button" data-act="parse" id="f-parsebtn" disabled><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download into form</button><label class="btn sm" id="f-ocrlbl"><input type="file" id="f-ocr" accept="image/*" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read from a photo</label></div><div class="ocrmsg" id="f-ocrmsg">Reads the text on your device. The photo isn't uploaded.</div>`}`}
     <fieldset class="lockable" ${!r && !f.filled ? 'disabled' : ''}>
     <div class="g4">
       <div><div class="lbl2">Serves / makes</div><input class="tin" id="f-yield" data-keep maxlength="40" value="${v('y', d.yield)}"></div>
@@ -722,6 +722,49 @@ function renderForm(id){
     ${f.err ? `<div class="err">${esc(f.err)}</div>` : ''}
   </div>`;
 }
+// ---- Read a recipe from a photo (text is read on the device with Tesseract; nothing is uploaded) ----
+let tessP = null, ocrBusy = false;
+function loadTess(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  return tessP || (tessP = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload = () => res(window.Tesseract); sc.onerror = () => { tessP = null; rej(new Error('load')); }; document.head.appendChild(sc);
+  }));
+}
+const OCR_HEAD = /^(instructions?|directions?|method|steps|preparation)\s*:?$/i;
+function ocrTidy(t){
+  // Photos wrap long steps onto several lines. Put each step back on one line.
+  const out = []; let inSteps = false;
+  for(let l of String(t || '').replace(/\r/g, '').split('\n')){
+    l = l.replace(/\s+/g, ' ').trim(); if(!l) continue;
+    const head = OCR_HEAD.test(l); if(head) inSteps = true;
+    const prev = out[out.length - 1];
+    if(inSteps && !head && prev && !OCR_HEAD.test(prev) && !/^\d+\s*[.):-]\s*\S/.test(l) && !/:$/.test(l) && (!/[.!?:)]$/.test(prev) || /^[a-z]/.test(l))) out[out.length - 1] = prev + ' ' + l;
+    else out.push(l);
+  }
+  return out.join('\n');
+}
+async function readPhoto(file){
+  if(ocrBusy || !file) return; ocrBusy = true;
+  const say = t => { const e = $('#f-ocrmsg'); if(e){ e.textContent = t; e.classList.toggle('bad', /^Couldn/.test(t)); } };
+  say('Getting ready to read the photo…');
+  try{
+    const T = await loadTess();
+    const img = await shrink(file, 2200);
+    const {data} = await T.recognize(img, 'eng', {logger: m => { if(m.status === 'recognizing text') say('Reading the photo… ' + Math.round(m.progress * 100) + '%'); }});
+    const text = ocrTidy(data.text);
+    if(text.length < 25){ say("Couldn't find any text in that photo. Try a sharper, straight-on photo or a screenshot."); return; }
+    const pa = $('#f-paste'); if(pa){ pa.value = text; const b = $('#f-parsebtn'); if(b) b.disabled = false; }
+    fillFromPaste();
+    if(form && form.importOk !== true && !form.filled) say("Couldn't find ingredients in that photo. Check the text below and edit it, or try another photo.");
+  }catch(err){ console.error(err); say("Couldn't read that photo. Check your connection and try again."); }
+  finally{ ocrBusy = false; }
+}
+document.addEventListener('paste', e => {
+  if(!e.target || e.target.id !== 'f-paste') return;
+  const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => /^image\//.test(x.type));
+  if(f){ e.preventDefault(); readPhoto(f); }
+});
 function fillFromPaste(){
   const raw = ($('#f-paste') || {}).value || '';
   if(!raw.trim()){ toast('Paste the recipe first'); return; }
@@ -1505,6 +1548,7 @@ document.addEventListener('paste', e => {
   if(e.target.id === 'f-link' && form && form.forId === 'new') setTimeout(() => autoImport(e.target), 0);
 });
 document.addEventListener('change', async e => {
+  if(e.target.id === 'f-ocr'){ const f = e.target.files[0]; e.target.value = ''; if(f) readPhoto(f); return; }
   if(e.target.dataset && e.target.dataset.photoFor && e.target.files[0]){
     const id = e.target.dataset.photoFor, row = R(id); if(!row) return;
     photoBusy = id; render();

@@ -1060,6 +1060,46 @@ async function downloadBackup(){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Backup downloaded${ok ? ` with ${ok} photo${ok === 1 ? '' : 's'}` : ''}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
 }
+let dlBusy = false;
+async function downloadMine(){
+  if(dlBusy || !recipes.length) return;
+  dlBusy = true; render();
+  try{
+    const enc = new TextEncoder(), files = [], names = {}, used = new Set(); let ok = 0, bad = 0;
+    const list = recipes.map(r => r.data).filter(Boolean).slice().sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    const pics = list.filter(d => typeof d.photo === 'string' && /^https?:/.test(d.photo));
+    for(const d of pics){
+      toast(`Saving photos… ${ok + bad + 1} of ${pics.length}`);
+      try{ const r = await fetch(d.photo); if(!r.ok) throw 0;
+        const ext = ((d.photoPath || d.photo).split('?')[0].match(/\.(jpe?g|png|webp|gif|heic)$/i) || [0, 'jpg'])[1].toLowerCase();
+        let base = String(d.title || 'recipe').replace(/[^\w\- ]+/g, '').trim().slice(0, 60) || 'recipe', name = `photos/${base}.${ext}`, n = 2;
+        while(used.has(name.toLowerCase())) name = `photos/${base} ${n++}.${ext}`;
+        used.add(name.toLowerCase()); names[d.photo] = name;
+        files.push({name, data: new Uint8Array(await r.arrayBuffer())}); ok++;
+      }catch(e){ bad++; } }
+    const t = x => esc(prettyFractions(x));
+    const one = d => { let n = 0; const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
+      return `<article>${names[d.photo] ? `<img src="${esc(encodeURI(names[d.photo]))}" alt="">` : ''}<h2>${esc(d.title || 'Untitled recipe')}</h2>
+<p class="meta">${[d.yield, d.total || d.cook, d.savedFrom && d.savedFrom.name ? 'Saved from ' + kitchenOf(d.savedFrom.name) : ''].filter(Boolean).map(esc).join(' · ')}</p>
+<h3>Ingredients</h3>${(d.ingredients || []).map(g => `${g.group ? `<h4>${esc(g.group)}</h4>` : ''}<ul>${(g.items || []).map(i => `<li>${t(i)}</li>`).join('')}</ul>`).join('')}
+<h3>Steps</h3>${(d.steps || []).map(sec => `${sec.section ? `<h4>${esc(sec.section)}</h4>` : ''}<ol start="${n + 1}">${(sec.items || []).map(st => { n++; return `<li>${st.title ? `<b>${esc(st.title)}</b> ` : ''}${t(st.text)}</li>`; }).join('')}</ol>`).join('')}
+${d.notes && d.notes.length ? `<h3>Good to know</h3><ul>${d.notes.map(x => `<li>${t(x)}</li>`).join('')}</ul>` : ''}
+${srcs.length ? `<p class="src">${srcs.map((l, i) => `<a href="${esc(l.url)}">${i === 0 ? 'Original recipe' : esc(l.label || hostOf(l.url))}</a> (${esc(hostOf(l.url))})`).join(' · ')}</p>` : ''}</article>`; };
+    const day = new Date().toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'});
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Mixing Bowl recipes</title>
+<style>body{font:16px/1.55 Georgia,serif;color:#141414;max-width:720px;margin:0 auto;padding:28px 20px}h1{font-size:30px;margin:0 0 4px}h2{font-size:24px;margin:0 0 4px}h3{font:700 13px/1.2 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#D7263D;margin:22px 0 6px}h4{font-size:15px;margin:14px 0 4px}.meta,.sub,.src{color:#666;font:14px Arial,sans-serif}article{border-top:2px solid #141414;padding:26px 0;margin-top:26px}img{width:100%;max-height:340px;object-fit:cover;border-radius:10px;margin-bottom:14px}ul,ol{margin:0;padding-left:22px}li{margin:4px 0}nav ol{columns:2}a{color:#141414}@media print{article{break-before:page;border:0}nav{break-after:page}img{max-height:260px}}</style></head><body>
+<h1>My Mixing Bowl recipes</h1><p class="sub">${list.length} recipe${list.length === 1 ? '' : 's'} · downloaded ${esc(day)} from mixingbowl.github.io</p>
+<nav><ol>${list.map((d, i) => `<li><a href="#r${i}">${esc(d.title || 'Untitled recipe')}</a></li>`).join('')}</ol></nav>
+${list.map((d, i) => one(d).replace('<article>', `<article id="r${i}">`)).join('\n')}
+</body></html>`;
+    files.unshift({name: 'My recipes.html', data: enc.encode(html)}, {name: 'recipes.json', data: enc.encode(JSON.stringify({app: 'Mixing Bowl', downloaded: new Date().toISOString(), recipes: list.map(d => Object.assign({}, d, names[d.photo] ? {photoFile: names[d.photo]} : {}))}, null, 2))});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files));
+    a.download = 'mixing-bowl-recipes-' + new Date().toISOString().slice(0, 10) + '.zip';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(`Downloaded ${list.length} recipe${list.length === 1 ? '' : 's'}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
+  }catch(e){ console.error(e); toast("Couldn't create the download"); }
+  dlBusy = false; render();
+}
 function restoreTrip(at){
   const trip = (P().trips || []).find(x => x.at === at); if(!trip) return;
   const ids = trip.rids ? trip.rids : trip.rid ? [trip.rid] : recipes.filter(r => (trip.r || []).includes(D(r).short || D(r).title)).map(r => r.id);
@@ -1138,6 +1178,11 @@ function renderAccount(){
     ${since ? `<div class="lbl2">Member since</div><div>${esc(since)}</div>` : ''}
     <div class="lbl2">What's saved</div><div>${recipes.length} recipe${recipes.length === 1 ? '' : 's'} · ${allItems().length} shopping list item${allItems().length === 1 ? '' : 's'}</div>
   </div>
+  <div class="card panel" style="margin-top:16px"><h3>Download my recipes</h3>
+    <p style="margin:6px 0 12px">Get a copy of all your recipes and photos as a zip file. Open <b>My recipes.html</b> inside it to read or print them.</p>
+    <button class="btn" data-act="dlmine"${dlBusy || !recipes.length ? ' disabled' : ''}>${dlBusy ? 'Preparing…' : 'Download my recipes'}</button>
+    ${recipes.length ? '' : '<div class="muted" style="margin-top:8px">You don\'t have any recipes yet.</div>'}
+  </div>
   <div class="card panel danger" style="margin-top:16px"><h3>Delete account</h3>
     <p style="margin:6px 0 12px">Permanently deletes your account, all your recipes and photos, your shopping list and your cooking progress. This can't be undone.</p>
     <button class="btn dangerbtn" data-act="delopen">Delete my account and data</button>
@@ -1207,8 +1252,8 @@ function renderTerms(){
     <p><b>Using Mixing Bowl.</b> Mixing Bowl is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
     <p><b>Your content.</b> What you add is yours, and you're responsible for it. Only save content you have the right to use. Recipes saved from other websites still belong to their creators and are for your own personal use.</p>
     <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Mixing Bowl infringes your copyright, email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
-    <p><b>Fair use of the site.</b> Don't upload anything illegal, harmful or abusive, and don't try to break, overload or misuse the site or other people's accounts.</p>
-    <p><b>Provided as is.</b> Mixing Bowl is offered as is, without warranties of any kind. Features may change, and the site may be paused or shut down. Keep your own copy of anything important.</p>
+    <p><b>Acceptable use.</b> You agree not to upload content that is unlawful, harmful or abusive, and not to disrupt, overload or misuse the site or interfere with other members' accounts.</p>
+    <p><b>Provided as is.</b> Mixing Bowl is provided "as is" and "as available", without warranties of any kind. Features may change, and the site may be suspended or discontinued at any time. We recommend keeping your own copy of any recipes and photos you upload to the site.</p>
     <p><b>Liability.</b> To the fullest extent permitted by law, Mixing Bowl is not liable for any loss or damage resulting from your use of the site.</p>
     <p><b>Accounts.</b> You can delete your account at any time from <b>Account</b>. Accounts that break these terms may be suspended or removed.</p>
     <p><b>Changes.</b> These terms may be updated from time to time. Continuing to use Mixing Bowl means you accept the current version.</p>
@@ -1273,6 +1318,7 @@ document.addEventListener('click', async e => {
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
+  if(a === 'dlmine'){ downloadMine(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
   if(a === 'fcatpick'){ const t = el.dataset.t; fCat = fCat.includes(t) ? fCat.filter(x => x !== t) : fCat.concat(t); render(); return; }
   if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }

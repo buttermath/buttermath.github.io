@@ -745,7 +745,8 @@ async function importLink(){
     if(data && data.ingredients) p = data; else if(data && data.caption) p = {caption: data.caption}; else msg = (data && data.error) || '';
   }catch(err){ console.error(err); }
   form.importing = false;
-  if(!p){ form.importOk = false; form.importMsg = (/share that page/.test(msg) ? "This site doesn't allow imports." : msg || "Couldn't import that link.") + ' Paste it below.'; render(); return; }
+  if(!p){ form.importOk = false; let many = false; try{ many = /(^|-)recipes$|(^|-)(ideas|roundup|desserts|dinners|meals)$/i.test(new URL(url).pathname.replace(/\/+$/, '').split('/').pop()); }catch(e){}
+    form.importMsg = /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : (msg || "Couldn't import that link.") + ' Paste it below.'; render(); return; }
   if(p.caption){
     const cap = p.caption.replace(/\s*((?:10|[0-9])\uFE0F?\u20E3|\u{1F51F})\s*/gu, '\n').replace(/\n{3,}/g, '\n\n').trim();
     const pa = $('#f-paste'); if(pa) pa.value = cap;
@@ -774,7 +775,7 @@ function reviewCard(rv){ if(!rv.url && !rv.warn) return ''; return `<div class="
 function stepLines(t){ return String(t || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !/:$/.test(l)); }
 function stepCheck(t, fromSite){
   const ls = stepLines(t), long = ls.some(l => l.length > 450);
-  if(fromSite && (ls.length <= 3 || long)) return 'Some steps may be missing or combined. Check them against the original before you save.';
+  if(fromSite && (ls.length <= 3 || long)) return 'Review all recipe steps before saving to ensure no steps are missing or paraphrased.';
   if(long) return 'A few steps look combined. Give each step its own line.';
   return '';
 }

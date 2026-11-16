@@ -695,7 +695,7 @@ function renderForm(id){
     ${r ? '' : `
     ${f.importOk ? '' : `<div class="lbl2">Or paste the recipe</div>
     <textarea class="tin" id="f-paste" data-keep rows="5" placeholder="Copy the recipe from the site and paste it here"></textarea>
-    <div class="row" style="margin-top:8px"><button class="btn primary sm" type="button" data-act="parse" id="f-parsebtn" disabled><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download into form</button></div>`}`}
+    <div class="row" style="margin-top:8px"><label class="btn sm" id="f-ocrlbl"><input type="file" id="f-ocr" accept="image/*" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read from a photo</label></div><div class="ocrmsg" id="f-ocrmsg">Paste your recipe or add a screenshot to fill the recipe in below. Screenshots are read and discarded. They are never stored.</div>`}`}
     <fieldset class="lockable" ${!r && !f.filled ? 'disabled' : ''}>
     <div class="g4">
       <div><div class="lbl2">Serves / makes</div><input class="tin" id="f-yield" data-keep maxlength="40" value="${v('y', d.yield)}"></div>
@@ -722,14 +722,70 @@ function renderForm(id){
     ${f.err ? `<div class="err">${esc(f.err)}</div>` : ''}
   </div>`;
 }
+// ---- Read a recipe from a photo (text is read on the device with Tesseract; nothing is uploaded) ----
+let tessP = null, ocrBusy = false;
+function loadTess(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  return tessP || (tessP = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload = () => res(window.Tesseract); sc.onerror = () => { tessP = null; rej(new Error('load')); }; document.head.appendChild(sc);
+  }));
+}
+const OCR_HEAD = /^(instructions?|directions?|method|steps|preparation)\s*:?$/i;
+function ocrTidy(t){
+  // Photos wrap long steps onto several lines. Put each step back on one line.
+  const out = []; let inSteps = false;
+  for(let l of String(t || '').replace(/\r/g, '').split('\n')){
+    l = l.replace(/\s+/g, ' ').trim(); if(!l) continue;
+    const head = OCR_HEAD.test(l); if(head) inSteps = true;
+    const prev = out[out.length - 1];
+    if(inSteps && !head && prev && !OCR_HEAD.test(prev) && !/^\d+\s*[.):-]\s*\S/.test(l) && !/:$/.test(l) && (!/[.!?:)]$/.test(prev) || /^[a-z]/.test(l))) out[out.length - 1] = prev + ' ' + l;
+    else out.push(l);
+  }
+  return out.join('\n');
+}
+function ocrSay(t){ const e = $('#f-ocrmsg'); if(e){ e.textContent = t; e.classList.toggle('bad', /^Couldn/.test(t)); } }
+function autoFill(){
+  // Pasting (or leaving the box) fills the form. Ask first if the person already typed ingredients or steps.
+  const pa = $('#f-paste'), raw = pa ? pa.value : '';
+  if(!raw.trim() || !form || raw === form.lastParsed) return;
+  const p = parseRecipeText(raw);
+  if(!p.ingredients){ ocrSay("Couldn't find ingredients in that text. Make sure it includes the ingredient list."); return; }
+  const ing = $('#f-ing'), st = $('#f-steps');
+  const hand = (ing && ing.value.trim() && ing.value.trim() !== (form.autoIng || '')) || (st && st.value.trim() && st.value.trim() !== (form.autoSteps || ''));
+  if(hand) confirmBox('Replace what you typed?', 'This fills the form from the pasted text and replaces the ingredients and steps you entered.', 'Replace', fillFromPaste);
+  else fillFromPaste();
+}
+async function readPhoto(file){
+  if(ocrBusy || !file) return; ocrBusy = true;
+  const say = ocrSay;
+  say('Getting ready to read the photo…');
+  try{
+    const T = await loadTess();
+    const img = await shrink(file, 2200);
+    const {data} = await T.recognize(img, 'eng', {logger: m => { if(m.status === 'recognizing text') say('Reading the photo… ' + Math.round(m.progress * 100) + '%'); }});
+    const text = ocrTidy(data.text);
+    if(text.length < 25){ say("Couldn't find any text in that photo. Try a sharper, straight-on photo or a screenshot."); return; }
+    const pa = $('#f-paste'); if(pa){ pa.value = text; const b = $('#f-parsebtn'); if(b) b.disabled = false; }
+    fillFromPaste();
+    if(form && form.importOk !== true && !form.filled) say("Couldn't find ingredients in that photo. Check the text below and edit it, or try another photo.");
+  }catch(err){ console.error(err); say("Couldn't read that photo. Check your connection and try again."); }
+  finally{ ocrBusy = false; }
+}
+document.addEventListener('paste', e => {
+  if(!e.target || e.target.id !== 'f-paste') return;
+  const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => /^image\//.test(x.type));
+  if(f){ e.preventDefault(); readPhoto(f); } else setTimeout(autoFill, 60);
+});
 function fillFromPaste(){
   const raw = ($('#f-paste') || {}).value || '';
   if(!raw.trim()){ toast('Paste the recipe first'); return; }
   const p = parseRecipeText(raw);
   const set = (id, val, force) => { const el = $(id); if(el && val && (force || !el.value.trim())) el.value = val; };
-  set('#f-title', p.title); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
+  set('#f-title', p.title, !(($('#f-title') || {}).value || '').trim() || $('#f-title').value === form.autoTitle); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
   set('#f-ing', p.ingredients, true); set('#f-steps', p.steps, true); set('#f-notes', p.notes);
   if(!p.ingredients){ toast("Couldn't find ingredients. Paste just the recipe."); return; }
+  form.lastParsed = raw; form.autoIng = p.ingredients; form.autoSteps = p.steps; form.autoTitle = p.title;
   form.filled = true; form.review = {n: stepLines(p.steps).length, url: (($('#f-link') || {}).value || '').trim(), warn: stepCheck(p.steps, false), src: 'paste'}; render();
   toast('Filled in');
 }
@@ -1036,8 +1092,9 @@ function renderHealth(){
   return `<div class="card panel health"><h3>Site health</h3>${warn}
     ${rows.map(([n, v, max, label]) => { const p = Math.min(100, v / max * 100); return `<div class="hrow"><div class="hlbl"><span>${n}</span><span class="muted">${label}</span></div><div class="hbar ${p >= 80 ? 'red' : p >= 60 ? 'amber' : ''}"><i style="width:${Math.max(p, 1.5)}%"></i></div></div>`; }).join('')}
     <div class="muted" style="font-size:14px;margin-top:6px">Last sign-in: ${days === null ? '—' : days === 0 ? 'today' : days + ' day' + (days === 1 ? '' : 's') + ' ago'}. Supabase pauses free sites after 7 quiet days.</div>
+    ${(() => { const lb = P().lastBackup, bd = lb ? Math.floor((Date.now() - lb) / 864e5) : null, late = bd === null || bd > 14; return `<div class="hbk${late ? ' late' : ''}">Last backup: ${bd === null ? 'none recorded yet' : (bd === 0 ? 'today' : bd === 1 ? 'yesterday' : bd + ' days ago') + ' (' + new Date(lb).toLocaleDateString(undefined, {month: 'long', day: 'numeric'}) + ')'}${bd !== null && bd > 14 ? '. Overdue. Download a new one.' : bd === null ? '. Download one now.' : ''}</div>`; })()}
     <div class="row" style="margin-top:12px"><button class="btn" data-act="backup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download backup</button></div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress and photos to one zip file.</div></div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos and friend connections to one zip file. Aim for one every two weeks.</div></div>`;
 }
 const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
@@ -1067,6 +1124,7 @@ async function downloadBackup(){
   a.download = 'mixingbowl-backup-' + new Date().toISOString().slice(0, 10) + '.zip';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Backup downloaded${ok ? ` with ${ok} photo${ok === 1 ? '' : 's'}` : ''}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
+  mutate(k => { k.progress.lastBackup = Date.now(); });
 }
 let dlBusy = false;
 async function downloadMine(){
@@ -1503,6 +1561,8 @@ document.addEventListener('paste', e => {
   if(e.target.id === 'f-link' && form && form.forId === 'new') setTimeout(() => autoImport(e.target), 0);
 });
 document.addEventListener('change', async e => {
+  if(e.target.id === 'f-paste'){ autoFill(); return; }
+  if(e.target.id === 'f-ocr'){ const f = e.target.files[0]; e.target.value = ''; if(f) readPhoto(f); return; }
   if(e.target.dataset && e.target.dataset.photoFor && e.target.files[0]){
     const id = e.target.dataset.photoFor, row = R(id); if(!row) return;
     photoBusy = id; render();

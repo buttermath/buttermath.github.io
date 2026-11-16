@@ -518,7 +518,8 @@ function renderShopping(){
   const done = items.filter(it => shop[it.id]).length;
   const pct = items.length ? Math.round(done / items.length * 100) : 0;
   const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && (P().active[r.id] === true || all.some(i => (i.recipes || []).includes(r.id))));
-  const chips = chipRecipes.map(r => `<button class="chip ${isActive(r.id) ? 'on' : ''}" style="--c:${esc(D(r).color || '#888')}" data-act="active" data-drag="1" data-id="${esc(r.id)}"><i class="sw"></i>${esc(D(r).short || D(r).title)}</button>`).join(' ');
+  const chips = chipRecipes.map(r => { const on = isActive(r.id), nm = esc(D(r).short || D(r).title);
+    return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${esc(D(r).color || '#888')}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">✕</button></span>`; }).join(' ');
   const Q = shopQ.trim().toLowerCase();
   const pool = Q ? all.filter(i => i.name.toLowerCase().includes(Q) && (items.includes(i) || shop[i.id])) : f === 'have' ? all : items;
   const keep = i => { const st = shop[i.id] || ''; return Q || f === 'all' || (f === 'need' && !st) || (f === 'cart' && st === 'bought') || (f === 'have' && st === 'have'); };
@@ -542,7 +543,7 @@ function renderShopping(){
   });
   const secOpts = kitchen.shopping.sections;
   return `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
-    ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Done with a recipe? Drag it to Past trips.</div>` : ''}
+    ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap a recipe to hide or show its ingredients. Tap ✕ to take it off your list. Done cooking? Drag it to Past trips.</div>` : ''}
     <div class="prog-line"><b>${done} of ${items.length} sorted</b><span class="muted">${items.length - done} still remaining</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div>
   </div>
@@ -556,12 +557,12 @@ function renderShopping(){
       <select id="addFor" data-keep aria-label="Which recipe is it for?"><option value="">No recipe</option>${recipes.map(r => `<option value="${esc(r.id)}">For ${esc(D(r).short || D(r).title)}</option>`).join('')}</select>
       <button class="btn primary" type="submit">+ Add</button>
       <button class="btn" type="button" data-act="addclose">Done</button>
-    </form>` : all.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from a recipe</button><button class="btn" data-act="addopen">+ Type an item</button></div>` : ''}
-  ${!all.length && !Q ? `<section class="shopstart"><h3>Your list is currently empty</h3><p class="muted">Add ingredients from your recipe(s) or add individual ingredients.</p>
+    </form>` : items.length || chipRecipes.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from a recipe</button><button class="btn" data-act="addopen">+ Type an item</button></div>` : ''}
+  ${!items.length && !chipRecipes.length && !Q && f !== 'have' ? `<section class="shopstart"><h3>Your list is currently empty</h3><p class="muted">Add ingredients from your recipe(s) or add individual ingredients.</p>
     <ol><li><i>1</i><span>Add a recipe from your cookbook.</span></li><li><i>2</i><span>The recipe ingredients land here, sorted by aisle and added up across recipes.</span></li><li><i>3</i><span>Check things off as you shop.</span></li></ol>
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Type an item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to my list</b> while you are on any recipe page.</p>` : ''}
-  <div class="f-${f}">${secs || (Q || !all.length ? '' : `<div class="card empty">${f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
+  <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
   ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<div class="tripfoot2"><div class="tf2-ic" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></div><div class="tf2-t"><span><b>${cnt.cart}</b> in your cart</span><span><b>${cnt.need}</b> still needed</span></div><button class="btn primary" data-act="resetshop">Finish trip</button></div>` : ''}<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}`;
@@ -1562,6 +1563,9 @@ document.addEventListener('click', async e => {
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'active'){ const v = !isActive(id); mutate(k => { k.progress.active[id] = v; }); return; }
+  if(a === 'chiprm'){ const r = R(id); if(!r) return; const snap = JSON.parse(JSON.stringify({items: kitchen.shopping.items, shop: kitchen.progress.shop || {}, act: kitchen.progress.active[id]}));
+    mutate(k => { unlinkRecipe(k, id); delete k.progress.active[id]; });
+    toast(`Removed ${D(r).short || D(r).title} from your list`, () => mutate(k => { k.shopping.items = snap.items; k.progress.shop = snap.shop; if(snap.act === undefined) delete k.progress.active[id]; else k.progress.active[id] = snap.act; })); return; }
   if(a === 'relist'){ const r = R(id); mutate(k => { if(r && !k.shopping.items.some(i => (i.recipes || []).includes(id))) addIngredientsTo(k, id, D(r).ingredients || []); k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id]; }); toast('Added to your shopping list'); return; }
   if(a === 'filter'){ ui.filter = el.dataset.f; saveUi(); render(); return; }
   if(a === 'delitem'){ const it = allItems().find(i => i.id === id); mutate(k => { k.shopping.items = k.shopping.items.filter(i => i.id !== id); delete k.progress.shop[id]; }); if(it) toast('Removed ' + it.name); return; }

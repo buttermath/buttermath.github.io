@@ -749,3 +749,6 @@ button.savebtn.done{cursor:pointer}
 @media(max-width:440px){.actrow .wake .wl{display:none}.actrow .wake{padding:11px 13px}.actrow .wake .bi{margin:0}}
 .hbk{font-size:14px;margin-top:10px;font-weight:600}.hbk.late{color:#C8102E}
 .ocrmsg{margin-top:8px;font-size:13px;color:var(--muted)}.ocrmsg.bad{color:var(--accent)}
+.atools{display:flex;gap:8px;margin-top:10px}.atools #adm-q{flex:1;min-width:0}.atools select{flex:0 0 auto;width:auto;max-width:46%}
+.ascroll{max-height:620px;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding-right:4px}.afr{font-size:14px;margin-top:4px}.anone{padding:14px 0;font-size:14px}.anone[hidden]{display:none}
+.ascroll .amem{display:block;padding:9px 0}.ascroll .amem .muted{text-align:left;font-size:13px;line-height:1.45}.amtop{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}.amtop b{font-size:15px}.amtop .muted{word-break:break-all}

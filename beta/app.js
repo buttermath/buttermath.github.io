@@ -1061,7 +1061,7 @@ function enterKitchen(){
   }, Math.max(0, 1600 - (Date.now() - t0))); };
   go();
 }
-let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null;
+let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null, adminFr = null, admSort = 'new', admQ = '';
 function renderAdmin(){
   const back = `<button class="back" data-act="go" data-h="shopping">← Shopping list</button><h2 class="ptitle">Admin</h2>`;
   if(!isAdmin) return back + `<div class="card empty">This page is only for the site administrator.</div>`;
@@ -1069,12 +1069,26 @@ function renderAdmin(){
     adminBusy = true;
     sb.rpc('admin_users').then(({data, error}) => { adminBusy = false; adminData = error ? {err: true} : (data || []); render(); });
     sb.rpc('admin_usage').then(({data, error}) => { adminUsage = error ? {err: true} : data; render(); }, () => {});
+    sb.rpc('admin_friend_counts').then(({data, error}) => { adminFr = {}; if(!error) (data || []).forEach(f => { adminFr[String(f.email || '').toLowerCase()] = f; }); render(); }, () => {});
   }
   if(!adminData) return back + `<div class="card empty">Loading…</div>`;
   if(adminData.err) return back + `<div class="card empty">Couldn't load members.</div>`;
   const fmtD = t => t ? new Date(t).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : '—';
+  const fr = u => (adminFr || {})[String(u.email || '').toLowerCase()];
+  const nm = u => String(u.name || u.email || '').toLowerCase();
+  const sorts = {new: (a, b) => new Date(b.created_at) - new Date(a.created_at), old: (a, b) => new Date(a.created_at) - new Date(b.created_at), az: (a, b) => nm(a).localeCompare(nm(b)), active: (a, b) => new Date(b.last_sign_in_at || 0) - new Date(a.last_sign_in_at || 0), friends: (a, b) => ((fr(b) || {}).friends || 0) - ((fr(a) || {}).friends || 0) || nm(a).localeCompare(nm(b))};
+  const list = adminData.slice().sort(sorts[admSort] || sorts.new);
+  setTimeout(() => { const s = document.querySelector('.ascroll'); if(!s) return; const r = [...s.querySelectorAll('.arow')].find(x => x.offsetHeight); if(r && adminData.length > 5) s.style.maxHeight = r.offsetHeight * 5 + 'px'; });
+  const using = adminFr ? adminData.filter(u => (fr(u) || {}).friends > 0).length : null;
+  const q = admQ.trim().toLowerCase();
+  const friendLine = u => { const f = fr(u); if(!adminFr) return ''; if(!f) return ' · 0 friends';
+    return ` · ${f.friends} friend${f.friends == 1 ? '' : 's'}${f.pending ? ` (${f.pending} waiting)` : ''}${f.shared ? ` · ${f.shared} recipe${f.shared == 1 ? '' : 's'} sent` : ''}`; };
   return back + renderHealth() + `<div class="card panel"><h3>Members <small>${adminData.length}</small></h3>
-    <div class="atable">${adminData.map(u => `<div class="arow"><div><b>${esc(u.name || '—')}</b><div class="muted">${esc(u.email)}</div></div><div class="muted">Joined ${fmtD(u.created_at)}<br>Last in ${fmtD(u.last_sign_in_at)}<br>${u.recipes} recipe${u.recipes == 1 ? '' : 's'}</div></div>`).join('')}</div></div>`;
+    ${using !== null ? `<div class="muted afr">${using} of ${adminData.length} member${adminData.length === 1 ? ' has' : 's have'} at least one friend.</div>` : ''}
+    <div class="atools"><input class="tin" id="adm-q" data-keep type="search" placeholder="Search members" value="${esc(admQ)}" autocomplete="off" aria-label="Search members">
+    <select class="tin" id="adm-sort" aria-label="Sort members">${[['new', 'Newest joined'], ['old', 'Oldest joined'], ['az', 'A–Z'], ['active', 'Last signed in'], ['friends', 'Most friends']].map(([k, l]) => `<option value="${k}"${admSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="atable ascroll">${list.map(u => { const s = (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase(); return `<div class="arow amem" data-s="${esc(s)}"${q && !s.includes(q) ? ' hidden' : ''}><div class="amtop"><b>${esc(u.name || '—')}</b><span class="muted">${esc(u.email)}</span></div><div class="muted">Joined ${fmtD(u.created_at)} · Last in ${fmtD(u.last_sign_in_at)}</div><div class="muted">${u.recipes} recipe${u.recipes == 1 ? '' : 's'}${friendLine(u)}</div></div>`; }).join('')}
+    <div class="muted anone"${q && !list.some(u => (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase().includes(q)) ? '' : ' hidden'}>No members match.</div></div></div>`;
 }
 function renderHealth(){
   const u = adminUsage;
@@ -1446,7 +1460,7 @@ document.addEventListener('click', async e => {
   if(a === 'delopen'){ delOpen = true; render(); setTimeout(() => { const w = $('#del-word'); if(w) w.focus(); }, 50); return; }
   if(a === 'delclose'){ if(e.target.closest('[data-stop]') && el.classList.contains('modal')) return; delOpen = false; render(); return; }
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
-  if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; } location.hash = el.dataset.h; return; }
+  if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
@@ -1619,12 +1633,15 @@ function autoImport(el){
   const u = el.value.trim();
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
+document.addEventListener('input', e => { if(e.target.id !== 'adm-q') return; admQ = e.target.value; const q = admQ.trim().toLowerCase(); let n = 0;
+  document.querySelectorAll('.ascroll .arow').forEach(r => { const hit = !q || r.dataset.s.includes(q); r.hidden = !hit; if(hit) n++; }); const z = document.querySelector('.anone'); if(z) z.hidden = n > 0; });
 document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'f-link'){ e.preventDefault(); autoImport(e.target); } });
 document.addEventListener('focusout', e => { if(e.target.id === 'f-link') autoImport(e.target); });
 document.addEventListener('paste', e => {
   if(e.target.id === 'f-link' && form && form.forId === 'new') setTimeout(() => autoImport(e.target), 0);
 });
 document.addEventListener('change', async e => {
+  if(e.target.id === 'adm-sort'){ admSort = e.target.value; render(); return; }
   if(e.target.id === 'f-paste'){ autoFill(); return; }
   if(e.target.id === 'f-restore'){ const f = e.target.files[0]; e.target.value = ''; if(f && isAdmin) startRestore(f); return; }
   if(e.target.id === 'f-ocr'){ const f = e.target.files[0]; e.target.value = ''; if(f) readPhoto(f); return; }

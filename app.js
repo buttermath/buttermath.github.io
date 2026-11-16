@@ -446,9 +446,16 @@ function renderInviteCard(){
 
 let lastView = '';
 const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
+function fadeSwap(id){ document.querySelectorAll(`.factrow > *, .tile [data-act="fsave"][data-id="${id}"], .tile [data-act="funsave"][data-id="${id}"]`).forEach(x => x.classList.add('fadein')); }
 function syncFbar(fid){ const r = route(), bar = document.querySelector('.fbar2'), rows = (fbook[fid] || {}).rows || []; if(r.v === 'fbook' && bar){ const sc = document.querySelector('.selchips'), fn = document.querySelector('.fnote'); if(sc) sc.remove(); if(fn) fn.remove(); bar.outerHTML = fFilterBar(rows, fid); } if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id)); }
 const viewKey = h => h.replace(/([#"])a\d+-/g, '$1a-');
+/* Keep pictures that didn't change across a re-draw, so photos and drawings don't flash. */
 function render(){
+  const old = {}; document.querySelectorAll('#app .art').forEach(el => { const k = viewKey(el.outerHTML); (old[k] = old[k] || []).push(el); });
+  render0();
+  document.querySelectorAll('#app .art').forEach(el => { const q = old[viewKey(el.outerHTML)]; if(q && q.length){ const o = q.shift(); if(o !== el) el.replaceWith(o); } });
+}
+function render0(){
   const kept = {}; document.querySelectorAll('[data-keep]').forEach(el => { if(el.id) kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
   const icol = document.querySelector('.ing-col'), icolTop = icol ? icol.scrollTop : 0;
   const ae = document.activeElement && document.activeElement.id && document.activeElement.hasAttribute('data-keep') ? document.activeElement : null;
@@ -1060,6 +1067,46 @@ async function downloadBackup(){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Backup downloaded${ok ? ` with ${ok} photo${ok === 1 ? '' : 's'}` : ''}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
 }
+let dlBusy = false;
+async function downloadMine(){
+  if(dlBusy || !recipes.length) return;
+  dlBusy = true; render();
+  try{
+    const enc = new TextEncoder(), files = [], names = {}, used = new Set(); let ok = 0, bad = 0;
+    const list = recipes.map(r => r.data).filter(Boolean).slice().sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    const pics = list.filter(d => typeof d.photo === 'string' && /^https?:/.test(d.photo));
+    for(const d of pics){
+      toast(`Saving photos… ${ok + bad + 1} of ${pics.length}`);
+      try{ const r = await fetch(d.photo); if(!r.ok) throw 0;
+        const ext = ((d.photoPath || d.photo).split('?')[0].match(/\.(jpe?g|png|webp|gif|heic)$/i) || [0, 'jpg'])[1].toLowerCase();
+        let base = String(d.title || 'recipe').replace(/[^\w\- ]+/g, '').trim().slice(0, 60) || 'recipe', name = `photos/${base}.${ext}`, n = 2;
+        while(used.has(name.toLowerCase())) name = `photos/${base} ${n++}.${ext}`;
+        used.add(name.toLowerCase()); names[d.photo] = name;
+        files.push({name, data: new Uint8Array(await r.arrayBuffer())}); ok++;
+      }catch(e){ bad++; } }
+    const t = x => esc(prettyFractions(x));
+    const one = d => { let n = 0; const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
+      return `<article>${names[d.photo] ? `<img src="${esc(encodeURI(names[d.photo]))}" alt="">` : ''}<h2>${esc(d.title || 'Untitled recipe')}</h2>
+<p class="meta">${[d.yield, d.total || d.cook, d.savedFrom && d.savedFrom.name ? 'Saved from ' + kitchenOf(d.savedFrom.name) : ''].filter(Boolean).map(esc).join(' · ')}</p>
+<h3>Ingredients</h3>${(d.ingredients || []).map(g => `${g.group ? `<h4>${esc(g.group)}</h4>` : ''}<ul>${(g.items || []).map(i => `<li>${t(i)}</li>`).join('')}</ul>`).join('')}
+<h3>Steps</h3>${(d.steps || []).map(sec => `${sec.section ? `<h4>${esc(sec.section)}</h4>` : ''}<ol start="${n + 1}">${(sec.items || []).map(st => { n++; return `<li>${st.title ? `<b>${esc(st.title)}</b> ` : ''}${t(st.text)}</li>`; }).join('')}</ol>`).join('')}
+${d.notes && d.notes.length ? `<h3>Good to know</h3><ul>${d.notes.map(x => `<li>${t(x)}</li>`).join('')}</ul>` : ''}
+${srcs.length ? `<p class="src">${srcs.map((l, i) => `<a href="${esc(l.url)}">${i === 0 ? 'Original recipe' : esc(l.label || hostOf(l.url))}</a> (${esc(hostOf(l.url))})`).join(' · ')}</p>` : ''}</article>`; };
+    const day = new Date().toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'});
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Mixing Bowl recipes</title>
+<style>body{font:16px/1.55 Georgia,serif;color:#141414;max-width:720px;margin:0 auto;padding:28px 20px}h1{font-size:30px;margin:0 0 4px}h2{font-size:24px;margin:0 0 4px}h3{font:700 13px/1.2 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#D7263D;margin:22px 0 6px}h4{font-size:15px;margin:14px 0 4px}.meta,.sub,.src{color:#666;font:14px Arial,sans-serif}article{border-top:2px solid #141414;padding:26px 0;margin-top:26px}img{width:100%;max-height:340px;object-fit:cover;border-radius:10px;margin-bottom:14px}ul,ol{margin:0;padding-left:22px}li{margin:4px 0}nav ol{columns:2}a{color:#141414}@media print{article{break-before:page;border:0}nav{break-after:page}img{max-height:260px}}</style></head><body>
+<h1>My Mixing Bowl recipes</h1><p class="sub">${list.length} recipe${list.length === 1 ? '' : 's'} · downloaded ${esc(day)} from mixingbowl.github.io</p>
+<nav><ol>${list.map((d, i) => `<li><a href="#r${i}">${esc(d.title || 'Untitled recipe')}</a></li>`).join('')}</ol></nav>
+${list.map((d, i) => one(d).replace('<article>', `<article id="r${i}">`)).join('\n')}
+</body></html>`;
+    files.unshift({name: 'My recipes.html', data: enc.encode(html)}, {name: 'recipes.json', data: enc.encode(JSON.stringify({app: 'Mixing Bowl', downloaded: new Date().toISOString(), recipes: list.map(d => Object.assign({}, d, names[d.photo] ? {photoFile: names[d.photo]} : {}))}, null, 2))});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files));
+    a.download = 'mixing-bowl-recipes-' + new Date().toISOString().slice(0, 10) + '.zip';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(`Downloaded ${list.length} recipe${list.length === 1 ? '' : 's'}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
+  }catch(e){ console.error(e); toast("Couldn't create the download"); }
+  dlBusy = false; render();
+}
 function restoreTrip(at){
   const trip = (P().trips || []).find(x => x.at === at); if(!trip) return;
   const ids = trip.rids ? trip.rids : trip.rid ? [trip.rid] : recipes.filter(r => (trip.r || []).includes(D(r).short || D(r).title)).map(r => r.id);
@@ -1137,6 +1184,11 @@ function renderAccount(){
     <div class="lbl2">Email</div><div>${esc(user.email)}</div>
     ${since ? `<div class="lbl2">Member since</div><div>${esc(since)}</div>` : ''}
     <div class="lbl2">What's saved</div><div>${recipes.length} recipe${recipes.length === 1 ? '' : 's'} · ${allItems().length} shopping list item${allItems().length === 1 ? '' : 's'}</div>
+  </div>
+  <div class="card panel" style="margin-top:16px"><h3>Download my recipes</h3>
+    <p style="margin:6px 0 12px">Get a copy of all your recipes and photos as a zip file. Open <b>My recipes.html</b> inside it to read or print them.</p>
+    <button class="btn" data-act="dlmine"${dlBusy || !recipes.length ? ' disabled' : ''}>${dlBusy ? 'Preparing…' : 'Download my recipes'}</button>
+    ${recipes.length ? '' : '<div class="muted" style="margin-top:8px">You don\'t have any recipes yet.</div>'}
   </div>
   <div class="card panel danger" style="margin-top:16px"><h3>Delete account</h3>
     <p style="margin:6px 0 12px">Permanently deletes your account, all your recipes and photos, your shopping list and your cooking progress. This can't be undone.</p>
@@ -1273,6 +1325,7 @@ document.addEventListener('click', async e => {
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
+  if(a === 'dlmine'){ downloadMine(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
   if(a === 'fcatpick'){ const t = el.dataset.t; fCat = fCat.includes(t) ? fCat.filter(x => x !== t) : fCat.concat(t); render(); return; }
   if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }
@@ -1295,12 +1348,12 @@ document.addEventListener('click', async e => {
     await sb.rpc('dismiss_share', {share: id}); inbox = inbox.filter(x => x.id !== id); render(); return; }
   if(a === 'fsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, b = fbook[fid], f = friendBy(fid), row = b && b.rows.find(x => x.id === id);
     if(!row || !f){ toast("Couldn't save it. Refresh and try again."); return; } if(savedCopy(fid, id) || el.disabled) return;
-    const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
-    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name});
+    const was = el.innerHTML; el.disabled = true; const slow = setTimeout(() => { el.classList.add('busy'); el.textContent = 'Saving…'; }, 500);
+    try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); clearTimeout(slow);
       sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
       const ar = el.closest('.factrow'); if(ar) ar.innerHTML = fActRow(fid, id); else el.outerHTML = `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button>`;
-      syncFbar(fid);
-      toast('Recipe saved!'); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
+      syncFbar(fid); fadeSwap(id);
+      toast('Recipe saved!'); }catch(err){ clearTimeout(slow); console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
   if(a === 'openmine'){ openMine(id); return; }
   if(a === 'fsavedtog'){ fSavedOnly = !fSavedOnly; render(); return; }
   if(a === 'funsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, mine = savedCopy(fid, id); if(!mine || el.disabled) return; el.disabled = true;
@@ -1309,6 +1362,7 @@ document.addEventListener('click', async e => {
     const pp = D(mine).photoPath, pt = setTimeout(() => { if(pp) sb.storage.from('photos').remove([pp]).catch(() => {}); }, 7000);
     const ar = el.closest('.factrow'), tile = el.closest('.tile'); if(ar) ar.innerHTML = fActRow(fid, id); else if(fSavedOnly && tile && rowsSaved(fid) > 0) tile.remove(); else el.outerHTML = `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(id)}">${ICON_PLUS2}Save</button>`;
     if(fSavedOnly && !rowsSaved(fid)){ fSavedOnly = false; render(); } else syncFbar(fid);
+    fadeSwap(id);
     toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }

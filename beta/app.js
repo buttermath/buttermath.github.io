@@ -142,7 +142,7 @@ function renderLanding(){
     <div class="lp-copy">
       <span class="lp-eyebrow">Attention home cooks and bakers</span>
       <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
-      <p class="lp-lede">A free way to save recipes from any website, social media post, or screenshot. A place where you can share recipes with friends. Select what you're cooking this week and let Mixing Bowl write the shopping list. You'll never have to worry about tallying up ingredients again.</p>
+      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one cookbook. Choose what you're cooking this week, and Mixing Bowl turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
       <div class="lp-ctas"><button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button></div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Mixing Bowl shopping list showing butter added up from two recipes">

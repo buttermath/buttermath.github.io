@@ -748,3 +748,4 @@ button.savebtn.done{cursor:pointer}
 .actrow .sendbtn{padding:11px 13px}.actrow .sendbtn .bi,.actrow .sendbtn svg{margin:0;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:440px){.actrow .wake .wl{display:none}.actrow .wake{padding:11px 13px}.actrow .wake .bi{margin:0}}
 .hbk{font-size:14px;margin-top:10px;font-weight:600}.hbk.late{color:#C8102E}
+.ocrmsg{margin-top:8px;font-size:13px;color:var(--muted)}.ocrmsg.bad{color:var(--accent)}

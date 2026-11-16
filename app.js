@@ -1207,8 +1207,8 @@ function renderTerms(){
     <p><b>Using Mixing Bowl.</b> Mixing Bowl is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
     <p><b>Your content.</b> What you add is yours, and you're responsible for it. Only save content you have the right to use. Recipes saved from other websites still belong to their creators and are for your own personal use.</p>
     <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Mixing Bowl infringes your copyright, email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
-    <p><b>Fair use of the site.</b> Don't upload anything illegal, harmful or abusive, and don't try to break, overload or misuse the site or other people's accounts.</p>
-    <p><b>Provided as is.</b> Mixing Bowl is offered as is, without warranties of any kind. Features may change, and the site may be paused or shut down. Keep your own copy of anything important.</p>
+    <p><b>Acceptable use.</b> You agree not to upload content that is unlawful, harmful or abusive, and not to disrupt, overload or misuse the site or interfere with other members' accounts.</p>
+    <p><b>Provided as is.</b> Mixing Bowl is provided "as is" and "as available", without warranties of any kind. Features may change, and the site may be suspended or discontinued at any time. We recommend keeping your own copy of any recipes and photos you upload to the site.</p>
     <p><b>Liability.</b> To the fullest extent permitted by law, Mixing Bowl is not liable for any loss or damage resulting from your use of the site.</p>
     <p><b>Accounts.</b> You can delete your account at any time from <b>Account</b>. Accounts that break these terms may be suspended or removed.</p>
     <p><b>Changes.</b> These terms may be updated from time to time. Continuing to use Mixing Bowl means you accept the current version.</p>

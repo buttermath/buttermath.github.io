@@ -752,3 +752,22 @@ button.savebtn.done{cursor:pointer}
 .atools{display:flex;gap:8px;margin-top:10px}.atools #adm-q{flex:1;min-width:0}.atools select{flex:0 0 auto;width:auto;max-width:46%}
 .ascroll{max-height:620px;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding-right:4px}.afr{font-size:14px;margin-top:4px}.anone{padding:14px 0;font-size:14px}.anone[hidden]{display:none}
 .ascroll .amem{display:block;padding:9px 0}.ascroll .amem .muted{text-align:left;font-size:13px;line-height:1.45}.amtop{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}.amtop b{font-size:15px}.amtop .muted{word-break:break-all}
+.addbtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 16px}.addbtns .btn{min-height:44px;justify-content:center;width:auto;white-space:nowrap;padding:8px 10px}
+.shopstart{background:#fff;border:2px solid #141414;border-radius:24px;box-shadow:0 6px 0 #141414;padding:22px 20px;display:flex;flex-direction:column;gap:14px;margin:0 0 14px}
+.shopstart h3{margin:0;font:400 19px 'Archivo Black',sans-serif}.shopstart>p{margin:-8px 0 0;font-size:15px}
+.shopstart ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}.shopstart li{display:flex;gap:12px;align-items:flex-start;font-size:15px}
+.shopstart li i{font-style:normal;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}.shopstart li span{padding-top:3px}
+.shopstart .btn{min-height:46px;justify-content:center;width:100%}.shophint{text-align:center;font-size:14px;margin:0 0 16px}.shophint b{color:var(--ink)}
+.picksheet{max-height:85vh}.pickhead{display:flex;justify-content:space-between;align-items:center}.pickhead .ibtn{width:44px;height:44px}.pickp{margin:-6px 4px 0;font-size:14px}
+.picklist{overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:16px;min-height:60px}
+.pickrow{width:100%;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border:0;border-bottom:1px solid var(--line);background:#fff;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.pickrow:last-child{border-bottom:0}.pickrow[hidden]{display:none}.pickrow.sel{background:var(--accent-soft)}.pickrow.on{opacity:.55;cursor:default}
+.pickrow .sw{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}.pickrow .pt{flex:1;display:flex;flex-direction:column}.pickrow .pt b{font-size:15px}.pickrow .pt small{font-size:14px;color:var(--muted)}
+.pickrow .pbox{width:24px;height:24px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:1px solid #A9A9A9;background:#fff}
+.pickrow.sel .pbox,.pickrow.on .pbox{background:#141414;color:#fff;border-color:#141414}
+.pickgo{min-height:48px;justify-content:center;width:100%}.pickgo:disabled{opacity:.45}.pickempty{padding:16px;font-size:14px}
+.chipw{position:relative;display:inline-flex;align-items:center}.chipw .chip{padding-right:36px}
+.chipx{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.chipx:hover{background:rgba(0,0,0,.06);color:var(--ink)}
+.chip:not(.on){color:var(--muted)}
+.tile .st{color:var(--muted)}

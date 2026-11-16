@@ -44,8 +44,8 @@ let toastT; function toast(t, undo){ const el = $('#toast'); el.textContent = t;
    Each change is a small function. It runs on the local copy right away, and on save
    it runs again on the freshest copy from the server, so two devices don't overwrite each other. */
 let queue = [], flushing = false, flushT = null;
-function mutate(fn){
-  fn(kitchen); render();
+function mutate(fn, quiet){
+  fn(kitchen); if(!quiet) render();
   queue.push(fn); clearTimeout(flushT); flushT = setTimeout(flush, 400); setStatus('busy', 'Saving…');
 }
 async function flush(){
@@ -59,9 +59,10 @@ async function flush(){
     fns.forEach(f => f(fresh));
     const {error: e2} = await sb.from('kitchens').upsert({user_id: user.id, shopping: fresh.shopping, progress: fresh.progress, updated_at: new Date().toISOString()});
     if(e2) throw e2;
+    const same = JSON.stringify({s: fresh.shopping, p: fresh.progress}) === JSON.stringify({s: kitchen.shopping, p: kitchen.progress});
     kitchen = fresh; queue.forEach(f => f(kitchen));
     flushing = false;
-    if(queue.length) flush(); else { setStatus('ok', 'Saved'); render(); }
+    if(queue.length) flush(); else { setStatus('ok', 'Saved'); if(!same) render(); } // skip the redraw when the saved copy matches the screen (avoids a flash)
   }catch(e){
     console.error(e); queue = fns.concat(queue); flushing = false;
     setStatus('err', 'Not saved — retrying'); flushT = setTimeout(flush, 4000);
@@ -1511,7 +1512,7 @@ document.addEventListener('click', async e => {
     fadeSwap(id);
     toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }
-  if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); render(); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }
+  if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }, true); const sm = el.querySelector('small'), tg = el.querySelector('.tog'); if(sm) sm.textContent = on ? 'Only you can see this recipe' : 'Friends can see this recipe'; if(tg) tg.classList.toggle('on', on); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
   if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;

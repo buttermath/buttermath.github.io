@@ -1455,7 +1455,7 @@ document.addEventListener('click', async e => {
   if(e.target.closest('[data-stop]') && !e.target.closest('[data-act]')) return;
   const el = e.target.closest('[data-act]');
   if(menuOpen && !(el && el.dataset.act === 'menu')){ menuOpen = false; render(); }
-  if(moreOpen && !(el && el.dataset.act === 'more')){ moreOpen = false; render(); }
+  if(moreOpen && !(el && ['more','privtog'].includes(el.dataset.act))){ moreOpen = false; render(); }
   if(catOpen && !(el && ['catmenu','catpick','catclear'].includes(el.dataset.act))){ catOpen = false; render(); }
   if(sortOpen && !(el && ['sortmenu','sortpick'].includes(el.dataset.act))){ sortOpen = false; render(); }
   if(fCatOpen && !(el && ['fcatmenu','fcatpick','fcatclear'].includes(el.dataset.act))){ fCatOpen = false; render(); }
@@ -1511,7 +1511,7 @@ document.addEventListener('click', async e => {
     fadeSwap(id);
     toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }
-  if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); moreOpen = false; render(); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }
+  if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }); render(); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
   if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;

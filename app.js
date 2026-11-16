@@ -362,13 +362,27 @@ function fGrid(fid, rows){
   if(fSortK === 'az') shown = shown.slice().sort((a, b) => (a.data.title || '').localeCompare(b.data.title || ''));
   return `<div class="grid" id="fgrid">${shown.map(r => fTile(fid, r)).join('')}</div><div class="card empty" id="fnone" ${shown.length ? 'hidden' : ''}>No recipes match.</div>`;
 }
+function fActRow(fid, rid){
+  const saved = savedCopy(fid, rid);
+  return saved ? `<button class="savebtn done inl" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(rid)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button><button class="golink" data-act="openmine" data-id="${esc(saved.id)}">Go to your cookbook →</button>`
+    : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my cookbook</button>`;
+}
+const BOOK_ART = `<svg class="book" viewBox="0 0 160 96" aria-hidden="true"><ellipse cx="80" cy="90" rx="66" ry="4" fill="#141414" opacity=".12"/><rect x="8" y="76" width="144" height="9" rx="4" fill="#D7263D" stroke="#141414" stroke-width="2.5"/><path d="M14 76 L14 70 Q46 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M146 76 L146 70 Q114 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 73 Q47 64 78 74M142 73 Q113 64 82 74" fill="none" stroke="#CFC8B6" stroke-width="1.5"/><g fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"><path class="pg p1" d="M80 73 Q112 60 144 68"/><path class="pg p2" d="M80 73 Q112 60 144 68"/><path class="pg p3" d="M80 73 Q112 60 144 68"/></g></svg>`;
+function openMine(id){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ location.hash = 'r-' + id; return; }
+  const o = document.createElement('div'); o.className = 'bookload'; o.setAttribute('role', 'status');
+  o.innerHTML = `<div class="loader">${BOOK_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
+  document.body.appendChild(o);
+  setTimeout(() => { location.hash = 'r-' + id; }, 1950);
+  setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 2150);
+}
 function renderFrecipe(key){
   const [fid, rid] = key.split('~'), f = friendBy(fid), b = fbook[fid];
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div></div>`; }
   if(!b){ setTimeout(() => loadFbook(fid)); return `<div class="grid"><div class="skeleton"></div></div>`; }
   const row = (b.rows || []).find(r => r.id === rid);
   if(!f || !row) return `<button class="back" data-act="go" data-h="${f ? 'f-' + esc(fid) : 'friends'}">← ${f ? esc(kitchenOf(f.name)) : 'Friends'}</button><div class="card empty">${b.loading ? 'Loading…' : "This recipe isn't shared anymore."}</div>`;
-  const d = row.data, saved = savedCopy(fid, rid);
+  const d = row.data;
   const ings = (d.ingredients || []).map(g => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map(t => `<div class="ing ro"><span>${fmt(t)}</span></div>`).join('')).join('');
   let n = 0;
   const steps = (d.steps || []).map(sec => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map(st => { n++; return `<div class="step ro"><span class="num">${n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p></span></div>`; }).join('')).join('');
@@ -380,7 +394,7 @@ function renderFrecipe(key){
     <div class="byl">${avatar(fid, f.name, 'xs')}From ${esc(kitchenOf(f.name))}</div>
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}</div>
     ${autoTags(d).length ? `<div class="rtags">${autoTags(d).map(t => `<span class="rtag ro">${esc(t)}</span>`).join('')}</div>` : ''}
-    <div class="actrow">${saved ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(saved.id)}">${ICON_OK}Saved · Open yours</button>` : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my cookbook</button>`}</div>
+    <div class="actrow factrow">${fActRow(fid, rid)}</div>
   </div></div>
   <div class="layout">
     <div class="card panel ing-col"><div class="inghead"><h3>Ingredients</h3></div>${ings || '<div class="muted">No ingredients listed.</div>'}</div>
@@ -487,7 +501,7 @@ function renderHeader(r){
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
   $('#tabs').innerHTML = `<button class="tab ${r.v === 'shopping' ? 'on' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
-  <button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Cookbook${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
+  <button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
   <button class="tab ${['friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="friends">Friends${friendsNew() ? '<span class="rdot" aria-label="New"></span>' : ''}</button>`;
 }
 
@@ -605,7 +619,7 @@ function renderRecipes(){
 
 function renderRecipe(id){
   const r = R(id);
-  if(!r) return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button><div class="card empty">That recipe isn't here anymore.</div>`;
+  if(!r) return `<button class="back" data-act="go" data-h="recipes">← Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
   const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${fmt(t)}</span></button>`;
     if(choosing !== r.id || !splitIngredient(t).key) return row;
@@ -620,7 +634,7 @@ function renderRecipe(id){
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
   const notes = hasNotes || srcs.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${srcs.map((l, li) => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${li === 0 ? 'View original recipe' : esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
-  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn editpill" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe">${ICON_PEN}<span>Edit</span></button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu"><button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Remove recipe</button></div>` : ''}</div></div>
     ${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
@@ -658,12 +672,12 @@ function ensureForm(id){
 }
 function renderForm(id){
   const r = id ? R(id) : null;
-  if(id && !r) return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button><div class="card empty">That recipe isn't here anymore.</div>`;
+  if(id && !r) return `<button class="back" data-act="go" data-h="recipes">← Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const f = ensureForm(id), d = r ? D(r) : {};
   const link = (d.links || []).find(l => l.url) || {};
   const v = (k, dv) => esc(dv == null ? '' : dv);
   const photoNow = f.photoUrl || (!f.removePhoto && d.photo) || null;
-  return `<button class="back" data-act="go" data-h="${r ? 'r-' + esc(r.id) : 'recipes'}">← ${r ? 'Back to recipe' : 'Cookbook'}</button>
+  return `<button class="back" data-act="go" data-h="${r ? 'r-' + esc(r.id) : 'recipes'}">← ${r ? 'Back to recipe' : 'Recipes'}</button>
   <div class="card panel form">
     <h3>${r ? 'Edit recipe' : 'Add a recipe'}</h3>
     <div class="lbl2">Recipe website link <span class="hint">recommended</span></div>
@@ -1097,7 +1111,7 @@ function renderMenu(){
   </div>`;
 }
 function renderSettings(){
-  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card panel"><h3>Settings</h3>
     <div class="lbl2">Your name </div>
     <form data-form="name" class="row"><input class="tin" id="acc-name" data-keep style="flex:1;min-width:160px" value="${esc(firstName())}" maxlength="40" required><button class="btn primary" type="submit">Save name</button></form>
@@ -1118,7 +1132,7 @@ function renderSettings(){
 }
 function renderAccount(){
   const since = user.created_at ? new Date(user.created_at).toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'}) : '';
-  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card panel"><h3>Account</h3>
     <div class="lbl2">Email</div><div>${esc(user.email)}</div>
     ${since ? `<div class="lbl2">Member since</div><div>${esc(since)}</div>` : ''}
@@ -1136,7 +1150,7 @@ function renderAccount(){
 const FB_EMAIL = 'mixingbowl.admin@gmail.com';
 function renderFeedback(){
   const su = encodeURIComponent('Mixing Bowl feedback');
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Cookbook' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose fb"><h3>Send feedback</h3>
     <p>Ideas, bugs or questions? Email us at <b>${FB_EMAIL}</b>.</p>
     <div class="fbbtns"><button class="btn primary sm" data-act="copyemail">Copy email address</button></div>
@@ -1147,7 +1161,7 @@ const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add to shopping list</b>. Add as many recipes as you like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Cookbook tab as your own personal cookbook to store as many recipes as you\'d like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Recipes tab as your own personal cookbook to store as many recipes as you\'d like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your cookbook, or send them one of yours.'},
 ];
 let tourStep = -1;
@@ -1166,7 +1180,7 @@ function maybeTour(){
 }
 function renderHelp(){
   const step = (n, t) => `<div class="hstep"><div class="hnum">${n}</div><div><h4>${t.title}</h4><p>${t.text}</p></div></div>`;
-  return `<button class="back" data-act="go" data-h="recipes">← Cookbook</button>
+  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card panel prose help"><h3>How Mixing Bowl works</h3>
     <p class="muted">Plan, shop and cook from one place.</p>
     ${TOUR.map((t, i) => step(i + 1, t)).join('')}
@@ -1187,7 +1201,7 @@ function renderHelp(){
   </div>`;
 }
 function renderTerms(){
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Cookbook' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Terms of Use</h3>
     <p class="muted">Last updated November 15, 2026</p>
     <p><b>Using Mixing Bowl.</b> Mixing Bowl is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
@@ -1202,7 +1216,7 @@ function renderTerms(){
   </div>`;
 }
 function renderPrivacy(){
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Cookbook' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Your privacy</h3>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
     <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own cookbook, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from their cookbook. Any copies a friend has saved of your recipes will stay in their cookbook, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Mixing Bowl doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
@@ -1284,15 +1298,16 @@ document.addEventListener('click', async e => {
     const was = el.innerHTML; el.disabled = true; el.classList.add('busy'); el.textContent = 'Saving…';
     try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name});
       sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
-      el.outerHTML = el.dataset.open ? `<button class="btn primary grow" data-act="go" data-h="r-${esc(mine.id)}">${ICON_OK}Saved · Open yours</button>` : `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button>`;
+      const ar = el.closest('.factrow'); if(ar) ar.innerHTML = fActRow(fid, id); else el.outerHTML = `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button>`;
       syncFbar(fid);
       toast('Recipe saved!'); }catch(err){ console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
+  if(a === 'openmine'){ openMine(id); return; }
   if(a === 'fsavedtog'){ fSavedOnly = !fSavedOnly; render(); return; }
   if(a === 'funsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, mine = savedCopy(fid, id); if(!mine || el.disabled) return; el.disabled = true;
     const {error} = await sb.from('recipes').delete().eq('id', mine.id).eq('user_id', user.id); if(error){ toast("Couldn't remove it. Try again."); el.disabled = false; return; }
     recipes = recipes.filter(x => x.id !== mine.id); const before = {active: P().active[mine.id], cook: P().cook[mine.id]}; mutate(k => removeRecipeFrom(k, mine.id));
     const pp = D(mine).photoPath, pt = setTimeout(() => { if(pp) sb.storage.from('photos').remove([pp]).catch(() => {}); }, 7000);
-    const tile = el.closest('.tile'); if(fSavedOnly && tile && rowsSaved(fid) > 0) tile.remove(); else el.outerHTML = `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(id)}">${ICON_PLUS2}Save</button>`;
+    const ar = el.closest('.factrow'), tile = el.closest('.tile'); if(ar) ar.innerHTML = fActRow(fid, id); else if(fSavedOnly && tile && rowsSaved(fid) > 0) tile.remove(); else el.outerHTML = `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(id)}">${ICON_PLUS2}Save</button>`;
     if(fSavedOnly && !rowsSaved(fid)){ fSavedOnly = false; render(); } else syncFbar(fid);
     toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }

@@ -746,7 +746,7 @@ async function importLink(){
   }catch(err){ console.error(err); }
   form.importing = false;
   if(!p){ form.importOk = false; let many = false; try{ many = /(^|-)(recipes|ideas|roundup|dishes|sides|appetizers|desserts|dinners|meals|menu|menus|favorites)$/i.test(new URL(url).pathname.replace(/\/+$/, '').split('/').pop()); }catch(e){}
-    form.importMsg = /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : "Couldn't find a recipe on that page. If it lists several recipes, open the one you want and paste its link. Otherwise, paste the recipe below."; render(); return; }
+    form.importMsg = /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : "Couldn't find a recipe on that page. Please paste the recipe below. If your link lists several recipes, open the one you want and paste the direct link."; render(); return; }
   if(p.caption){
     const cap = p.caption.replace(/\s*((?:10|[0-9])\uFE0F?\u20E3|\u{1F51F})\s*/gu, '\n').replace(/\n{3,}/g, '\n\n').trim();
     const pa = $('#f-paste'); if(pa) pa.value = cap;

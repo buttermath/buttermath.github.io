@@ -448,7 +448,13 @@ let lastView = '';
 const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
 function syncFbar(fid){ const r = route(), bar = document.querySelector('.fbar2'), rows = (fbook[fid] || {}).rows || []; if(r.v === 'fbook' && bar){ const sc = document.querySelector('.selchips'), fn = document.querySelector('.fnote'); if(sc) sc.remove(); if(fn) fn.remove(); bar.outerHTML = fFilterBar(rows, fid); } if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id)); }
 const viewKey = h => h.replace(/([#"])a\d+-/g, '$1a-');
+/* Keep pictures that didn't change across a re-draw, so photos and drawings don't flash. */
 function render(){
+  const old = {}; document.querySelectorAll('#app .art').forEach(el => { const k = viewKey(el.outerHTML); (old[k] = old[k] || []).push(el); });
+  render0();
+  document.querySelectorAll('#app .art').forEach(el => { const q = old[viewKey(el.outerHTML)]; if(q && q.length){ const o = q.shift(); if(o !== el) el.replaceWith(o); } });
+}
+function render0(){
   const kept = {}; document.querySelectorAll('[data-keep]').forEach(el => { if(el.id) kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
   const icol = document.querySelector('.ing-col'), icolTop = icol ? icol.scrollTop : 0;
   const ae = document.activeElement && document.activeElement.id && document.activeElement.hasAttribute('data-keep') ? document.activeElement : null;

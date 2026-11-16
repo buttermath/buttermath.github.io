@@ -695,7 +695,7 @@ function renderForm(id){
     ${r ? '' : `
     ${f.importOk ? '' : `<div class="lbl2">Or paste the recipe</div>
     <textarea class="tin" id="f-paste" data-keep rows="5" placeholder="Copy the recipe from the site and paste it here"></textarea>
-    <div class="row" style="margin-top:8px"><label class="btn sm" id="f-ocrlbl"><input type="file" id="f-ocr" accept="image/*" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read from a photo</label></div><div class="ocrmsg" id="f-ocrmsg">Paste your recipe or add a screenshot to fill the recipe in below.</div>`}`}
+    <div class="row" style="margin-top:8px"><label class="btn sm" id="f-ocrlbl"><input type="file" id="f-ocr" accept="image/*" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read from a photo</label></div><div class="ocrmsg" id="f-ocrmsg">Paste your recipe or add a screenshot to fill the recipe in below. Screenshots are read and discarded. They are never stored.</div>`}`}
     <fieldset class="lockable" ${!r && !f.filled ? 'disabled' : ''}>
     <div class="g4">
       <div><div class="lbl2">Serves / makes</div><input class="tin" id="f-yield" data-keep maxlength="40" value="${v('y', d.yield)}"></div>

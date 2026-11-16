@@ -1180,7 +1180,10 @@ async function startRestore(file){
     const waitNote = wait.length ? `<p>${wait.length} ${wait.length === 1 ? 'person has' : 'people have'} no account yet (${wait.map(esc).join(', ')}). Their recipes stay in the backup. Run this again after they sign up.</p>` : '';
     if(!bits.length){ if(wait.length) confirmBox('Nothing to restore yet', `<p>Everything for the people who have accounts is already here.</p>${waitNote}`, 'OK', () => {}, true); else toast('Nothing to restore. Everything in this backup is already here.'); return; }
     const kept = pv.recipes_already_there ? `<p>${pv.recipes_already_there} recipe${pv.recipes_already_there === 1 ? ' is' : 's are'} already here and will be left alone. Nothing is overwritten or deleted.</p>` : '<p>Nothing is overwritten or deleted.</p>';
-    confirmBox('Restore this backup?', `<p>This will add ${bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0]} for ${(pv.matched || []).length} member${(pv.matched || []).length === 1 ? '' : 's'}, matched by email.</p>${kept}${waitNote}`, 'Restore', () => runRestore(bk, photos, pv), true);
+    const addIds = new Set(pv.recipe_ids || []), owners = [...new Set((bk.recipes || []).filter(r => addIds.has(r.id)).map(r => pv.user_map[r.user_id]))];
+    const whoGets = !owners.length ? '' : owners.length === 1 && owners[0] === user.id ? ' Recipes go back into your own account only.' : ` Recipes go back to ${owners.length === 1 ? 'the account they came from' : `the ${owners.length} accounts they came from`}. Nobody else sees them.`;
+    const nm = (pv.matched || []).length;
+    confirmBox('Restore this backup?', `<p>This will add ${bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0]}.${whoGets}</p><p>${nm} member${nm === 1 ? '' : 's'} in the backup ${nm === 1 ? 'was' : 'were'} matched to ${nm === 1 ? 'an account' : 'accounts'} here by email.</p>${kept}${waitNote}`, 'Restore', () => runRestore(bk, photos, pv), true);
   }finally{ restoreBusy = false; }
 }
 async function runRestore(bk, photos, pv){

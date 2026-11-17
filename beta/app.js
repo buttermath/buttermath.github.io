@@ -1216,7 +1216,7 @@ const AUTH_ART = `<svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg" 
   <rect x="12" y="56" width="136" height="12" rx="6" fill="#fff" stroke="#141414" stroke-width="4"/>
   <rect x="58" y="118" width="44" height="10" rx="5" fill="#D7263D" stroke="#141414" stroke-width="4"/>
   <path d="M34 78c2 10 8 19 16 25" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/>
-</svg><g fill="#D7263D" opacity=".55"><path d="M70 40l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path d="M330 52l2.4 5.6 5.6 2.4-5.6 2.4-2.4 5.6-2.4-5.6-5.6-2.4 5.6-2.4z"/><path d="M300 118l2 4.6 4.6 2-4.6 2-2 4.6-2-4.6-4.6-2 4.6-2z"/></g></svg>`;
+</svg><g><g transform="translate(70 48) rotate(-18) scale(1)"><rect x="-13" y="-8" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="-11" y="-6" width="22" height="5" rx="2" fill="#FFF3C4"/></g><g transform="translate(332 58) rotate(14) scale(0.85)"><rect x="-13" y="-8" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="-11" y="-6" width="22" height="5" rx="2" fill="#FFF3C4"/></g><g transform="translate(300 124) rotate(-8) scale(0.7)"><rect x="-13" y="-8" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="-11" y="-6" width="22" height="5" rx="2" fill="#FFF3C4"/></g></g></svg>`;
 function renderGate(){
   if(gate === 'loading') return `<div class="gate"><div class="loader" aria-label="Loading">${POT_ART.replace('viewBox="0 0 160 140"', 'viewBox="0 -50 160 190"')}
     <div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div></div>`;

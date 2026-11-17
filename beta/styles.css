@@ -836,3 +836,4 @@ button.savebtn.done{cursor:pointer}
 .tripend h3{margin:0 0 6px;font:400 17px 'Archivo Black',sans-serif}.tripend p{margin:0 auto 14px;font-size:14px;max-width:420px}.tripend p b{color:var(--ink)}
 .te-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.te-btns .btn{min-height:44px;padding:10px 18px}
 .frsent{margin:0 2px 12px;font-size:15px;line-height:1.5;color:var(--muted)}.frsent b{color:var(--ink)}.frsheet .bigbtn+.bigbtn{margin-top:8px}
+.frmore{margin:10px 2px 4px;font-size:14px;line-height:1.5;color:var(--muted);text-align:center}.frmore a,.frmore .linkbtn{display:inline;color:var(--accent);font-weight:700;padding:0;font-size:14px;text-decoration:underline}

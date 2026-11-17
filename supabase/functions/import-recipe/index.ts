@@ -72,7 +72,7 @@ function steps(ins: any): string[] {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   try {
-    const { url } = await req.json();
+    const { url, yt } = await req.json();
     if (!/^https?:\/\//i.test(url || '')) return json({ error: 'That doesn\'t look like a web link.' }, 400);
     const UAS = [
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -82,6 +82,24 @@ Deno.serve(async (req) => {
     ];
     const isIG = /(^|\.)instagram\.com$/i.test(new URL(url).hostname);
     if (isIG) UAS.unshift(UAS.splice(2, 1)[0]); // Instagram answers link-preview bots with the caption
+    // YouTube: return the video's full description (only when the app asks for it with yt: true)
+    const host = new URL(url).hostname.replace(/^(www|m|music)\./i, '').toLowerCase();
+    if (yt && (host === 'youtube.com' || host === 'youtu.be')) {
+      const u = new URL(url);
+      const id = host === 'youtu.be' ? u.pathname.slice(1).split('/')[0] : (u.searchParams.get('v') || (u.pathname.match(/^\/(?:shorts|live|embed)\/([\w-]{6,})/) || [])[1]);
+      if (!id) return json({ error: 'That doesn\'t look like a YouTube video link.' }, 200);
+      // YouTube blocks cloud servers from reading its pages, so this uses YouTube's official API.
+      // The key is the YOUTUBE_API_KEY secret in Supabase (Edge Functions > Secrets).
+      const key = Deno.env.get('YOUTUBE_API_KEY');
+      if (!key) return json({ error: 'YouTube import isn\'t set up yet.', code: 'yt_setup' }, 200);
+      const ar = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' + encodeURIComponent(id) + '&key=' + encodeURIComponent(key));
+      if (!ar.ok) return json({ error: 'YouTube wouldn\'t share that video (' + ar.status + ').' }, 200);
+      const sn = (await ar.json())?.items?.[0]?.snippet;
+      if (!sn) return json({ error: 'Couldn\'t find that YouTube video. It may be private.' }, 200);
+      const desc = String(sn.description || ''), title = String(sn.title || '');
+      if (desc.trim().length < 20) return json({ error: 'That video doesn\'t have a description to import.' }, 200);
+      return json({ caption: desc, title, source: 'youtube' });
+    }
     let res: Response | null = null;
     for (const ua of UAS) {
       res = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': ua, 'Accept': 'text/html,application/xhtml+xml,*/*' } });

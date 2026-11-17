@@ -398,13 +398,14 @@ async function inviteMail(to){
   const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
   const subj = `${me || 'A friend'} invited you to Mixing Bowl`;
   const body = `Hi!\n\nI've been saving my recipes on Mixing Bowl, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
-  return 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  const E = encodeURIComponent;
+  return {url, mail: 'mailto:' + E(to).replace(/%40/g, '@') + '?subject=' + E(subj) + '&body=' + E(body), gmail: 'https://mail.google.com/mail/?view=cm&fs=1&to=' + E(to) + '&su=' + E(subj) + '&body=' + E(body)};
 }
 function renderAddFriend(){
   if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="askt">User not found</div>
     <p class="frsent">We couldn't find a Mixing Bowl account for <b>${esc(frSent.em)}</b>. They might not be on Mixing Bowl yet.</p>
     <p class="frsent">Send them an invite. They'll get your friend request when they log in for the first time.</p>
-    ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}` : `<div class="askt">Request sent</div>
+    ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}${frSent.mail ? `<p class="frmore">Nothing happened? <a href="${esc(frSent.mail.gmail)}" target="_blank" rel="noopener">Write it in Gmail</a> or <button class="linkbtn" data-act="frcopy">copy the invite link</button></p>` : ''}` : `<div class="askt">Request sent</div>
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Mixing Bowl.</p>`}
     <button class="btn bigbtn" data-act="addfriendclose">Done</button></div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
@@ -1613,7 +1614,8 @@ document.addEventListener('click', async e => {
   if(a === 'frmailed') return;
   if(a === 'frmail'){ if(!frSent) return; el.disabled = true; const mail = await inviteMail(frSent.em); el.disabled = false;
     if(!mail){ toast("Couldn't make an invite link. Try again."); return; }
-    frSent.mail = mail; render(); location.href = mail; return; }
+    frSent.mail = mail; render(); location.href = mail.mail; return; }
+  if(a === 'frcopy'){ const u = frSent && frSent.mail && frSent.mail.url; if(!u) return; try { await navigator.clipboard.writeText(u); toast('Invite link copied. Paste it into an email or text.'); } catch(_) { prompt('Copy this invite link:', u); } return; }
   if(a === 'frlink'){ copyInviteLink(); return; }
   if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }

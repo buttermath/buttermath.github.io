@@ -1305,7 +1305,7 @@ async function downloadBackup(){
     toast(`Saving photos… ${ok + bad + 1} of ${pics.length}`);
     try{ const r = await fetch(p.url); if(!r.ok) throw 0; files.push({name, data: new Uint8Array(await r.arrayBuffer())}); ok++; }catch(e){ bad++; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files));
-  a.download = 'mixingbowl-backup-' + new Date().toISOString().slice(0, 10) + '.zip';
+  a.download = 'butter-math-backup-' + new Date().toISOString().slice(0, 10) + '.zip';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Backup downloaded${ok ? ` with ${ok} photo${ok === 1 ? '' : 's'}` : ''}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
   mutate(k => { k.progress.lastBackup = Date.now(); });
@@ -1409,9 +1409,9 @@ ${srcs.length ? `<p class="src">${srcs.map((l, i) => `<a href="${esc(l.url)}">${
 <nav><ol>${list.map((d, i) => `<li><a href="#r${i}">${esc(d.title || 'Untitled recipe')}</a></li>`).join('')}</ol></nav>
 ${list.map((d, i) => one(d).replace('<article>', `<article id="r${i}">`)).join('\n')}
 </body></html>`;
-    files.unshift({name: 'My recipes.html', data: enc.encode(html)}, {name: 'recipes.json', data: enc.encode(JSON.stringify({app: 'Mixing Bowl', downloaded: new Date().toISOString(), recipes: list.map(d => Object.assign({}, d, names[d.photo] ? {photoFile: names[d.photo]} : {}))}, null, 2))});
+    files.unshift({name: 'My recipes.html', data: enc.encode(html)}, {name: 'recipes.json', data: enc.encode(JSON.stringify({app: 'Butter Math', downloaded: new Date().toISOString(), recipes: list.map(d => Object.assign({}, d, names[d.photo] ? {photoFile: names[d.photo]} : {}))}, null, 2))});
     const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files));
-    a.download = 'mixing-bowl-recipes-' + new Date().toISOString().slice(0, 10) + '.zip';
+    a.download = 'butter-math-recipes-' + new Date().toISOString().slice(0, 10) + '.zip';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     toast(`Downloaded ${list.length} recipe${list.length === 1 ? '' : 's'}${bad ? `. ${bad} photo${bad === 1 ? '' : 's'} couldn't be saved.` : ''}`);
   }catch(e){ console.error(e); toast("Couldn't create the download"); }

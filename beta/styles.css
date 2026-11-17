@@ -840,3 +840,5 @@ button.savebtn.done{cursor:pointer}
 .pot .drops .pat{transform-box:fill-box;transform-origin:center;opacity:0;animation:bmfall 1.6s cubic-bezier(.55,0,.85,.55) infinite}.pot .drops .pat.two{animation-delay:.8s}
 @keyframes bmfall{0%{opacity:0;transform:translateY(-46px) rotate(-25deg)}12%{opacity:1}70%{opacity:1;transform:translateY(44px) rotate(8deg)}82%,100%{opacity:0;transform:translateY(58px) rotate(12deg)}}
 .pot .spoon{animation-duration:1.6s}.pot .batter{animation-duration:1.6s}
+
+.mhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.mhead h3{margin-top:4px}.mhead .mx{flex:none;width:36px;height:36px;margin:-6px -8px 0 0}

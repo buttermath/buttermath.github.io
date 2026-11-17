@@ -1510,7 +1510,7 @@ function renderAccount(){
     <input class="tin" id="del-word" autocomplete="off" style="margin-top:12px" placeholder="DELETE">
     <div class="row"><button class="btn" data-act="delclose">Cancel</button><button class="btn dangerbtn" data-act="delconfirm">Delete forever</button></div></div></div>` : ''}`;
 }
-const FB_EMAIL = 'mixingbowl.admin@gmail.com';
+const FB_EMAIL = 'hello@buttermath.app';
 function renderFeedback(){
   const su = encodeURIComponent('Butter Math feedback');
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
@@ -1569,13 +1569,13 @@ function renderTerms(){
     <p class="muted">Last updated November 15, 2026</p>
     <p><b>Using Butter Math.</b> Butter Math is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
     <p><b>Your content.</b> What you add is yours, and you're responsible for it. Only save content you have the right to use. Recipes saved from other websites still belong to their creators and are for your own personal use.</p>
-    <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Butter Math infringes your copyright, email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
+    <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Butter Math infringes your copyright, email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
     <p><b>Acceptable use.</b> You agree not to upload content that is unlawful, harmful or abusive, and not to disrupt, overload or misuse the site or interfere with other members' accounts.</p>
     <p><b>Provided as is.</b> Butter Math is provided "as is" and "as available", without warranties of any kind. Features may change, and the site may be suspended or discontinued at any time. We recommend keeping your own copy of any recipes and photos you upload to the site.</p>
     <p><b>Liability.</b> To the fullest extent permitted by law, Butter Math is not liable for any loss or damage resulting from your use of the site.</p>
     <p><b>Accounts.</b> You can delete your account at any time from <b>Account</b>. Accounts that break these terms may be suspended or removed.</p>
     <p><b>Changes.</b> These terms may be updated from time to time. Continuing to use Butter Math means you accept the current version.</p>
-    <p><b>Contact.</b> Email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a>.</p>
+    <p><b>Contact.</b> Email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a>.</p>
   </div>`;
 }
 function renderPrivacy(){
@@ -1594,7 +1594,7 @@ function renderPrivacy(){
     <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages, and its fonts are loaded from Google Fonts. Account emails are sent through Supabase.</p>
     <p><b>Leaving.</b> You can delete your account at any time from <b>Account</b>, which permanently removes your account and everything you've saved. Copies in older backups are deleted when those backups expire, within 90 days.</p>
     <p><b>Age.</b> Butter Math is for ages 13 and up.</p>
-    <p><b>Questions.</b> Email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a>.</p>
+    <p><b>Questions.</b> Email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a>.</p>
   </div>`;
 }
 

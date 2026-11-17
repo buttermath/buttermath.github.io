@@ -146,11 +146,11 @@ function renderLanding(){
     <div class="lp-copy">
       <span class="lp-eyebrow">Attention home cooks and bakers</span>
       <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
-      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one cookbook. Choose what you're cooking this week, and Mixing Bowl turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
+      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one cookbook. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
       <div class="lp-ctas"><button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button></div>
     </div>
-    <div class="lp-phone" role="img" aria-label="A Mixing Bowl shopping list showing butter added up from two recipes">
-      <div class="lp-ph-top"><span class="lp-ph-logo">Mixing <span>Bowl</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
+    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs and lemons added up from two recipes">
+      <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>
         <div class="lp-chips"><span class="lp-chip" style="--c:#0072B2;background:#E6F1F8"><i></i>Blueberry pie</span><span class="lp-chip" style="--c:#D55E00;background:#FBEFE6"><i></i>Lemon bars</span></div>
@@ -168,8 +168,8 @@ function renderLanding(){
     <span class="lp-eyebrow">Maybe this sounds familiar</span>
     <h2 class="lp-h2">Your recipes are stored everywhere. Your grocery list is in a notes app or written on scratch paper.</h2>
     <div class="lp-three">
-      ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Mixing Bowl keeps them all in one cookbook.")}
-      ${card('The butter math', 'Two recipes, two amounts of butter. Mixing Bowl adds them up so you buy enough the first time.')}
+      ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Butter Math keeps them all in one cookbook.")}
+      ${card('The butter math', 'Two recipes both call for butter, eggs and lemons. Butter Math adds up every ingredient so you buy enough the first time.')}
       ${card('One shopping trip', 'Your list is sorted by grocery aisle and you can keep track as you shop for multiple recipes. Check things off as you shop and nothing gets left on the shelf.')}
     </div>
   </section>
@@ -211,8 +211,8 @@ function renderAuth(){
   }
   const inv = inviteToken() && inviteInfo && inviteInfo.name && inviteInfo.name !== '__self' ? inviteInfo.name : '';
   const gift = !inv && giftToken() && giftInfo && giftInfo.name && giftInfo.name !== '__self' ? giftInfo : null;
-  const title = inv && m === 'signup' ? `Join ${esc(inv)} on Mixing Bowl` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
-  return `<div class="authwrap">${inv || gift ? '' : '<button class="linkbtn lp-back" data-act="landing">← About Mixing Bowl</button>'}
+  const title = inv && m === 'signup' ? `Join ${esc(inv)} on Butter Math` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Butter Math!</span>';
+  return `<div class="authwrap">${inv || gift ? '' : '<button class="linkbtn lp-back" data-act="landing">← About Butter Math</button>'}
     <div class="authhero">${AUTH_ART}</div>
     <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : gift && m !== 'forgot' ? `<div class="invhead">${avatar(giftInfo.t, gift.name)}<span>${esc(gift.name)} sent you ${esc(gift.title || 'a recipe')}</span></div>` : ''}<h2>${title}</h2>
     <p class="muted" style="margin:4px 0 14px">${gift && m === 'signup' ? `Create a free account and ${esc(gift.title || 'the recipe')} will be waiting for you.` : gift && m === 'signin' ? `Sign in to get ${esc(gift.title || 'the recipe')}.` : inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
@@ -225,7 +225,7 @@ function renderAuth(){
     ${m === 'signup' ? `<div class="fine">By creating an account, you confirm you're 13 or older and agree to the <a href="#terms">Terms</a> and <a href="#privacy">Privacy</a> notice.</div>` : ''}
     ${v.err ? `<div class="err">${esc(v.err)}</div>` : ''}${v.msg ? `<div class="ok">${esc(v.msg)}</div>` : ''}
     <div class="authlinks">
-      ${m !== 'signin' ? `<button class="linkbtn" data-act="authmode" data-m="signin">${inv ? 'Already on Mixing Bowl? Sign in' : 'I have an account — sign in'}</button>` : `<button class="linkbtn" data-act="authmode" data-m="signup">New here? Create an account</button><button class="linkbtn" data-act="authmode" data-m="forgot">Forgot password?</button>`}
+      ${m !== 'signin' ? `<button class="linkbtn" data-act="authmode" data-m="signin">${inv ? 'Already on Butter Math? Sign in' : 'I have an account — sign in'}</button>` : `<button class="linkbtn" data-act="authmode" data-m="signup">New here? Create an account</button><button class="linkbtn" data-act="authmode" data-m="forgot">Forgot password?</button>`}
     </div></div></div>`;
 }
 async function handleAuthForm(kind){
@@ -403,17 +403,17 @@ function renderFriends(){
 async function inviteMail(to){
   const {data, error} = await sb.rpc('create_invite_link'); if(error || !data) return null;
   const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
-  const subj = `${me || 'A friend'} invited you to Mixing Bowl`;
-  const body = `Hi!\n\nI've been saving my recipes on Mixing Bowl, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
+  const subj = `${me || 'A friend'} invited you to Butter Math`;
+  const body = `Hi!\n\nI've been saving my recipes on Butter Math, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
   const E = encodeURIComponent;
   return {url, mail: 'mailto:' + E(to).replace(/%40/g, '@') + '?subject=' + E(subj) + '&body=' + E(body), gmail: 'https://mail.google.com/mail/?view=cm&fs=1&to=' + E(to) + '&su=' + E(subj) + '&body=' + E(body)};
 }
 function renderAddFriend(){
   if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="askt">User not found</div>
-    <p class="frsent">We couldn't find a Mixing Bowl account for <b>${esc(frSent.em)}</b>. They might not be on Mixing Bowl yet.</p>
+    <p class="frsent">We couldn't find a Butter Math account for <b>${esc(frSent.em)}</b>. They might not be on Butter Math yet.</p>
     <p class="frsent">Send them an invite and they'll receive your friend request when they log in for the first time.</p>
     ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}${frSent.mail ? `<p class="frmore">If this did not open an email, <button class="linkbtn" data-act="frcopy">copy the invite link</button> so you can email or text the sign up link to a friend.</p>` : ''}` : `<div class="askt">Request sent</div>
-    <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Mixing Bowl.</p>`}
+    <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Butter Math.</p>`}
     <button class="btn bigbtn" data-act="addfriendclose">Done</button></div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
     <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
@@ -503,7 +503,7 @@ function renderSendSheet(r){
     : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add friend</button>`}
     <div class="ordiv">or</div>
     <button class="btn outline bigbtn" data-act="reclink" data-id="${esc(r.id)}">${ICON_LINK}Copy link to this recipe</button>
-    <div class="frhint">For friends who aren't on Mixing Bowl yet. They'll get the recipe when they sign up or log in.</div></div>`;
+    <div class="frhint">For friends who aren't on Butter Math yet. They'll get the recipe when they sign up or log in.</div></div>`;
 }
 
 async function saveCopy(data, from){
@@ -525,8 +525,8 @@ async function copyInviteLink(){
   const {data, error} = await sb.rpc('create_invite_link');
   if(error || !data){ toast("Couldn't make a link. Try again."); return; }
   const url = location.origin + location.pathname + '#invite-' + data;
-  const text = `${firstName() || 'I'} invited you to share recipes on Mixing Bowl`;
-  if(navigator.share && matchMedia('(pointer: coarse)').matches){ try{ await navigator.share({title: 'Mixing Bowl', text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
+  const text = `${firstName() || 'I'} invited you to share recipes on Butter Math`;
+  if(navigator.share && matchMedia('(pointer: coarse)').matches){ try{ await navigator.share({title: 'Butter Math', text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
   try{ await navigator.clipboard.writeText(url); toast('Invite link copied. Send it to your friend.'); }catch(e){ prompt('Copy this invite link', url); }
 }
 // invite links: remember the token through sign-up / email confirmation
@@ -629,7 +629,7 @@ function render0(){
 function renderHeader(r){
   const n = firstName();
   const kn = user && n && !recovering ? `<span class="kname">${esc(n)}'s Kitchen</span>` : '';
-  return `<div class="bwrap"><h1>Mixing <span>Bowl</span></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
+  return `<div class="bwrap"><h1>Butter <span>Math</span></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
 }
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
@@ -969,7 +969,7 @@ async function importLink(){
   }catch(err){ console.error(err); }
   form.importing = false;
   if(!p){ form.importOk = false; let many = false; try{ many = /(^|-)(recipes|ideas|roundup|dishes|sides|appetizers|desserts|dinners|meals|menu|menus|favorites)$/i.test(new URL(url).pathname.replace(/\/+$/, '').split('/').pop()); }catch(e){}
-    form.importMsg = /(^|\.)(youtube\.com|youtu\.be)$/i.test((() => { try{ return new URL(url).hostname; }catch(e){ return ''; } })()) ? "YouTube doesn't let Mixing Bowl read this video yet. Under the video, tap the description to open it, copy it, and paste it below." : /instagram/i.test(msg) ? "Instagram doesn't let Mixing Bowl read this post. Copy the caption from Instagram and paste it below." : /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : "Couldn't find a recipe on that page. Please paste the recipe below. If your link lists several recipes, open the one you want and paste the direct link."; render(); return; }
+    form.importMsg = /(^|\.)(youtube\.com|youtu\.be)$/i.test((() => { try{ return new URL(url).hostname; }catch(e){ return ''; } })()) ? "YouTube doesn't let Butter Math read this video yet. Under the video, tap the description to open it, copy it, and paste it below." : /instagram/i.test(msg) ? "Instagram doesn't let Butter Math read this post. Copy the caption from Instagram and paste it below." : /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : "Couldn't find a recipe on that page. Please paste the recipe below. If your link lists several recipes, open the one you want and paste the direct link."; render(); return; }
   const yt = p && p.source === 'youtube';
   if(yt){ const v = videoRecipeText(p.caption); if(!v){ form.importOk = false; form.importMsg = "This video's description doesn't include the recipe. If you have it, paste it below."; render(); return; } p.caption = v; }
   if(p.caption){
@@ -1202,7 +1202,7 @@ try{ if(sessionStorage.getItem('mb-in')) gate = 'in'; }catch(e){}
 const KITCHEN_ART = `<svg class="kart" aria-hidden="true" viewBox="0 0 200 160"><rect width="200" height="160" rx="22" fill="#FBF6EC"/><g fill="#141414"><rect x="0" y="148" width="6" height="6"/><rect x="6" y="154" width="6" height="6"/><rect x="12" y="148" width="6" height="6"/><rect x="18" y="154" width="6" height="6"/><rect x="24" y="148" width="6" height="6"/><rect x="30" y="154" width="6" height="6"/><rect x="36" y="148" width="6" height="6"/><rect x="42" y="154" width="6" height="6"/><rect x="48" y="148" width="6" height="6"/><rect x="54" y="154" width="6" height="6"/><rect x="60" y="148" width="6" height="6"/><rect x="66" y="154" width="6" height="6"/><rect x="72" y="148" width="6" height="6"/><rect x="78" y="154" width="6" height="6"/><rect x="84" y="148" width="6" height="6"/><rect x="90" y="154" width="6" height="6"/><rect x="96" y="148" width="6" height="6"/><rect x="102" y="154" width="6" height="6"/><rect x="108" y="148" width="6" height="6"/><rect x="114" y="154" width="6" height="6"/><rect x="120" y="148" width="6" height="6"/><rect x="126" y="154" width="6" height="6"/><rect x="132" y="148" width="6" height="6"/><rect x="138" y="154" width="6" height="6"/><rect x="144" y="148" width="6" height="6"/><rect x="150" y="154" width="6" height="6"/><rect x="156" y="148" width="6" height="6"/><rect x="162" y="154" width="6" height="6"/><rect x="168" y="148" width="6" height="6"/><rect x="174" y="154" width="6" height="6"/><rect x="180" y="148" width="6" height="6"/><rect x="186" y="154" width="6" height="6"/><rect x="192" y="148" width="6" height="6"/><rect x="198" y="154" width="6" height="6"/></g><rect x="26" y="32" width="148" height="116" fill="#fff" stroke="#141414" stroke-width="3.5"/><rect x="18" y="20" width="164" height="14" rx="4" fill="#141414"/><rect x="20.0" y="38" width="17.8" height="22" fill="#D7263D"/><rect x="37.8" y="38" width="17.8" height="22" fill="#fff"/><rect x="55.6" y="38" width="17.8" height="22" fill="#D7263D"/><rect x="73.3" y="38" width="17.8" height="22" fill="#fff"/><rect x="91.1" y="38" width="17.8" height="22" fill="#D7263D"/><rect x="108.9" y="38" width="17.8" height="22" fill="#fff"/><rect x="126.7" y="38" width="17.8" height="22" fill="#D7263D"/><rect x="144.4" y="38" width="17.8" height="22" fill="#fff"/><rect x="162.2" y="38" width="17.8" height="22" fill="#D7263D"/><circle cx="28.9" cy="60" r="8.9" fill="#D7263D" stroke="#141414" stroke-width="2.6"/><circle cx="46.7" cy="60" r="8.9" fill="#fff" stroke="#141414" stroke-width="2.6"/><circle cx="64.4" cy="60" r="8.9" fill="#D7263D" stroke="#141414" stroke-width="2.6"/><circle cx="82.2" cy="60" r="8.9" fill="#fff" stroke="#141414" stroke-width="2.6"/><circle cx="100.0" cy="60" r="8.9" fill="#D7263D" stroke="#141414" stroke-width="2.6"/><circle cx="117.8" cy="60" r="8.9" fill="#fff" stroke="#141414" stroke-width="2.6"/><circle cx="135.6" cy="60" r="8.9" fill="#D7263D" stroke="#141414" stroke-width="2.6"/><circle cx="153.3" cy="60" r="8.9" fill="#fff" stroke="#141414" stroke-width="2.6"/><circle cx="171.1" cy="60" r="8.9" fill="#D7263D" stroke="#141414" stroke-width="2.6"/><rect x="18" y="35" width="164" height="5" rx="2" fill="#141414"/><rect x="36" y="82" width="90" height="40" rx="3" fill="#DDEFF5" stroke="#141414" stroke-width="2.8"/><rect x="47" y="106" width="12" height="5" rx="2.5" fill="#D7263D" stroke="#141414" stroke-width="1.8"/><path d="M53 111v11" stroke="#141414" stroke-width="2"/><rect x="73" y="106" width="12" height="5" rx="2.5" fill="#D7263D" stroke="#141414" stroke-width="1.8"/><path d="M79 111v11" stroke="#141414" stroke-width="2"/><rect x="99" y="106" width="12" height="5" rx="2.5" fill="#D7263D" stroke="#141414" stroke-width="1.8"/><path d="M105 111v11" stroke="#141414" stroke-width="2"/><path d="M36 102h90" stroke="#141414" stroke-width="3"/><path d="M44 94 l12-10" stroke="#fff" stroke-width="3" stroke-linecap="round"/><rect x="136" y="82" width="28" height="66" rx="3" fill="#D7263D" stroke="#141414" stroke-width="3"/><circle cx="150.0" cy="96" r="7" fill="#DDEFF5" stroke="#141414" stroke-width="2.5"/><circle cx="158" cy="122" r="2.2" fill="#141414"/><rect x="26" y="126" width="110" height="22" fill="#D7263D" stroke="#141414" stroke-width="3"/><path d="M26 134h110" stroke="#fff" stroke-width="2.5"/><path d="M24 148h152" stroke="#141414" stroke-width="3"/></svg>`;
 const POT_ART = `<svg class="pot" viewBox="0 0 160 140" aria-hidden="true">
   <g class="spoon"><path d="M80 66 L112 8" stroke="#141414" stroke-width="9" stroke-linecap="round"/><path d="M80 66 L112 8" stroke="#C98B4E" stroke-width="5" stroke-linecap="round"/><ellipse cx="78" cy="72" rx="7" ry="11" fill="#C98B4E" stroke="#141414" stroke-width="3" transform="rotate(29 78 72)"/></g>
-  <g class="drops" fill="#F4C9A6" stroke="#141414" stroke-width="2.5"><circle cx="44" cy="52" r="4.5"/><circle cx="116" cy="50" r="4"/><circle cx="58" cy="44" r="3.2"/><circle cx="102" cy="42" r="3.5"/></g>
+  <g class="drops"><g transform="translate(40 -4)"><g class="pat"><rect x="0" y="0" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="2" y="2" width="22" height="5" rx="2" fill="#FFF3C4"/></g></g><g transform="translate(92 -10)"><g class="pat two"><rect x="0" y="0" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="2" y="2" width="22" height="5" rx="2" fill="#FFF3C4"/></g></g></g>
   <path class="batter" d="M22 60 C34 44 52 40 66 46 C78 51 86 41 100 42 C116 43 128 50 138 60 Z" fill="#F4C9A6" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
   <path d="M18 62h124c0 34-27 58-62 58S18 96 18 62z" fill="#D7263D" stroke="#141414" stroke-width="4" stroke-linejoin="round"/>
   <rect x="12" y="56" width="136" height="12" rx="6" fill="#fff" stroke="#141414" stroke-width="4"/>
@@ -1216,9 +1216,9 @@ const AUTH_ART = `<svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg" 
   <rect x="12" y="56" width="136" height="12" rx="6" fill="#fff" stroke="#141414" stroke-width="4"/>
   <rect x="58" y="118" width="44" height="10" rx="5" fill="#D7263D" stroke="#141414" stroke-width="4"/>
   <path d="M34 78c2 10 8 19 16 25" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/>
-</svg><g fill="#D7263D" opacity=".55"><path d="M70 40l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path d="M330 52l2.4 5.6 5.6 2.4-5.6 2.4-2.4 5.6-2.4-5.6-5.6-2.4 5.6-2.4z"/><path d="M300 118l2 4.6 4.6 2-4.6 2-2 4.6-2-4.6-4.6-2 4.6-2z"/></g></svg>`;
+</svg><g><g transform="translate(70 48) rotate(-18) scale(1)"><rect x="-13" y="-8" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="-11" y="-6" width="22" height="5" rx="2" fill="#FFF3C4"/></g><g transform="translate(332 58) rotate(14) scale(0.85)"><rect x="-13" y="-8" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="-11" y="-6" width="22" height="5" rx="2" fill="#FFF3C4"/></g><g transform="translate(300 124) rotate(-8) scale(0.7)"><rect x="-13" y="-8" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="-11" y="-6" width="22" height="5" rx="2" fill="#FFF3C4"/></g></g></svg>`;
 function renderGate(){
-  if(gate === 'loading') return `<div class="gate"><div class="loader" aria-label="Loading">${POT_ART}
+  if(gate === 'loading') return `<div class="gate"><div class="loader" aria-label="Loading">${POT_ART.replace('viewBox="0 0 160 140"', 'viewBox="0 -50 160 190"')}
     <div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div></div>`;
   return `<div class="gate"><div class="gatecard">${KITCHEN_ART}
     <button class="btn primary big" data-act="enter">Enter your kitchen</button></div></div>`;
@@ -1343,9 +1343,9 @@ async function startRestore(file){
   try{
     toast('Reading the backup…');
     let bk, photos;
-    try{ ({backup: bk, photos} = await readBackupFile(file)); }catch(e){ console.error(e); toast("That doesn't look like a Mixing Bowl backup"); return; }
+    try{ ({backup: bk, photos} = await readBackupFile(file)); }catch(e){ console.error(e); toast("That doesn't look like a Butter Math backup"); return; }
     const {data: pv, error} = await sb.rpc('admin_restore', {bk, apply: false});
-    if(error){ console.error(error); toast(/not a mixing bowl|does not look/i.test(error.message || '') ? "That doesn't look like a Mixing Bowl backup" : "Couldn't read that backup"); return; }
+    if(error){ console.error(error); toast(/not a mixing bowl|does not look/i.test(error.message || '') ? "That doesn't look like a Butter Math backup" : "Couldn't read that backup"); return; }
     const a = pv.add, wait = pv.waiting || [];
     const bits = [[a.recipes, 'recipe'], [a.kitchens, 'shopping list', 'shopping lists'], [a.friendships, 'friend connection'], [a.shares, 'shared recipe'], [a.invites, 'invite'], [a.notices, 'save notice']].filter(x => x[0]).map(x => `${x[0]} ${x[0] === 1 ? x[1] : (x[2] || x[1] + 's')}`);
     const waitNote = wait.length ? `<p>${wait.length} ${wait.length === 1 ? 'person has' : 'people have'} no account yet (${wait.map(esc).join(', ')}). Their recipes stay in the backup. Run this again after they sign up.</p>` : '';
@@ -1404,9 +1404,9 @@ async function downloadMine(){
 ${d.notes && d.notes.length ? `<h3>Good to know</h3><ul>${d.notes.map(x => `<li>${t(x)}</li>`).join('')}</ul>` : ''}
 ${srcs.length ? `<p class="src">${srcs.map((l, i) => `<a href="${esc(l.url)}">${i === 0 ? 'Original recipe' : esc(l.label || hostOf(l.url))}</a> (${esc(hostOf(l.url))})`).join(' · ')}</p>` : ''}</article>`; };
     const day = new Date().toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'});
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Mixing Bowl recipes</title>
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Butter Math recipes</title>
 <style>body{font:16px/1.55 Georgia,serif;color:#141414;max-width:720px;margin:0 auto;padding:28px 20px}h1{font-size:30px;margin:0 0 4px}h2{font-size:24px;margin:0 0 4px}h3{font:700 13px/1.2 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#D7263D;margin:22px 0 6px}h4{font-size:15px;margin:14px 0 4px}.meta,.sub,.src{color:#666;font:14px Arial,sans-serif}article{border-top:2px solid #141414;padding:26px 0;margin-top:26px}img{width:100%;max-height:340px;object-fit:cover;border-radius:10px;margin-bottom:14px}ul,ol{margin:0;padding-left:22px}li{margin:4px 0}nav ol{columns:2}a{color:#141414}@media print{article{break-before:page;border:0}nav{break-after:page}img{max-height:260px}}</style></head><body>
-<h1>My Mixing Bowl recipes</h1><p class="sub">${list.length} recipe${list.length === 1 ? '' : 's'} · downloaded ${esc(day)} from mixingbowl.github.io</p>
+<h1>My Butter Math recipes</h1><p class="sub">${list.length} recipe${list.length === 1 ? '' : 's'} · downloaded ${esc(day)} from ${esc(location.host)}</p>
 <nav><ol>${list.map((d, i) => `<li><a href="#r${i}">${esc(d.title || 'Untitled recipe')}</a></li>`).join('')}</ol></nav>
 ${list.map((d, i) => one(d).replace('<article>', `<article id="r${i}">`)).join('\n')}
 </body></html>`;
@@ -1482,7 +1482,7 @@ function renderSettings(){
       <div><button class="btn primary" type="submit">Update password</button></div>
     </form>
   </div>
-  <div class="card panel" style="margin-top:16px"><h3>Add Mixing Bowl to your Home Screen</h3>
+  <div class="card panel" style="margin-top:16px"><h3>Add Butter Math to your Home Screen</h3>
     <p class="muted" style="margin:6px 0 10px">This site is not yet available in the App Store. Follow the steps below to add it to your phone's Home Screen.</p>
     <p style="margin:6px 0"><b>iPhone:</b> open this site in Safari, tap Share, then <b>Add to Home Screen</b>.</p>
     <p style="margin:6px 0"><b>Android:</b> open it in Chrome, tap ⋮, then <b>Add to Home screen</b>.</p>
@@ -1510,9 +1510,9 @@ function renderAccount(){
     <input class="tin" id="del-word" autocomplete="off" style="margin-top:12px" placeholder="DELETE">
     <div class="row"><button class="btn" data-act="delclose">Cancel</button><button class="btn dangerbtn" data-act="delconfirm">Delete forever</button></div></div></div>` : ''}`;
 }
-const FB_EMAIL = 'mixingbowl.admin@gmail.com';
+const FB_EMAIL = 'hello@buttermath.app';
 function renderFeedback(){
-  const su = encodeURIComponent('Mixing Bowl feedback');
+  const su = encodeURIComponent('Butter Math feedback');
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose fb"><h3>Send feedback</h3>
     <p>Ideas, bugs or questions? Email us at <b>${FB_EMAIL}</b>.</p>
@@ -1544,7 +1544,7 @@ function maybeTour(){
 function renderHelp(){
   const step = (n, t) => `<div class="hstep"><div class="hnum">${n}</div><div><h4>${t.title}</h4><p>${t.text}</p></div></div>`;
   return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
-  <div class="card panel prose help"><h3>How Mixing Bowl works</h3>
+  <div class="card panel prose help"><h3>How Butter Math works</h3>
     <p class="muted">Plan, shop and cook from one place.</p>
     ${TOUR.map((t, i) => step(i + 1, t)).join('')}
     <h4 class="htips">Good to know</h4>
@@ -1567,15 +1567,15 @@ function renderTerms(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Terms of Use</h3>
     <p class="muted">Last updated November 15, 2026</p>
-    <p><b>Using Mixing Bowl.</b> Mixing Bowl is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
+    <p><b>Using Butter Math.</b> Butter Math is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
     <p><b>Your content.</b> What you add is yours, and you're responsible for it. Only save content you have the right to use. Recipes saved from other websites still belong to their creators and are for your own personal use.</p>
-    <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Mixing Bowl infringes your copyright, email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
+    <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Butter Math infringes your copyright, email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
     <p><b>Acceptable use.</b> You agree not to upload content that is unlawful, harmful or abusive, and not to disrupt, overload or misuse the site or interfere with other members' accounts.</p>
-    <p><b>Provided as is.</b> Mixing Bowl is provided "as is" and "as available", without warranties of any kind. Features may change, and the site may be suspended or discontinued at any time. We recommend keeping your own copy of any recipes and photos you upload to the site.</p>
-    <p><b>Liability.</b> To the fullest extent permitted by law, Mixing Bowl is not liable for any loss or damage resulting from your use of the site.</p>
+    <p><b>Provided as is.</b> Butter Math is provided "as is" and "as available", without warranties of any kind. Features may change, and the site may be suspended or discontinued at any time. We recommend keeping your own copy of any recipes and photos you upload to the site.</p>
+    <p><b>Liability.</b> To the fullest extent permitted by law, Butter Math is not liable for any loss or damage resulting from your use of the site.</p>
     <p><b>Accounts.</b> You can delete your account at any time from <b>Account</b>. Accounts that break these terms may be suspended or removed.</p>
-    <p><b>Changes.</b> These terms may be updated from time to time. Continuing to use Mixing Bowl means you accept the current version.</p>
-    <p><b>Contact.</b> Email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a>.</p>
+    <p><b>Changes.</b> These terms may be updated from time to time. Continuing to use Butter Math means you accept the current version.</p>
+    <p><b>Contact.</b> Email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a>.</p>
   </div>`;
 }
 function renderPrivacy(){
@@ -1583,18 +1583,18 @@ function renderPrivacy(){
   <div class="card panel prose"><h3>Your privacy</h3>
     <p class="muted">Last updated November 16, 2026</p>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
-    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own cookbook, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from their cookbook. Any copies a friend has saved of your recipes will stay in their cookbook, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Mixing Bowl doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
-    <p><b>Adding recipes from a link.</b> When you paste a recipe link, Mixing Bowl's server visits that page to copy the recipe into your form. The website you linked sees a visit from Mixing Bowl, not from you. The link isn't saved unless you save the recipe.</p>
+    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own cookbook, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from their cookbook. Any copies a friend has saved of your recipes will stay in their cookbook, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Butter Math doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
+    <p><b>Adding recipes from a link.</b> When you paste a recipe link, Butter Math's server visits that page to copy the recipe into your form. The website you linked sees a visit from Butter Math, not from you. The link isn't saved unless you save the recipe.</p>
     <p><b>Adding recipes from a screenshot.</b> Screenshots are read on your own device to pull out the recipe text. The image is never uploaded or stored. The reading tool is downloaded from jsDelivr, a public code library, the first time you use it. Your screenshot is never sent there.</p>
     <p><b>Pasted text.</b> Recipe text you paste is sorted into the form on your device. Only what you save is stored.</p>
     <p><b>Passwords stay secret.</b> Passwords are stored encrypted. No one, including the site administrator, can see yours.</p>
     <p><b>Photos.</b> Uploaded photos are stored at private, unguessable web addresses that aren't listed anywhere. Anyone with a photo's exact address could open it, so avoid uploading anything sensitive.</p>
-    <p><b>Emails.</b> Mixing Bowl only sends account emails, such as confirming your address or resetting your password. There are no newsletters or marketing emails.</p>
+    <p><b>Emails.</b> Butter Math only sends account emails, such as confirming your address or resetting your password. There are no newsletters or marketing emails.</p>
     <p><b>Backups.</b> To protect against data loss, the site administrator regularly downloads a backup copy of the site's data, including member names, email addresses, recipes, shopping lists and photos. Backups are kept privately, protected by two-step sign-in, and deleted after 90 days. They're only used to restore data after a problem.</p>
     <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages, and its fonts are loaded from Google Fonts. Account emails are sent through Supabase.</p>
     <p><b>Leaving.</b> You can delete your account at any time from <b>Account</b>, which permanently removes your account and everything you've saved. Copies in older backups are deleted when those backups expire, within 90 days.</p>
-    <p><b>Age.</b> Mixing Bowl is for ages 13 and up.</p>
-    <p><b>Questions.</b> Email <a href="mailto:mixingbowl.admin@gmail.com">mixingbowl.admin@gmail.com</a>.</p>
+    <p><b>Age.</b> Butter Math is for ages 13 and up.</p>
+    <p><b>Questions.</b> Email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a>.</p>
   </div>`;
 }
 

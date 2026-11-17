@@ -826,3 +826,13 @@ button.savebtn.done{cursor:pointer}
 .lp-three.lp-four{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:900px){.lp-three.lp-four{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 18px}}
 @media(max-width:760px){.lp-three.lp-four{grid-template-columns:1fr;gap:14px}}
+
+/* cart status in the list header, finish trip beside past trips */
+.cartline{display:flex;gap:8px;margin:14px 0 8px;flex-wrap:wrap}
+.cartline button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font:500 15px Inter,sans-serif;cursor:pointer}
+.cartline button b{font-weight:700}.cartline .bi{width:20px;height:20px}
+.cartline button.on{background:#141414;border-color:#141414;color:#fff}
+.tripend{margin-top:26px;padding:18px;border:1px dashed #CFC8BF;border-radius:16px;background:transparent;text-align:center}
+.tripend h3{margin:0 0 6px;font:400 17px 'Archivo Black',sans-serif}.tripend p{margin:0 auto 14px;font-size:14px;max-width:420px}.tripend p b{color:var(--ink)}
+.te-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.te-btns .btn{min-height:44px;padding:10px 18px}
+.frsent{margin:0 2px 12px;font-size:15px;line-height:1.5;color:var(--muted)}.frsent b{color:var(--ink)}.frsheet .bigbtn+.bigbtn{margin-top:8px}

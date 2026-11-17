@@ -98,11 +98,15 @@ async function boot(){
   if(user) startUser(); else render();
 }
 function stopUser(){ isAdmin = false; adminData = null; if(channel){ try{ sb.removeChannel(channel); }catch(e){} channel = null; } recipes = []; kitchen = blankKitchen(); loaded = false; queue = []; }
+let startRun = 0;
 async function startUser(){
+  const run = ++startRun;
   stopUser(); render();
   await loadAll();
+  if(run !== startRun || !user) return;
   loadFriends(true).then(afterInviteLogin);
   try{
+    sb.getChannels().filter(c => c.topic === 'realtime:kitchen-' + user.id).forEach(c => sb.removeChannel(c));
     channel = sb.channel('kitchen-' + user.id)
       .on('postgres_changes', {event:'*', schema:'public', table:'kitchens', filter:'user_id=eq.' + user.id}, p => { if(!queue.length && !flushing && p.new && p.new.user_id){ kitchen = normalize(p.new); render(); } })
       .on('postgres_changes', {event:'*', schema:'public', table:'recipes'}, () => loadRecipes())

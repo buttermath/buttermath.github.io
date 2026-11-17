@@ -621,7 +621,7 @@ button.rtag.add{padding-right:10px}
 /* ---------- friends ---------- */
 .tab .rdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#D7263D;margin-left:6px;vertical-align:3px}
 .btn.outline{background:#fff;border:1.5px solid #D9D2C7;color:#141414}
-.bigbtn{width:100%;justify-content:center;padding:14px;font-size:16px}
+.bigbtn{width:100%;justify-content:center;padding:14px;font-size:16px}a.btn{text-decoration:none;color:inherit}a.btn.primary{color:#fff}
 .fr-h{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 14px}
 .fr-h h2{font:400 26px 'Archivo Black',sans-serif;margin:0}
 .fr-sec{font:700 12px Inter,sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#D7263D;margin:20px 4px 10px;display:flex;align-items:center;gap:8px}

@@ -23,6 +23,8 @@ const PALETTE = ['#4B57A8','#D9772B','#D9487A','#3F7A55','#8A5BC2','#B7862F','#2
 let sb = null, session = null, user = null;
 let authView = {mode:'signin', msg:'', err:'', busy:false};
 let recovering = false;
+let landing = true, hadAcct = false; try{ if(localStorage.getItem('mb-had-account')){ landing = false; hadAcct = true; } }catch(e){}
+const landingOn = r => !user && !recovering && landing && !inviteToken() && !['privacy','terms','feedback','invite'].includes(r.v);
 let recipes = [];            // rows: {id, sort, data}
 let kitchen = blankKitchen();
 let loaded = false, channel = null;
@@ -128,6 +130,73 @@ async function loadAll(quiet){
   render();
 }
 
+function renderLanding(){
+  const bowl = POT_ART.replace('class="pot"', 'class="lp-bowl"');
+  const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
+  const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
+  const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;
+  const step = (n, h, p) => `<li><span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
+  const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
+  return `<div class="lp">
+  <section class="lp-hero">
+    <div class="lp-copy">
+      <span class="lp-eyebrow">Attention home cooks and bakers</span>
+      <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
+      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one cookbook. Choose what you're cooking this week, and Mixing Bowl turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
+      <div class="lp-ctas"><button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button></div>
+    </div>
+    <div class="lp-phone" role="img" aria-label="A Mixing Bowl shopping list showing butter added up from two recipes">
+      <div class="lp-ph-top"><span class="lp-ph-logo">Mixing <span>Bowl</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
+      <div class="lp-ph-body">
+        <span class="lp-lbl">Shopping for</span>
+        <div class="lp-chips"><span class="lp-chip" style="--c:#0072B2;background:#E6F1F8"><i></i>Blueberry pie</span><span class="lp-chip" style="--c:#D55E00;background:#FBEFE6"><i></i>Lemon bars</span></div>
+        <span class="lp-aisle">Dairy &amp; eggs</span>
+        <div class="lp-items">
+          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>1 cup + 7 Tbsp</small><span class="lp-tags">${pie}${bars}</span></div></div>
+          <div class="lp-item done"><span class="lp-ck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></span><div><b>Eggs</b><small>5 large</small></div></div>
+        </div>
+        <span class="lp-aisle">Produce</span>
+        <div class="lp-items"><div class="lp-item"><span class="lp-ck"></span><div><b>Lemons</b><small>5</small><span class="lp-tags">${pie}${bars}</span></div></div></div>
+      </div>
+    </div>
+  </section>
+  <section class="lp-sec lp-white">
+    <span class="lp-eyebrow">Maybe this sounds familiar</span>
+    <h2 class="lp-h2">Your recipes are stored everywhere. Your grocery list is in a notes app or written on scratch paper.</h2>
+    <div class="lp-three">
+      ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Mixing Bowl keeps them all in one cookbook.")}
+      ${card('The butter math', 'Two recipes, two amounts of butter. Mixing Bowl adds them up so you buy enough the first time.')}
+      ${card('One shopping trip', 'Your list is sorted by grocery aisle and you can keep track as you shop for multiple recipes. Check things off as you shop and nothing gets left on the shelf.')}
+    </div>
+  </section>
+  <section class="lp-sec">
+    <span class="lp-eyebrow">How it works</span>
+    <h2 class="lp-h2">Four steps from recipe to dinner.</h2>
+    <ol class="lp-three lp-four lp-steps">
+      ${step(1, 'Save a recipe', 'Paste a link from any recipe site or social media post, add a photo of a cookbook page, or type in your own.')}
+      ${step(2, 'Build your list', 'Tap <b>Add ingredients to my list</b> on a recipe, or add recipes from your shopping list. Ingredients land on one list, sorted by aisle, with shared ones added up.')}
+      ${step(3, 'Shop', 'Check things off as you go, and tap <b>Have it</b> for anything already in your kitchen.')}
+      ${step(4, 'Cook', "Follow the recipe step by step and check off each one. Tap <b>Screen on</b> so your phone doesn't go dark mid-recipe.")}
+    </ol>
+  </section>
+  <section class="lp-sec lp-white">
+    <span class="lp-eyebrow">Made for sharing</span>
+    <h2 class="lp-h2">Cook with the people you love.</h2>
+    <div class="lp-three">
+      ${feat('<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/>', 'Share cookbooks', "Add friends and family to see each other's cookbooks and save a copy of their best recipes to your own cookbook.")}
+      ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few. Possibilities are endless.')}
+      ${feat('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
+    </div>
+  </section>
+  <section class="lp-final">
+    ${bowl}
+    <h2 class="lp-h2">Set up your kitchen today.</h2>
+    <p>Make your kitchen in a minute and save your first recipe. It's free.</p>
+    <button class="btn primary" data-act="authmode" data-m="signup">Create your kitchen</button>
+    <p class="lp-small">Already have one? <button class="linkbtn" data-act="authmode" data-m="signin">Sign in</button></p>
+  </section>
+</div>`;
+}
 function renderAuth(){
   const v = authView, m = v.mode;
   if(recovering){
@@ -138,7 +207,7 @@ function renderAuth(){
   }
   const inv = inviteToken() && inviteInfo && inviteInfo.name && inviteInfo.name !== '__self' ? inviteInfo.name : '';
   const title = inv && m === 'signup' ? `Join ${esc(inv)} on Mixing Bowl` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
-  return `<div class="authwrap">
+  return `<div class="authwrap">${inv ? '' : '<button class="linkbtn lp-back" data-act="landing">← About Mixing Bowl</button>'}
     <div class="authhero">${AUTH_ART}</div>
     <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : ''}<h2>${title}</h2>
     <p class="muted" style="margin:4px 0 14px">${inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
@@ -469,12 +538,13 @@ function render0(){
   let r = route();
   if(r.v === 'invite' && sb){ rememberInvite(r.id); if(!user && authView.mode === 'signin' && !authView.invSet){ authView = {mode:'signup', msg:'', err:'', busy:false, invSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); } }
   if(!(user && !recovering && gate !== 'in')) delete app.dataset.gate;
+  if(user && !recovering && !hadAcct){ hadAcct = true; landing = false; try{ localStorage.setItem('mb-had-account', '1'); }catch(e){} }
   $('#hdr').innerHTML = renderHeader(r);
   if(!sb){ return; }
   if(!user && r.v === 'privacy'){ app.innerHTML = renderPrivacy(); $('#tabs').innerHTML = ''; }
   else if(!user && r.v === 'terms'){ app.innerHTML = renderTerms(); $('#tabs').innerHTML = ''; }
   else if(!user && r.v === 'feedback'){ app.innerHTML = renderFeedback(); $('#tabs').innerHTML = ''; }
-  else if(!user || recovering){ app.innerHTML = renderAuth(); $('#tabs').innerHTML = ''; }
+  else if(!user || recovering){ app.innerHTML = landingOn(r) ? renderLanding() : renderAuth(); $('#tabs').innerHTML = ''; }
   else if(gate !== 'in'){ const g = renderGate(); if(app.dataset.gate !== g){ app.innerHTML = g; app.dataset.gate = g; } $('#tabs').innerHTML = ''; }
   else if(!loaded){ app.innerHTML = `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   else {
@@ -509,7 +579,7 @@ function render0(){
 function renderHeader(r){
   const n = firstName();
   const kn = user && n && !recovering ? `<span class="kname">${esc(n)}'s Kitchen</span>` : '';
-  return `<div class="bwrap"><h1>Mixing <span>Bowl</span></h1>${kn}</div><div class="hright">${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
+  return `<div class="bwrap"><h1>Mixing <span>Bowl</span></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn primary lp-red lp-navcreate" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
 }
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
@@ -1565,7 +1635,8 @@ document.addEventListener('click', async e => {
   if(a === 'tourend'){ $('#modalRoot').innerHTML = ''; tourStep = -1; if(!P().tourDone) mutate(k => { k.progress.tourDone = true; }); return; }
   if(a === 'deltrip'){ e.preventDefault(); const ats = el.dataset.at.split('|'), old = (P().trips || []).slice(); mutate(k => { k.progress.trips = (k.progress.trips || []).filter(t => !ats.includes(String(t.at))); }); toast('Trip removed', () => mutate(k => { k.progress.trips = old; })); return; }
   if(a === 'untrip'){ el.dataset.at.split('|').forEach(at => restoreTrip(at)); return; }
-  if(a === 'authmode'){ authView = {mode: el.dataset.m, msg:'', err:'', busy:false}; render(); return; }
+  if(a === 'authmode'){ authView = {mode: el.dataset.m, msg:'', err:'', busy:false}; landing = false; render(); window.scrollTo(0, 0); return; }
+  if(a === 'landing'){ landing = true; render(); window.scrollTo(0, 0); return; }
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'active'){ const v = !isActive(id); mutate(k => { k.progress.active[id] = v; }); return; }

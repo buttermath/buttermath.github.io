@@ -837,3 +837,6 @@ button.savebtn.done{cursor:pointer}
 .te-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.te-btns .btn{min-height:44px;padding:10px 18px}
 .frsent{margin:0 2px 12px;font-size:15px;line-height:1.5;color:var(--muted)}.frsent b{color:var(--ink)}.frsheet .bigbtn+.bigbtn{margin-top:8px}
 .frmore{margin:10px 2px 4px;font-size:14px;line-height:1.5;color:var(--muted);text-align:center}.frmore a,.frmore .linkbtn{display:inline;color:var(--accent);font-weight:700;padding:0;font-size:14px;text-decoration:underline}
+.pot .drops .pat{transform-box:fill-box;transform-origin:center;opacity:0;animation:bmfall 1.6s cubic-bezier(.55,0,.85,.55) infinite}.pot .drops .pat.two{animation-delay:.8s}
+@keyframes bmfall{0%{opacity:0;transform:translateY(-46px) rotate(-25deg)}12%{opacity:1}70%{opacity:1;transform:translateY(44px) rotate(8deg)}82%,100%{opacity:0;transform:translateY(58px) rotate(12deg)}}
+.pot .spoon{animation-duration:1.6s}.pot .batter{animation-duration:1.6s}

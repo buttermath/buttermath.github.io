@@ -847,7 +847,7 @@ function autoFill(){
   // Pasting (or leaving the box) fills the form. Ask first if the person already typed ingredients or steps.
   const pa = $('#f-paste'), raw = pa ? pa.value : '';
   if(!raw.trim() || !form || raw === form.lastParsed) return;
-  const p = parseRecipeText(raw);
+  const p = parseRecipeText(looksLikeVideo(raw) ? (videoRecipeText(raw) || raw) : raw);
   if(!p.ingredients){ ocrSay("Couldn't find ingredients in that text. Make sure it includes the ingredient list."); return; }
   const ing = $('#f-ing'), st = $('#f-steps');
   const hand = (ing && ing.value.trim() && ing.value.trim() !== (form.autoIng || '')) || (st && st.value.trim() && st.value.trim() !== (form.autoSteps || ''));
@@ -878,7 +878,7 @@ document.addEventListener('paste', e => {
 function fillFromPaste(){
   const raw = ($('#f-paste') || {}).value || '';
   if(!raw.trim()){ toast('Paste the recipe first'); return; }
-  const p = parseRecipeText(raw);
+  const p = parseRecipeText(looksLikeVideo(raw) ? (videoRecipeText(raw) || raw) : raw);
   const set = (id, val, force) => { const el = $(id); if(el && val && (force || !el.value.trim())) el.value = val; };
   set('#f-title', p.title, !(($('#f-title') || {}).value || '').trim() || $('#f-title').value === form.autoTitle); set('#f-yield', p.yield); set('#f-prep', p.prep); set('#f-cook', p.cook); set('#f-total', p.total);
   set('#f-ing', p.ingredients, true); set('#f-steps', p.steps, true); set('#f-notes', p.notes);
@@ -887,6 +887,25 @@ function fillFromPaste(){
   form.filled = true; form.review = {n: stepLines(p.steps).length, url: (($('#f-link') || {}).value || '').trim(), warn: stepCheck(p.steps, false), src: 'paste'}; render();
   toast('Filled in');
 }
+function videoRecipeText(desc){
+  const ls = String(desc || '').replace(/\r/g, '').split('\n').map(l => l.trim());
+  const qty = /^([-•*▢□]\s*)?(\d|[½⅓⅔¼¾⅛⅜⅝⅞]|one |two |three |a pinch|pinch|a few|handful|zest|juice)/i;
+  const head = /^(ingredients?|for the [\w\s]+)\s*:?$/i;
+  let i = ls.findIndex(l => head.test(l));
+  if(i < 0){ const q = ls.findIndex(l => qty.test(l) && !/^\(?\d{1,2}:\d{2}/.test(l) && !/https?:\/\//.test(l)); if(q < 0) return null; i = q > 0 && ls[q - 1] && ls[q - 1].length < 60 && !/[.!?:]$/.test(ls[q - 1]) && !/^#/.test(ls[q - 1]) ? q - 1 : q; }
+  const stop = /^(chapters|timestamps|time stamps|links|follow|connect|credits|video series|animation credits|music|shop|merch|subscribe|about)\b[^:]{0,30}:?$/i;
+  let out = [];
+  for(let k = i; k < ls.length; k++){
+    const l = ls[k];
+    if(k > i && (stop.test(l) || /^\(?\d{1,2}:\d{2}(:\d{2})?\)?\s/.test(l))) break;
+    if(/https?:\/\/|www\./i.test(l) || /^(#\w+\s*)+$/.test(l) || /sponsor|use (my )?code|% off|discount|affiliate|subscribe|patreon/i.test(l)) continue;
+    out.push(l);
+  }
+  const txt = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return txt.length > 20 ? txt : null;
+}
+// A pasted YouTube description: has video chapters, links, or sponsor/subscribe lines around the recipe.
+function looksLikeVideo(s){ return /^\(?\d{1,2}:\d{2}(:\d{2})?\)?\s+\S/m.test(s) || /\b(subscribe|sponsor(ed)?|chapters:)/i.test(s); }
 async function importLink(){
   const url = (($('#f-link') || {}).value || '').trim();
   if(!/^https?:\/\/\S+\.\S+/i.test(url)){ toast('Paste a full https:// link'); return; }
@@ -894,13 +913,15 @@ async function importLink(){
   form.importing = true; form.importMsg = ''; render();
   let p = null, msg = '';
   try{
-    const {data, error} = await sb.functions.invoke('import-recipe', {body: {url}});
+    const {data, error} = await sb.functions.invoke('import-recipe', {body: {url, yt: true}});
     if(error) throw error;
-    if(data && data.ingredients) p = data; else if(data && data.caption) p = {caption: data.caption}; else msg = (data && data.error) || '';
+    if(data && data.ingredients) p = data; else if(data && data.caption) p = {caption: data.caption, source: data.source, vtitle: data.title}; else msg = (data && data.error) || '';
   }catch(err){ console.error(err); }
   form.importing = false;
   if(!p){ form.importOk = false; let many = false; try{ many = /(^|-)(recipes|ideas|roundup|dishes|sides|appetizers|desserts|dinners|meals|menu|menus|favorites)$/i.test(new URL(url).pathname.replace(/\/+$/, '').split('/').pop()); }catch(e){}
-    form.importMsg = /instagram/i.test(msg) ? "Instagram doesn't let Mixing Bowl read this post. Copy the caption from Instagram and paste it below." : /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : "Couldn't find a recipe on that page. Please paste the recipe below. If your link lists several recipes, open the one you want and paste the direct link."; render(); return; }
+    form.importMsg = /(^|\.)(youtube\.com|youtu\.be)$/i.test((() => { try{ return new URL(url).hostname; }catch(e){ return ''; } })()) ? "YouTube doesn't let Mixing Bowl read this video yet. Under the video, tap the description to open it, copy it, and paste it below." : /instagram/i.test(msg) ? "Instagram doesn't let Mixing Bowl read this post. Copy the caption from Instagram and paste it below." : /share that page/.test(msg) ? "This site doesn't allow imports. Paste it below." : many ? 'This page lists several recipes. Open the one you want and paste its link.' : "Couldn't find a recipe on that page. Please paste the recipe below. If your link lists several recipes, open the one you want and paste the direct link."; render(); return; }
+  const yt = p && p.source === 'youtube';
+  if(yt){ const v = videoRecipeText(p.caption); if(!v){ form.importOk = false; form.importMsg = "This video's description doesn't include the recipe. If you have it, paste it below."; render(); return; } p.caption = v; }
   if(p.caption){
     const cap = p.caption.replace(/\s*((?:10|[0-9])\uFE0F?\u20E3|\u{1F51F})\s*/gu, '\n').replace(/\n{3,}/g, '\n\n').trim();
     const pa = $('#f-paste'); if(pa) pa.value = cap;
@@ -911,12 +932,14 @@ async function importLink(){
       if(t >= 0){ q.notes = ls.slice(t + 1).join(' ').split(/\s*[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]\uFE0F?\s*/u).map(x => x.trim()).filter(x => x.length > 3).join('\n'); ls = ls.slice(0, t); }
       q.steps = ls.join('\n');
     }
+    if(yt && (!q.title || /^(ingredients?|for the\b)/i.test(q.title))) q.title = String(p.vtitle || '').split(/\s+[|–—-]\s+/)[0].replace(/\s*\b(recipe|easy|best)\b\s*/gi, ' ').trim();
     q.title = (q.title || '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, '').trim();
     const set = (id, val, force) => { const el = $(id); if(el && val && (force || !el.value.trim())) el.value = val; };
     set('#f-title', q.title); set('#f-yield', q.yield); set('#f-prep', q.prep); set('#f-cook', q.cook); set('#f-total', q.total);
     set('#f-ing', q.ingredients, true); set('#f-steps', q.steps, true); set('#f-notes', q.notes);
     form.filled = !!(q.title || q.steps); form.importOk = true;
-    form.importMsg = q.ingredients ? '✓ Pulled from the Instagram caption. Check it over before saving.' : '✓ Pulled from the Instagram caption. It had no ingredient list, so add those before saving.';
+    form.importMsg = yt ? (q.ingredients && q.steps.trim() ? '✓ Pulled from the YouTube description. Check it over before saving.' : q.ingredients ? '✓ Pulled the ingredients from the YouTube description. It had no written steps, so add those from the video before saving.' : '✓ Pulled from the YouTube description. It had no ingredient list, so add those before saving.')
+      : q.ingredients ? '✓ Pulled from the Instagram caption. Check it over before saving.' : '✓ Pulled from the Instagram caption. It had no ingredient list, so add those before saving.';
     render(); return;
   }
   const set = (id, val, force) => { const el = $(id); if(el && val && (force || !el.value.trim())) el.value = val; };

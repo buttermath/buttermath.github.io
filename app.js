@@ -579,7 +579,7 @@ function render0(){
 function renderHeader(r){
   const n = firstName();
   const kn = user && n && !recovering ? `<span class="kname">${esc(n)}'s Kitchen</span>` : '';
-  return `<div class="bwrap"><h1>Mixing <span>Bowl</span></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn primary lp-red lp-navcreate" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
+  return `<div class="bwrap"><h1>Mixing <span>Bowl</span></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
 }
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;

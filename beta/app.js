@@ -393,11 +393,18 @@ function renderFriends(){
     + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
     + (addFriendOpen ? renderAddFriend() : '');
 }
+async function inviteMail(to){
+  const {data, error} = await sb.rpc('create_invite_link'); if(error || !data) return null;
+  const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
+  const subj = `${me || 'A friend'} invited you to Mixing Bowl`;
+  const body = `Hi!\n\nI've been saving my recipes on Mixing Bowl, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
+  return 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+}
 function renderAddFriend(){
   if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="askt">User not found</div>
     <p class="frsent">We couldn't find a Mixing Bowl account for <b>${esc(frSent.em)}</b>. They might not be on Mixing Bowl yet.</p>
     <p class="frsent">Send them an invite. They'll get your friend request when they log in for the first time.</p>
-    <button class="btn primary bigbtn" data-act="frmail"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite</button>` : `<div class="askt">Request sent</div>
+    ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}` : `<div class="askt">Request sent</div>
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Mixing Bowl.</p>`}
     <button class="btn bigbtn" data-act="addfriendclose">Done</button></div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
@@ -1603,13 +1610,10 @@ document.addEventListener('click', async e => {
   if(a === 'fsortpick'){ fSortK = el.dataset.k; fSortOpen = false; render(); return; }
   if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); return; }
   if(a === 'addfriendclose'){ addFriendOpen = false; frSent = null; render(); return; }
-  if(a === 'frmail'){ const to = frSent && frSent.em; el.disabled = true; const {data, error} = await sb.rpc('create_invite_link'); el.disabled = false;
-    if(error || !data){ toast("Couldn't make an invite link. Try again."); return; }
-    const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
-    const subj = `${me || 'A friend'} invited you to Mixing Bowl`;
-    const body = `Hi!\n\nI've been saving my recipes on Mixing Bowl, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
-    location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
-    return; }
+  if(a === 'frmailed') return;
+  if(a === 'frmail'){ if(!frSent) return; el.disabled = true; const mail = await inviteMail(frSent.em); el.disabled = false;
+    if(!mail){ toast("Couldn't make an invite link. Try again."); return; }
+    frSent.mail = mail; render(); location.href = mail; return; }
   if(a === 'frlink'){ copyInviteLink(); return; }
   if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
@@ -1825,7 +1829,7 @@ document.addEventListener('submit', async e => {
     const btn = e.target.querySelector('button'); btn.disabled = true;
     const {data: res, error} = await sb.rpc('send_friend_request', {target_email: em});
     btn.disabled = false; if(error){ toast(/slow down/.test(error.message || '') ? "That's a lot of requests today. Try again tomorrow." : "Couldn't send it. Try again."); return; }
-    frSent = {em, invited: res === 'invited'}; render(); loadFriends(true); return; }
+    frSent = {em, invited: res === 'invited'}; if(frSent.invited) frSent.mail = await inviteMail(em); render(); loadFriends(true); return; }
   if(kind === 'newtag'){
     const id = e.target.dataset.id, r = R(id), raw = ($('#newtag').value || '').replace(/\s+/g, ' ').trim(); if(!r || !raw) return;
     const t = raw.charAt(0).toUpperCase() + raw.slice(1), ex = allTags().find(x => x.toLowerCase() === t.toLowerCase()) || t;

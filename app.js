@@ -24,7 +24,7 @@ let sb = null, session = null, user = null;
 let authView = {mode:'signin', msg:'', err:'', busy:false};
 let recovering = false;
 let landing = true, hadAcct = false; try{ if(localStorage.getItem('mb-had-account')){ landing = false; hadAcct = true; } }catch(e){}
-const landingOn = r => !user && !recovering && landing && !inviteToken() && !['privacy','terms','feedback','invite'].includes(r.v);
+const landingOn = r => !user && !recovering && landing && !inviteToken() && !giftToken() && !['privacy','terms','feedback','invite','gift'].includes(r.v);
 let recipes = [];            // rows: {id, sort, data}
 let kitchen = blankKitchen();
 let loaded = false, channel = null;
@@ -104,7 +104,7 @@ async function startUser(){
   stopUser(); render();
   await loadAll();
   if(run !== startRun || !user) return;
-  loadFriends(true).then(afterInviteLogin);
+  loadFriends(true).then(afterInviteLogin).then(claimGift);
   try{
     sb.getChannels().filter(c => c.topic === 'realtime:kitchen-' + user.id).forEach(c => sb.removeChannel(c));
     channel = sb.channel('kitchen-' + user.id)
@@ -210,11 +210,12 @@ function renderAuth(){
       ${v.err ? `<div class="err">${esc(v.err)}</div>` : ''}</div></div>`;
   }
   const inv = inviteToken() && inviteInfo && inviteInfo.name && inviteInfo.name !== '__self' ? inviteInfo.name : '';
+  const gift = !inv && giftToken() && giftInfo && giftInfo.name && giftInfo.name !== '__self' ? giftInfo : null;
   const title = inv && m === 'signup' ? `Join ${esc(inv)} on Mixing Bowl` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Mixing Bowl!</span>';
-  return `<div class="authwrap">${inv ? '' : '<button class="linkbtn lp-back" data-act="landing">← About Mixing Bowl</button>'}
+  return `<div class="authwrap">${inv || gift ? '' : '<button class="linkbtn lp-back" data-act="landing">← About Mixing Bowl</button>'}
     <div class="authhero">${AUTH_ART}</div>
-    <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : ''}<h2>${title}</h2>
-    <p class="muted" style="margin:4px 0 14px">${inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
+    <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : gift && m !== 'forgot' ? `<div class="invhead">${avatar(giftInfo.t, gift.name)}<span>${esc(gift.name)} sent you ${esc(gift.title || 'a recipe')}</span></div>` : ''}<h2>${title}</h2>
+    <p class="muted" style="margin:4px 0 14px">${gift && m === 'signup' ? `Create a free account and ${esc(gift.title || 'the recipe')} will be waiting for you.` : gift && m === 'signin' ? `Sign in to get ${esc(gift.title || 'the recipe')}.` : inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
     <form data-form="${m}">
       ${m === 'signup' ? `<input class="tin" id="au-name" data-keep placeholder="First name" maxlength="40" required autocomplete="given-name">` : ''}
       <input class="tin" id="au-email" data-keep type="email" placeholder="Email" required autocomplete="email">
@@ -337,6 +338,7 @@ function route(){
   if(h.startsWith('fr-')) return {v:'frecipe', id:h.slice(3)};
   if(h.startsWith('f-')) return {v:'fbook', id:h.slice(2)};
   if(h.startsWith('invite-')) return {v:'invite', id:h.slice(7)};
+  if(h.startsWith('gift-')) return {v:'gift', id:h.slice(5)};
   if(h.startsWith('edit-')) return {v:'form', id:h.slice(5)};
   if(h === 'add') return {v:'form'};
   if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help'].includes(h)) return {v:h};
@@ -345,6 +347,7 @@ function route(){
 // ---------- friends & shared cookbooks ----------
 let fSavedOnly = false, fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';
 const FSORTS = {recent:'Recent', az:'A–Z'};
+let sendLink = null;
 let friends = null, inbox = [], saves = [], friendsAt = 0, addFriendOpen = false, frSent = null, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
 const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M19 8v6M16 11h6"/></svg>';
 const ICON_LINK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
@@ -497,7 +500,10 @@ function renderSendSheet(r){
     ${acc.length ? `<div class="sendlist">${acc.map(f => `<label class="sendrow">${avatar(f.friend_id, f.name, 'sm')}<span>${esc(f.name)}</span><input type="checkbox" class="sendck" value="${esc(f.friend_id)}" ${acc.length === 1 ? 'checked' : ''}></label>`).join('')}</div>
     <textarea class="tin" id="send-note" data-keep rows="2" maxlength="280" placeholder="Add a note (optional)"></textarea>
     <button class="btn primary bigbtn" id="send-go" data-act="sendgo" data-id="${esc(r.id)}"${acc.length === 1 ? '' : ' disabled'}>${acc.length === 1 ? 'Send' : 'Pick a friend to send'}</button>`
-    : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add friend</button>`}</div>`;
+    : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add friend</button>`}
+    <div class="ordiv">or</div>
+    <button class="btn outline bigbtn" data-act="reclink" data-id="${esc(r.id)}">${ICON_LINK}Copy link to this recipe</button>
+    <div class="frhint">For friends who aren't on Mixing Bowl yet. They'll get the recipe when they sign up or log in.</div></div>`;
 }
 
 async function saveCopy(data, from){
@@ -527,6 +533,34 @@ async function copyInviteLink(){
 function inviteToken(){ try{ return localStorage.getItem('mb_invite'); }catch(e){ return null; } }
 function rememberInvite(t){ try{ localStorage.setItem('mb_invite', t); }catch(e){} if(!inviteInfo || inviteInfo.t !== t){ inviteInfo = {t, name: null}; sb.rpc('invite_link_info', {t}).then(({data}) => { inviteInfo = {t, name: data || null, bad: !data}; render(); }); } }
 function forgetInvite(){ try{ localStorage.removeItem('mb_invite'); }catch(e){} }
+// recipe links: someone without an account gets a recipe once they sign in
+let giftInfo = null;
+function giftToken(){ try{ return localStorage.getItem('mb_gift'); }catch(e){ return null; } }
+function rememberGift(t){ try{ localStorage.setItem('mb_gift', t); }catch(e){} if(!giftInfo || giftInfo.t !== t){ giftInfo = {t, name: null}; sb.rpc('recipe_link_info', {t}).then(({data}) => { giftInfo = Object.assign({t, bad: !data}, data || {}); render(); }); } }
+function forgetGift(){ try{ localStorage.removeItem('mb_gift'); }catch(e){} giftInfo = null; }
+let claiming = false;
+async function claimGift(){
+  const t = giftToken(); if(!t || !user || claiming) return; claiming = true;
+  try{ await claimGift0(t); } finally { claiming = false; }
+}
+async function claimGift0(t){
+  const {data, error} = await sb.rpc('accept_recipe_link', {t}); forgetGift();
+  if(error || !data){ toast("Couldn't open that recipe link. Ask your friend to send a new one."); return; }
+  if(data.self){ toast("That's your own recipe link. Send it to a friend."); return; }
+  await loadFriends(true);
+  const sh = data.share && inbox.find(x => x.id === data.share);
+  if(sh){ try{
+      const row = await saveCopy(sh.data, {name: sh.sender_name});
+      await sb.rpc('dismiss_share', {share: sh.id}); inbox = inbox.filter(x => x.id !== sh.id);
+      toast(`${data.name} sent you ${data.title || 'a recipe'}. It's in your recipes.`); location.hash = 'r-' + row.id; return;
+    }catch(e){} }
+  toast(data.again ? `You already have ${data.title || 'this recipe'} from ${data.name}` : `${data.name} sent you ${data.title || 'a recipe'}`);
+  if(location.hash !== '#friends') location.hash = 'friends'; else render();
+}
+async function recipeLink(id){
+  const {data, error} = await sb.rpc('create_recipe_link', {rid: id}); if(error || !data) return null;
+  return location.origin + location.pathname + '#gift-' + data;
+}
 function renderInviteCard(){
   if(!inviteInfo || inviteInfo.bad) return '';
   if(inviteInfo.name === '__self'){ setTimeout(() => { forgetInvite(); inviteInfo = null; toast("That's your own invite link. Share it with a friend."); render(); }); return ''; }
@@ -551,6 +585,7 @@ function render0(){
   const ae = document.activeElement && document.activeElement.id && document.activeElement.hasAttribute('data-keep') ? document.activeElement : null;
   let sel = null; try{ sel = ae && ae.selectionStart != null ? [ae.selectionStart, ae.selectionEnd] : null; }catch(e){}
   let r = route();
+  if(r.v === 'gift' && sb){ rememberGift(r.id); if(!user && !authView.giftSet){ authView = {mode:'signup', msg:'', err:'', busy:false, giftSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); setTimeout(claimGift); } }
   if(r.v === 'invite' && sb){ rememberInvite(r.id); if(!user && authView.mode === 'signin' && !authView.invSet){ authView = {mode:'signup', msg:'', err:'', busy:false, invSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); } }
   if(!(user && !recovering && gate !== 'in')) delete app.dataset.gate;
   if(user && !recovering && !hadAcct){ hadAcct = true; landing = false; try{ localStorage.setItem('mb-had-account', '1'); }catch(e){} }
@@ -1503,7 +1538,7 @@ function showTour(i){
   </div></div>`;
 }
 function maybeTour(){
-  if(tourStep >= 0 || !kitchen || P().tourDone || recipes.length || allItems().length) return;
+  if(tourStep >= 0 || !kitchen || P().tourDone || recipes.length || allItems().length || giftToken() || claiming) return;
   showTour(0);
 }
 function renderHelp(){
@@ -1653,7 +1688,10 @@ document.addEventListener('click', async e => {
     toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }, true); const sm = el.querySelector('small'), tg = el.querySelector('.tog'); if(sm) sm.textContent = on ? 'Only you can see this recipe' : 'Friends can see this recipe'; if(tg) tg.classList.toggle('on', on); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }
-  if(a === 'sendopen'){ moreOpen = false; sendSheet = id; if(friends === null) loadFriends(true); render(); return; }
+  if(a === 'sendopen'){ moreOpen = false; sendSheet = id; sendLink = null; if(friends === null) loadFriends(true); recipeLink(id).then(u => { if(sendSheet === id) sendLink = {id, u}; }); render(); return; }
+  if(a === 'reclink'){ let u = sendLink && sendLink.id === id ? sendLink.u : null; if(!u){ el.disabled = true; u = await recipeLink(id); el.disabled = false; }
+    if(!u){ toast("Couldn't make a link. Try again."); return; }
+    try { await navigator.clipboard.writeText(u); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
   if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;
     const {data, error} = await sb.rpc('send_recipe', {recipe: id, friends: to, msg: (($('#send-note') || {}).value || '').trim()});

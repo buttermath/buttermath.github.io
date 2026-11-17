@@ -394,17 +394,15 @@ function renderFriends(){
     + (addFriendOpen ? renderAddFriend() : '');
 }
 function renderAddFriend(){
-  if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Friend request sent"><div class="askt">Request sent</div>
-    <p class="frsent">We sent a friend request to <b>${esc(frSent)}</b>. If they already use Mixing Bowl, it's waiting in their <b>Friends</b> tab.</p>
-    <p class="frsent">Not on Mixing Bowl yet? Email them an invite. Once they sign up, your request will be waiting for them.</p>
-    <button class="btn primary bigbtn" data-act="frmail"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite</button>
+  if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="askt">User not found</div>
+    <p class="frsent">We couldn't find a Mixing Bowl account for <b>${esc(frSent.em)}</b>. They might not be on Mixing Bowl yet.</p>
+    <p class="frsent">Send them an invite. They'll get your friend request when they log in for the first time.</p>
+    <button class="btn primary bigbtn" data-act="frmail"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite</button>` : `<div class="askt">Request sent</div>
+    <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Mixing Bowl.</p>`}
     <button class="btn bigbtn" data-act="addfriendclose">Done</button></div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
     <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Friend's email" required><button class="btn primary" type="submit">Send</button></form>
-    <div class="frhint">They'll see your request in their Friends tab.</div>
-    <div class="ordiv">or</div>
-    <button class="btn outline bigbtn" data-act="frlink">${ICON_LINK}Share invite link</button>
-    <div class="frhint">For friends who aren't on Mixing Bowl yet. After they sign up with your link, they'll be asked to accept your friend request.</div></div>`;
+  </div>`;
 }
 function fTile(fid, row){
   const d = row.data || {}, saved = savedCopy(fid, row.id), tt = autoTags(d).slice(0, 3);
@@ -1605,7 +1603,7 @@ document.addEventListener('click', async e => {
   if(a === 'fsortpick'){ fSortK = el.dataset.k; fSortOpen = false; render(); return; }
   if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); return; }
   if(a === 'addfriendclose'){ addFriendOpen = false; frSent = null; render(); return; }
-  if(a === 'frmail'){ const to = frSent; el.disabled = true; const {data, error} = await sb.rpc('create_invite_link'); el.disabled = false;
+  if(a === 'frmail'){ const to = frSent && frSent.em; el.disabled = true; const {data, error} = await sb.rpc('create_invite_link'); el.disabled = false;
     if(error || !data){ toast("Couldn't make an invite link. Try again."); return; }
     const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
     const subj = `${me || 'A friend'} invited you to Mixing Bowl`;
@@ -1689,7 +1687,7 @@ document.addEventListener('click', async e => {
   }
   if(a === 'resetshop'){
     const need = visibleItems().filter(i => !shop[i.id]).length;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Your cart goes to Past trips.${need ? ' Anything left stays on your list.' : ''}</div>${need ? `<label class="clearopt"><input type="checkbox" id="clearRest"><span>Clear ${need} remaining item${need === 1 ? '' : 's'}?</span></label>` : ''}<div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Your cart goes to Past trips.${need ? ' Anything left stays on your list unless you choose to clear cart.' : ''}</div>${need ? `<label class="clearopt"><input type="checkbox" id="clearRest"><span>Clear ${need} remaining item${need === 1 ? '' : 's'}?</span></label>` : ''}<div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
     return;
   }
   if(a === 'ing'){ const c = cookOf(id), key = el.dataset.k, v = !c.i[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.i = o.i || {})[key] = v; }); return; }
@@ -1825,9 +1823,9 @@ document.addEventListener('submit', async e => {
   if(['signin','signup','forgot','newpass'].includes(kind)){ return handleAuthForm(kind); }
   if(kind === 'frsend'){ const em = (($('#fr-email') || {}).value || '').trim(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Enter their email address'); return; }
     const btn = e.target.querySelector('button'); btn.disabled = true;
-    const {error} = await sb.rpc('send_friend_request', {target_email: em});
+    const {data: res, error} = await sb.rpc('send_friend_request', {target_email: em});
     btn.disabled = false; if(error){ toast(/slow down/.test(error.message || '') ? "That's a lot of requests today. Try again tomorrow." : "Couldn't send it. Try again."); return; }
-    frSent = em; render(); loadFriends(true); return; }
+    frSent = {em, invited: res === 'invited'}; render(); loadFriends(true); return; }
   if(kind === 'newtag'){
     const id = e.target.dataset.id, r = R(id), raw = ($('#newtag').value || '').replace(/\s+/g, ' ').trim(); if(!r || !raw) return;
     const t = raw.charAt(0).toUpperCase() + raw.slice(1), ex = allTags().find(x => x.toLowerCase() === t.toLowerCase()) || t;

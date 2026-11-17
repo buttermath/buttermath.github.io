@@ -131,7 +131,7 @@ async function loadAll(quiet){
 }
 
 function renderLanding(){
-  const bowl = POT_ART.replace('class="pot"', 'class="lp-bowl"');
+  const bowl = POT_ART.replace('class="pot"', 'class="lp-bowl"').replace(/<g class="drops"[\s\S]*?<\/g>/, '');
   const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
   const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
   const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;

@@ -1716,7 +1716,7 @@ document.addEventListener('click', async e => {
   if(a === 'deltrip'){ e.preventDefault(); const ats = el.dataset.at.split('|'), old = (P().trips || []).slice(); mutate(k => { k.progress.trips = (k.progress.trips || []).filter(t => !ats.includes(String(t.at))); }); toast('Trip removed', () => mutate(k => { k.progress.trips = old; })); return; }
   if(a === 'untrip'){ el.dataset.at.split('|').forEach(at => restoreTrip(at)); return; }
   if(a === 'authmode'){ authView = {mode: el.dataset.m, msg:'', err:'', busy:false}; landing = false; render(); window.scrollTo(0, 0); return; }
-  if(a === 'landing'){ landing = true; render(); window.scrollTo(0, 0); return; }
+  if(a === 'landing'){ forgetInvite(); forgetGift(); landing = true; render(); window.scrollTo(0, 0); return; }
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'active'){ const v = !isActive(id); mutate(k => { k.progress.active[id] = v; }); return; }

@@ -174,7 +174,7 @@ function renderLanding(){
     <h2 class="lp-h2">Four steps from recipe to dinner.</h2>
     <ol class="lp-three lp-four lp-steps">
       ${step(1, 'Save a recipe', 'Paste a link from any recipe site or social media post, add a photo of a cookbook page, or type in your own.')}
-      ${step(2, 'Build your list', 'Tap <b>Add ingredients to my list</b> on a recipe, or add recipes from your shopping list. Ingredients land on one list, sorted by aisle, with shared ones added up.')}
+      ${step(2, 'Build your list', 'Tap <b>Add ingredients to my list</b> on any recipe, or add recipe ingredients directly on your shopping list page. Ingredients land on one list, sorted by aisle, with shared ones added up.')}
       ${step(3, 'Shop', 'Check things off as you go, and tap <b>Have it</b> for anything already in your kitchen.')}
       ${step(4, 'Cook', "Follow the recipe step by step and check off each one. Tap <b>Screen on</b> so your phone doesn't go dark mid-recipe.")}
     </ol>
@@ -183,7 +183,7 @@ function renderLanding(){
     <span class="lp-eyebrow">Made for sharing</span>
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
-      ${feat('<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/>', 'Share cookbooks', "Add friends and family to see each other's cookbooks and save a copy of their best recipes to your own cookbook.")}
+      ${feat('<circle cx="9" cy="6" r="2.6"/><circle cx="15" cy="6" r="2.6"/><path d="M3.5 21v-3.5c0-3 1.8-5.3 4.5-5.8"/><path d="M20.5 21v-3.5c0-3-1.8-5.3-4.5-5.8"/><path d="M7 12.5c1.2 3.2 6.5 4.3 10.5 1.7"/><path d="M17 12.5c-1.2 3.2-6.5 4.3-10.5 1.7"/>', 'Share cookbooks', "Add friends and family to see each other's cookbooks and save a copy of their best recipes to your own cookbook.")}
       ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few. Possibilities are endless.')}
       ${feat('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>

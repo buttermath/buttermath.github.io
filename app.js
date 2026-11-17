@@ -345,7 +345,7 @@ function route(){
 // ---------- friends & shared cookbooks ----------
 let fSavedOnly = false, fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';
 const FSORTS = {recent:'Recent', az:'A–Z'};
-let friends = null, inbox = [], saves = [], friendsAt = 0, addFriendOpen = false, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
+let friends = null, inbox = [], saves = [], friendsAt = 0, addFriendOpen = false, frSent = null, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
 const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M19 8v6M16 11h6"/></svg>';
 const ICON_LINK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
 const ICON_LOCK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -397,13 +397,24 @@ function renderFriends(){
     + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
     + (addFriendOpen ? renderAddFriend() : '');
 }
+async function inviteMail(to){
+  const {data, error} = await sb.rpc('create_invite_link'); if(error || !data) return null;
+  const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
+  const subj = `${me || 'A friend'} invited you to Mixing Bowl`;
+  const body = `Hi!\n\nI've been saving my recipes on Mixing Bowl, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
+  const E = encodeURIComponent;
+  return {url, mail: 'mailto:' + E(to).replace(/%40/g, '@') + '?subject=' + E(subj) + '&body=' + E(body), gmail: 'https://mail.google.com/mail/?view=cm&fs=1&to=' + E(to) + '&su=' + E(subj) + '&body=' + E(body)};
+}
 function renderAddFriend(){
+  if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="askt">User not found</div>
+    <p class="frsent">We couldn't find a Mixing Bowl account for <b>${esc(frSent.em)}</b>. They might not be on Mixing Bowl yet.</p>
+    <p class="frsent">Send them an invite and they'll receive your friend request when they log in for the first time.</p>
+    ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}${frSent.mail ? `<p class="frmore">If this did not open an email, <button class="linkbtn" data-act="frcopy">copy the invite link</button> so you can email or text the sign up link to a friend.</p>` : ''}` : `<div class="askt">Request sent</div>
+    <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Mixing Bowl.</p>`}
+    <button class="btn bigbtn" data-act="addfriendclose">Done</button></div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
-    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Friend's email" required><button class="btn primary" type="submit">Send</button></form>
-    <div class="frhint">They'll see your request in their Friends tab.</div>
-    <div class="ordiv">or</div>
-    <button class="btn outline bigbtn" data-act="frlink">${ICON_LINK}Share invite link</button>
-    <div class="frhint">For friends who aren't on Mixing Bowl yet. After they sign up with your link, they'll be asked to accept your friend request.</div></div>`;
+    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
+  </div>`;
 }
 function fTile(fid, row){
   const d = row.data || {}, saved = savedCopy(fid, row.id), tt = autoTags(d).slice(0, 3);
@@ -622,11 +633,11 @@ function renderShopping(){
     }).join('') + `</div></div>`;
   });
   const secOpts = kitchen.shopping.sections;
-  return `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
+  return `${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
     ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap a recipe to hide or show its ingredients. Tap ✕ to take it off your list. Done cooking? Drag it to Past trips.</div>` : ''}
-    <div class="prog-line"><b>${done} of ${items.length} sorted</b><span class="muted">${items.length - done} still remaining</span></div>
-    <div class="bar"><i style="width:${pct}%"></i></div>
-  </div>
+    ${items.length ? `<div class="cartline"><button class="cl-cart ${f === 'cart' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="cart" aria-pressed="${f === 'cart'}" aria-label="Show the ${cnt.cart} item${cnt.cart === 1 ? '' : 's'} in your cart"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg><span><b>${cnt.cart}</b> in your cart</span></button><button class="cl-need ${f === 'need' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="need" aria-pressed="${f === 'need'}" aria-label="Show the ${cnt.need} item${cnt.need === 1 ? '' : 's'} you still need"><span><b>${cnt.need}</b> still needed</span></button></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>` : ''}
+  </div>` : ''}
   ${all.length ? `<div class="shopsearch ${Q ? 'on' : ''}" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="shopq" data-keep type="search" enterkeyhint="search" autocomplete="off" placeholder="Search your list" value="${esc(shopQ)}" aria-label="Search your list">${Q ? '<button class="sclear" data-act="sclear" aria-label="Clear search">✕</button>' : ''}</div>` : ''}
   ${Q ? `<div class="qnote" aria-live="polite">${pool.length ? `${pool.length} match${pool.length === 1 ? '' : 'es'} across Need, In cart and Have` : `Nothing on your list matches “${esc(shopQ.trim())}”`}</div>` : ''}
   ${!Q && (all.length || (P().trips || []).length) ? `<div class="seg" role="group" aria-label="Show">${fbtn('all','All')}${fbtn('need','Need')}${fbtn('cart','In cart')}${fbtn('have','Have')}</div>` : ''}
@@ -643,7 +654,7 @@ function renderShopping(){
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Type an item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to my list</b> while you are on any recipe page.</p>` : ''}
   <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
-  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<div class="tripfoot2"><div class="tf2-ic" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></div><div class="tf2-t"><span><b>${cnt.cart}</b> in your cart</span><span><b>${cnt.need}</b> still needed</span></div><button class="btn primary" data-act="resetshop">Finish trip</button></div>` : ''}<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>` : ''}
+  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish trip</b> to move everything in your cart to <b>Past trips</b>. Anything you still need stays on your list.</p><div class="te-btns"><button class="btn primary" data-act="resetshop">Finish trip</button><button class="btn" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}`;
 }
@@ -1603,7 +1614,12 @@ document.addEventListener('click', async e => {
   if(a === 'fsortmenu'){ fSortOpen = !fSortOpen; fCatOpen = false; render(); return; }
   if(a === 'fsortpick'){ fSortK = el.dataset.k; fSortOpen = false; render(); return; }
   if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); return; }
-  if(a === 'addfriendclose'){ addFriendOpen = false; render(); return; }
+  if(a === 'addfriendclose'){ addFriendOpen = false; frSent = null; render(); return; }
+  if(a === 'frmailed') return;
+  if(a === 'frmail'){ if(!frSent) return; el.disabled = true; const mail = await inviteMail(frSent.em); el.disabled = false;
+    if(!mail){ toast("Couldn't make an invite link. Try again."); return; }
+    frSent.mail = mail; render(); location.href = mail.mail; return; }
+  if(a === 'frcopy'){ const u = frSent && frSent.mail && frSent.mail.url; if(!u) return; try { await navigator.clipboard.writeText(u); toast('Invite link copied. Paste it into an email or text.'); } catch(_) { prompt('Copy this invite link:', u); } return; }
   if(a === 'frlink'){ copyInviteLink(); return; }
   if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
@@ -1671,7 +1687,7 @@ document.addEventListener('click', async e => {
     mutate(k => { unlinkRecipe(k, id); delete k.progress.active[id]; });
     toast(`Removed ${D(r).short || D(r).title} from your list`, () => mutate(k => { k.shopping.items = snap.items; k.progress.shop = snap.shop; if(snap.act === undefined) delete k.progress.active[id]; else k.progress.active[id] = snap.act; })); return; }
   if(a === 'relist'){ const r = R(id); mutate(k => { if(r && !k.shopping.items.some(i => (i.recipes || []).includes(id))) addIngredientsTo(k, id, D(r).ingredients || []); k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id]; }); toast('Added to your shopping list'); return; }
-  if(a === 'filter'){ ui.filter = el.dataset.f; saveUi(); render(); return; }
+  if(a === 'filter'){ ui.filter = el.dataset.tg && ui.filter === el.dataset.f ? 'all' : el.dataset.f; saveUi(); render(); return; }
   if(a === 'delitem'){ const it = allItems().find(i => i.id === id); mutate(k => { k.shopping.items = k.shopping.items.filter(i => i.id !== id); delete k.progress.shop[id]; }); if(it) toast('Removed ' + it.name); return; }
   if(a === 'copy'){
     const items = visibleItems().filter(i => !shop[i.id]); const secs = [...new Set(items.map(i => i.section || 'Other'))];
@@ -1681,7 +1697,7 @@ document.addEventListener('click', async e => {
   }
   if(a === 'resetshop'){
     const need = visibleItems().filter(i => !shop[i.id]).length;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Your cart goes to Past trips.${need ? ' Anything left stays on your list.' : ''}</div>${need ? `<label class="clearopt"><input type="checkbox" id="clearRest"><span>Clear ${need} remaining item${need === 1 ? '' : 's'}?</span></label>` : ''}<div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Your cart goes to Past trips.${need ? ' Anything left stays on your list unless you choose to clear cart.' : ''}</div>${need ? `<label class="clearopt"><input type="checkbox" id="clearRest"><span>Clear ${need} remaining item${need === 1 ? '' : 's'}?</span></label>` : ''}<div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
     return;
   }
   if(a === 'ing'){ const c = cookOf(id), key = el.dataset.k, v = !c.i[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.i = o.i || {})[key] = v; }); return; }
@@ -1817,9 +1833,9 @@ document.addEventListener('submit', async e => {
   if(['signin','signup','forgot','newpass'].includes(kind)){ return handleAuthForm(kind); }
   if(kind === 'frsend'){ const em = (($('#fr-email') || {}).value || '').trim(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Enter their email address'); return; }
     const btn = e.target.querySelector('button'); btn.disabled = true;
-    const {error} = await sb.rpc('send_friend_request', {target_email: em});
+    const {data: res, error} = await sb.rpc('send_friend_request', {target_email: em});
     btn.disabled = false; if(error){ toast(/slow down/.test(error.message || '') ? "That's a lot of requests today. Try again tomorrow." : "Couldn't send it. Try again."); return; }
-    addFriendOpen = false; const ei = $('#fr-email'); if(ei) ei.value = ''; toast('Request sent'); loadFriends(true); return; }
+    frSent = {em, invited: res === 'invited'}; if(frSent.invited) frSent.mail = await inviteMail(em); render(); loadFriends(true); return; }
   if(kind === 'newtag'){
     const id = e.target.dataset.id, r = R(id), raw = ($('#newtag').value || '').replace(/\s+/g, ' ').trim(); if(!r || !raw) return;
     const t = raw.charAt(0).toUpperCase() + raw.slice(1), ex = allTags().find(x => x.toLowerCase() === t.toLowerCase()) || t;
@@ -1853,7 +1869,7 @@ document.addEventListener('submit', async e => {
   }
 });
 document.addEventListener('change', e => { if(!e.target.classList || !e.target.classList.contains('sendck')) return; const n = document.querySelectorAll('.sendck:checked').length, b = $('#send-go'); if(b){ b.disabled = !n; b.textContent = n ? 'Send' : 'Pick a friend to send'; } });
-window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; addFriendOpen = false; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
+window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
   if(form && !/^#(add|edit-)/.test(location.hash)){ if(form.photoUrl) URL.revokeObjectURL(form.photoUrl); form = null; } // leaving the form without saving: next visit starts fresh
   render(); });
 

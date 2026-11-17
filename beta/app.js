@@ -149,7 +149,7 @@ function renderLanding(){
       <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one cookbook. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
       <div class="lp-ctas"><button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button></div>
     </div>
-    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter added up from two recipes">
+    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs and lemons added up from two recipes">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>
@@ -169,7 +169,7 @@ function renderLanding(){
     <h2 class="lp-h2">Your recipes are stored everywhere. Your grocery list is in a notes app or written on scratch paper.</h2>
     <div class="lp-three">
       ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Butter Math keeps them all in one cookbook.")}
-      ${card('The butter math', 'Two recipes, two amounts of butter. Butter Math adds them up so you buy enough the first time.')}
+      ${card('The butter math', 'Two recipes both call for butter, eggs and lemons. Butter Math adds up every ingredient so you buy enough the first time.')}
       ${card('One shopping trip', 'Your list is sorted by grocery aisle and you can keep track as you shop for multiple recipes. Check things off as you shop and nothing gets left on the shelf.')}
     </div>
   </section>

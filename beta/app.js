@@ -115,7 +115,7 @@ async function startUser(){
 }
 async function loadRecipes(){
   const {data, error} = await sb.from('recipes').select('id, sort, data').eq('user_id', user.id).order('sort', {ascending:true});
-  if(!error){ recipes = data || []; render(); }
+  if(!error){ recipes = notPending(data || []); render(); }
 }
 async function loadAll(quiet){
   if(!quiet) setStatus('busy', 'Loading…');
@@ -125,7 +125,7 @@ async function loadAll(quiet){
       sb.from('kitchens').select('*').eq('user_id', user.id).maybeSingle()
     ]);
     if(r.error) throw r.error; if(k.error) throw k.error;
-    recipes = r.data || [];
+    recipes = notPending(r.data || []);
     if(!queue.length && !flushing) kitchen = normalize(k.data);
     if(!k.data){ await sb.from('kitchens').upsert({user_id: user.id, shopping: kitchen.shopping, progress: kitchen.progress}); }
     loaded = true; setStatus('ok', 'Saved');
@@ -1074,16 +1074,32 @@ async function addStarters(){
     toast('Added Blueberry Pie'); if(data[0]) location.hash = 'r-' + data[0].id; else render();
   }catch(e){ console.error(e); toast("Couldn't add them. Try again."); setStatus('err', 'Not saved'); }
 }
-async function deleteRecipe(id){
+let pendingDel = null;
+function deleteRecipe(id){
   const r = R(id); if(!r) return;
+  if(pendingDel) commitDelete();
+  const at = recipes.indexOf(r);
+  recipes = recipes.filter(x => x.id !== id);
+  pendingDel = {r, at, t: setTimeout(commitDelete, 5000)};
+  if(location.hash !== '#recipes') location.hash = 'recipes'; else render();
+  toast('Recipe removed', () => {
+    if(!pendingDel || pendingDel.r.id !== id) return;
+    clearTimeout(pendingDel.t); pendingDel = null;
+    if(!R(id)) recipes.splice(Math.min(at, recipes.length), 0, r);
+    render(); toast('Recipe restored');
+  });
+}
+async function commitDelete(){
+  const p = pendingDel; if(!p) return; pendingDel = null; clearTimeout(p.t);
+  const {r} = p, id = r.id;
   try{
     const {error} = await sb.from('recipes').delete().eq('id', id); if(error) throw error;
     if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {});
-    recipes = recipes.filter(x => x.id !== id);
     mutate(k => removeRecipeFrom(k, id));
-    location.hash = 'recipes'; toast('Recipe removed');
-  }catch(e){ toast("Couldn't remove it. Try again."); }
+  }catch(e){ if(!R(id)) recipes.splice(Math.min(p.at, recipes.length), 0, r); render(); toast("Couldn't remove it. Try again."); }
 }
+const notPending = list => pendingDel ? list.filter(x => x.id !== pendingDel.r.id) : list;
+addEventListener('pagehide', () => { if(pendingDel) commitDelete(); });
 
 /* ---------------- account ---------------- */
 async function deleteAccount(){
@@ -1778,11 +1794,11 @@ document.addEventListener('click', async e => {
   if(a === 'unmark'){ mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; if(!o.before) return; o.s = Object.assign({}, o.before); delete o.before; syncMade(k, id); }); toast('Back to where you were'); return; }
   if(a === 'again'){ mutate(k => { bankLegacy(k, id); k.progress.cook[id] = {i:{}, s:{}}; }); addSheet = {id, again: true}; render(); window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   if(a === 'recipex'){ const r = R(id); if(!r) return;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>${esc(D(r).title)}</h3><div class="muted">Archive hides it until you want it again. Remove takes it out of your cookbook for good.</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn" data-act="archive" data-id="${esc(id)}">Archive</button><button class="btn dangerbtn" data-act="delrecipe" data-id="${esc(id)}">Remove</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><div class="mhead"><h3>${esc(D(r).title)}</h3><button class="ibtn mx" data-act="mclose" aria-label="Close">✕</button></div><div class="muted">Archive hides it until you want it again. Remove takes it out of your cookbook for good.</div><div class="row"><button class="btn" data-act="archive" data-id="${esc(id)}">Archive</button><button class="btn dangerbtn" data-act="delrecipe" data-id="${esc(id)}">Remove</button></div></div></div>`;
     return; }
   if(a === 'archive'){ $('#modalRoot').innerHTML = ''; const r = R(id); mutate(k => { (k.progress.archived = k.progress.archived || {})[id] = true; }); toast(D(r).title + ' archived'); if(location.hash !== '#recipes') location.hash = 'recipes'; return; }
   if(a === 'unarch'){ const r = R(id); mutate(k => { if(k.progress.archived) delete k.progress.archived[id]; }); toast(D(r).title + ' is back'); return; }
-  if(a === 'delrecipe'){ const r = R(id); confirmBox('Remove this recipe?', `Removes <b class="delname">${esc(D(r).title)}</b> from your cookbook. This action can't be undone.`, 'Remove recipe', () => deleteRecipe(id), true); return; }
+  if(a === 'delrecipe'){ $('#modalRoot').innerHTML = ''; moreOpen = false; deleteRecipe(id); return; }
   if(a === 'starters'){ el.disabled = true; addStarters(); return; }
   if(a === 'parse'){ fillFromPaste(); return; }
   if(a === 'addopen'){ ui.addOpen = true; render(); setTimeout(() => { const n = $('#addName'); if(n) n.focus(); }, 30); return; }

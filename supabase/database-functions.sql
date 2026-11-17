@@ -436,12 +436,13 @@ AS $function$
 declare me uuid := auth.uid(); them uuid; em text := lower(trim(target_email));
 begin
   if me is null or em !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'bad email'; end if;
-  if (select count(*) from friendships where requester = me and created_at > now() - interval '1 day') > 30 then raise exception 'slow down'; end if;
+  if (select count(*) from friendships where requester = me and created_at > now() - interval '1 day')
+   + (select count(*) from pending_invites where inviter = me and created_at > now() - interval '1 day') > 30 then raise exception 'slow down'; end if;
   select id into them from auth.users where lower(email) = em;
   if them = me then return 'sent'; end if;
   if them is null then
     insert into pending_invites(inviter, email) values (me, em) on conflict do nothing;
-    return 'sent';
+    return 'invited';
   end if;
   -- They already asked me: accept instead
   update friendships set status = 'accepted' where requester = them and addressee = me and status in ('pending', 'declined');

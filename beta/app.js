@@ -401,7 +401,7 @@ function renderAddFriend(){
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Mixing Bowl.</p>`}
     <button class="btn bigbtn" data-act="addfriendclose">Done</button></div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
-    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Friend's email" required><button class="btn primary" type="submit">Send</button></form>
+    <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
   </div>`;
 }
 function fTile(fid, row){

@@ -541,11 +541,21 @@ function forgetGift(){ try{ localStorage.removeItem('mb_gift'); }catch(e){} gift
 let claiming = false;
 async function claimGift(){
   const t = giftToken(); if(!t || !user || claiming) return; claiming = true;
-  const {data, error} = await sb.rpc('accept_recipe_link', {t}); claiming = false; forgetGift();
+  try{ await claimGift0(t); } finally { claiming = false; }
+}
+async function claimGift0(t){
+  const {data, error} = await sb.rpc('accept_recipe_link', {t}); forgetGift();
   if(error || !data){ toast("Couldn't open that recipe link. Ask your friend to send a new one."); return; }
   if(data.self){ toast("That's your own recipe link. Send it to a friend."); return; }
+  await loadFriends(true);
+  const sh = data.share && inbox.find(x => x.id === data.share);
+  if(sh){ try{
+      const row = await saveCopy(sh.data, {name: sh.sender_name});
+      await sb.rpc('dismiss_share', {share: sh.id}); inbox = inbox.filter(x => x.id !== sh.id);
+      toast(`${data.name} sent you ${data.title || 'a recipe'}. It's in your recipes.`); location.hash = 'r-' + row.id; return;
+    }catch(e){} }
   toast(data.again ? `You already have ${data.title || 'this recipe'} from ${data.name}` : `${data.name} sent you ${data.title || 'a recipe'}`);
-  await loadFriends(true); if(location.hash !== '#friends') location.hash = 'friends'; else render();
+  if(location.hash !== '#friends') location.hash = 'friends'; else render();
 }
 async function recipeLink(id){
   const {data, error} = await sb.rpc('create_recipe_link', {rid: id}); if(error || !data) return null;
@@ -1528,7 +1538,7 @@ function showTour(i){
   </div></div>`;
 }
 function maybeTour(){
-  if(tourStep >= 0 || !kitchen || P().tourDone || recipes.length || allItems().length) return;
+  if(tourStep >= 0 || !kitchen || P().tourDone || recipes.length || allItems().length || giftToken() || claiming) return;
   showTour(0);
 }
 function renderHelp(){

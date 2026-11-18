@@ -378,7 +378,7 @@ function addFresh(k, id, lines){
   if(k.progress.archived) delete k.progress.archived[id];
 }
 const ingListed = (id, line) => { const key = splitIngredient(line).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]) && isActive(id) && !(P().done || {})[id]; };
-let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null;
+let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null, shopAdd = false;
 const srcCredit = srcs => srcs.length ? `<div class="srcline">Recipe from <a href="${esc(srcs[0].url)}" target="_blank" rel="noopener">${esc(hostOf(srcs[0].url))}</a></div>` : '';
 const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./, ''); }catch(e){ return 'website'; } };
 const ICON_PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
@@ -659,6 +659,7 @@ function render0(){
   const ae = document.activeElement && document.activeElement.id && document.activeElement.hasAttribute('data-keep') ? document.activeElement : null;
   let sel = null; try{ sel = ae && ae.selectionStart != null ? [ae.selectionStart, ae.selectionEnd] : null; }catch(e){}
   let r = route();
+  if(r.v !== 'form') shopAdd = false;
   if(r.v === 'gift' && sb){ rememberGift(r.id); if(!user && !authView.giftSet){ authView = {mode:'signup', msg:'', err:'', busy:false, giftSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); setTimeout(claimGift); } }
   if(r.v === 'invite' && sb){ rememberInvite(r.id); if(!user && authView.mode === 'signin' && !authView.invSet){ authView = {mode:'signup', msg:'', err:'', busy:false, invSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); } }
   if(!(user && !recovering && gate !== 'in')) delete app.dataset.gate;
@@ -778,9 +779,9 @@ function renderPickSheet(all){
     <div class="pickhead"><div class="askt">Add from a recipe</div><button class="ibtn" data-act="pickclose" aria-label="Close">✕</button></div>
     <p class="muted pickp">Select which recipe(s) you're cooking. All ingredients will be added to your shopping list.</p>
     ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
-    <div class="picklist">${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
-      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">Your recipe box is empty. Add a recipe first.</div>`}</div>
-    <button class="btn primary pickgo" data-act="pickgo" ${n ? '' : 'disabled'}>${n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'}</button>
+    <div class="picklist"><button class="pickrow picknew" data-act="picknew"><span class="pt"><b>+ Add a new recipe</b><small>From a link, pasted text or a photo</small></span><span class="pplus" aria-hidden="true">+</span></button>${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
+      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">No recipes yet. Add one above and its ingredients go straight to your list.</div>`}</div>
+    ${list.length ? `<button class="btn primary pickgo" data-act="pickgo" ${n ? '' : 'disabled'}>${n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'}</button>` : `<button class="btn primary pickgo" data-act="picknew">Add a new recipe</button>`}
   </div>`;
 }
 
@@ -942,7 +943,7 @@ function renderForm(id){
       ${photoNow ? `<button class="picbtn picx" type="button" data-act="rmphoto" title="Use the drawing" aria-label="Use the drawing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}
     </div>
     <p class="pichint">Please use your own photo. Images from other websites belong to their creators.</p>
-    ${r && onList(r.id) ? `<label class="cb"><input type="checkbox" id="f-addlist" data-keep> Add new ingredients to list</label>` : ''}
+    ${r && onList(r.id) ? `<label class="cb"><input type="checkbox" id="f-addlist" data-keep> Add new ingredients to list</label>` : !r && shopAdd ? `<label class="cb"><input type="checkbox" id="f-addlist" data-keep checked> Add its ingredients to my shopping list</label>` : ''}
     </fieldset>
     <div class="row" style="margin-top:16px"><button class="btn primary sm" type="button" data-act="saveform" data-id="${r ? esc(r.id) : ''}" ${f.busy || (!r && !f.filled) ? 'disabled' : ''}>${f.busy ? 'Saving…' : r ? 'Save changes' : 'Save recipe'}</button></div>
     ${f.err ? `<div class="err">${esc(f.err)}</div>` : ''}
@@ -1136,8 +1137,9 @@ async function saveForm(id){
     if(!id) mutate(k => { k.progress.active[recId] = false; });
     if(addList) mutate(k => { addIngredientsTo(k, recId, ingredients); k.progress.active[recId] = true; if(k.progress.done) delete k.progress.done[recId]; });
     if(f.photoUrl) URL.revokeObjectURL(f.photoUrl);
-    form = null; toast(id ? 'Saved changes' : 'Saved! Tap Add ingredients to my list when you\'re ready.');
-    location.hash = 'r-' + recId; loadRecipes();
+    const toShop = !id && shopAdd && addList; shopAdd = false;
+    form = null; toast(toShop ? `Saved to your recipe box and added ${ingLines(data).length} ingredients to your list` : id ? 'Saved changes' : 'Saved! Tap Add ingredients to my list when you\'re ready.');
+    location.hash = toShop ? 'shopping' : 'r-' + recId; loadRecipes();
   }catch(e){
     console.error(e); f.busy = false; f.err = "Couldn't save: " + ((e && e.message) || 'check your connection and try again.'); render();
   }
@@ -1916,6 +1918,7 @@ document.addEventListener('click', async e => {
   if(a === 'more'){ moreOpen = !moreOpen; render(); return; }
   if(a === 'addask'){ addSheet = {id}; render(); return; }
   if(a === 'pickopen'){ pickSheet = {sel: {}}; ui.addOpen = false; render(); return; }
+  if(a === 'picknew'){ pickSheet = null; location.hash = 'add'; shopAdd = true; render(); return; }
   if(a === 'pickclose'){ pickSheet = null; render(); return; }
   if(a === 'picktog'){ if(!pickSheet || el.disabled) return; if(pickSheet.sel[id]) delete pickSheet.sel[id]; else pickSheet.sel[id] = true;
     const sel = !!pickSheet.sel[id], n = Object.keys(pickSheet.sel).length; el.classList.toggle('sel', sel); el.setAttribute('aria-pressed', sel); el.querySelector('.pbox').textContent = sel ? '✓' : '';
@@ -1991,7 +1994,7 @@ function autoImport(el){
   const u = el.value.trim();
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
-document.addEventListener('input', e => { if(e.target.id !== 'pickq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pickrow').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
+document.addEventListener('input', e => { if(e.target.id !== 'pickq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pickrow[data-s]').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
 document.addEventListener('input', e => { if(e.target.id !== 'adm-q') return; admQ = e.target.value; const q = admQ.trim().toLowerCase(); let n = 0;
   document.querySelectorAll('.ascroll .arow').forEach(r => { const hit = !q || r.dataset.s.includes(q); r.hidden = !hit; if(hit) n++; }); const z = document.querySelector('.anone'); if(z) z.hidden = n > 0; });
 document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'f-link'){ e.preventDefault(); autoImport(e.target); } });

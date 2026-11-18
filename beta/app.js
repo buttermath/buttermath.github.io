@@ -866,10 +866,10 @@ function renderMeal(){
   const longest = known.length ? known[0].t.min : 0;
   const ings = mealIngs(ids), have = ings.filter(mealOnList).length, allOn = ings.length && have === ings.length;
   const pills = allR.map(r => { const off = mealOff(r.id); return `<span class="mchip ${off ? 'off' : ''}"><button class="mchn" data-act="mealoff" data-id="${esc(r.id)}" aria-pressed="${!off}" title="${off ? 'Show in this meal again' : 'Hide from this meal'}">${mname(r)}</button><button class="mchx" data-act="mealrm" data-id="${esc(r.id)}" aria-label="Remove ${mname(r)} from this meal" title="Remove from this meal">✕</button></span>`; }).join('') + (all.length < MEAL_MAX ? `<button class="mchip add" data-act="mealopen">+ Add recipe</button>` : '');
-  const shopCard = m.hideShop || !ids.length ? '' : `<div class="mshop"><span class="mshopi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
+  const shopCard = (m.hideShop && !allOn) || !ids.length ? '' : `<div class="mshop"><span class="mshopi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
     <button class="mshopb" data-act="${allOn ? 'mealtolist' : 'mealshop'}"><b>${allOn ? 'All on your shopping list ✓' : 'Shop for ingredients'}</b><span>${allOn ? 'Go to your shopping list' : `${ings.length} ingredient${ings.length === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}${have ? ` · ${have} already on your list` : ''}`}</span></button>
     ${have ? `<button class="mshopgo" data-act="mealtolist" aria-label="Go to shopping list" title="Go to shopping list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : ''}
-    <button class="mshopx" data-act="mealshophide" aria-label="Close" title="Close">✕</button></div>`;
+    ${allOn ? '' : `<button class="mshopx" data-act="mealshophide" aria-label="Close" title="Close">✕</button>`}</div>`;
   const rows = known.map(({r, t}) => `<li><span class="mt">${clock(eat, t.min)}</span><div class="mtcard"><span><b>Start ${esc(D(r).title)}</b><small>${fmtDur(t.min)} ${t.from === 'total' ? 'total' : '(prep + cook)'}</small></span></div></li>`).join('');
   const timeline = known.length ? `<h3 class="mh">When to start</h3><ol class="mline">${rows}<li><span class="mt">${clock(eat, 0)}</span><div class="mtcard ready"><span><b>Ready to eat</b><small>${known.length === rs.length ? 'Everything finishes together' : 'The timed recipes finish together'}</small></span></div></li></ol>` : '';
   const unk = unknown.length ? `<div class="mnote">${unknown.map(({r}) => `<b>${esc(D(r).title)}</b>`).join(', ')} ${unknown.length === 1 ? "doesn't" : "don't"} list a total time, so ${unknown.length === 1 ? "it isn't" : "they aren't"} on the timeline. <button class="linkbtn" data-act="mealrec" data-id="${esc(unknown[0].r.id)}" data-edit="1">Add a time</button></div>` : '';
@@ -891,7 +891,7 @@ function renderMeal(){
   const tabs = rs.length > 1 ? `<div class="mtabs" role="tablist">${rs.map((r, i) => `<button role="tab" class="${i === 0 ? 'on' : ''}" data-act="mealjump" data-i="${i}">${mname(r)}</button>`).join('')}</div>` : '';
   return back + `<div class="mealpg"><h2 class="mtitle">Cook a Meal</h2><div class="msub">${ids.length} recipe${ids.length === 1 ? '' : 's'}${longest ? ` · start at ${clock(eat, longest)} · about ${fmtDur(longest)}` : ''}</div>
     <div class="mpl">Tap a recipe to hide it from the meal. Tap ✕ to remove it.</div><div class="mchips">${pills}</div>${shopCard}
-    ${ids.length ? `<div class="meat"><label for="mealeatx">We're eating at</label><input id="mealeatx" type="text" inputmode="text" autocomplete="off" value="${clock(eat, 0)}" aria-label="Time you're eating, like 6:30 PM"><button class="mclock" data-act="mealpicker" aria-label="Pick a time" title="Pick a time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button><input type="time" id="mealeat" value="${esc(eat)}" step="300" tabindex="-1" aria-hidden="true" class="mtimehid"></div>
+    ${ids.length ? `<div class="meat"><label for="mealeatx">We're eating at</label><input id="mealeatx" type="text" inputmode="text" autocomplete="off" value="${clock(eat, 0)}" aria-label="Time you're eating, like 6:30 PM"></div>
     ${timeline}${unk}${known.length ? `<p class="mfine">Start times are suggestions, so you can start any recipe whenever you like. They use each recipe's listed time and your phone's clock. Read through the steps for anything that needs to chill, rise, or marinate ahead.</p>` : ''}
     <h3 class="mh">Right now</h3><div class="mnow">${nowRows}</div>
     <h3 class="mh">Steps</h3>${stepNote}${tabs}<div class="mlanes" id="mlanes" style="--n:${rs.length}">${lanes}</div>` : `<div class="card empty">Every recipe is left out. Tap one above to add it back.</div>`}
@@ -2050,8 +2050,8 @@ document.addEventListener('click', async e => {
   if(a === 'sclear'){ shopQ = ''; const qi = $('#shopq'); if(qi) qi.value = ''; render(); const q = $('#shopq'); if(q) q.focus({preventScroll:true}); return; }
   if(a === 'more'){ moreOpen = !moreOpen; render(); return; }
   if(a === 'addask'){ addSheet = {id}; render(); return; }
-  if(a === 'mealopen'){ const sel = {}; mealIds().forEach(x => { sel[x] = true; }); mealPick = {sel}; render(); return; }
-  if(a === 'mealfrom'){ const sel = {}; mealIds().forEach(x => { sel[x] = true; }); if(R(id)) sel[id] = true; moreOpen = false; mealPick = {sel}; render(); return; }
+  if(a === 'mealopen'){ const sel = {}; mealOn().forEach(x => { sel[x] = true; }); mealPick = {sel}; render(); return; }
+  if(a === 'mealfrom'){ const sel = {}; mealOn().forEach(x => { sel[x] = true; }); if(R(id)) sel[id] = true; moreOpen = false; mealPick = {sel}; render(); return; }
   if(a === 'mealpickclose'){ mealPick = null; render(); return; }
   if(a === 'mealtog'){ if(!mealPick) return; if(mealPick.sel[id]) delete mealPick.sel[id]; else { if(Object.keys(mealPick.sel).length >= MEAL_MAX){ toast(`A meal can have up to ${MEAL_MAX} recipes`); return; } mealPick.sel[id] = true; }
     const sel = !!mealPick.sel[id], n = Object.keys(mealPick.sel).length; el.classList.toggle('sel', sel); el.setAttribute('aria-pressed', sel); el.querySelector('.pbox').textContent = sel ? '✓' : '';
@@ -2061,6 +2061,11 @@ document.addEventListener('click', async e => {
     const prev = mealIds(), fresh = ids.filter(x => { if(prev.includes(x)) return false; const p = progressOf(R(x)); return p.total > 0 && p.done === p.total; });
     mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = ids; delete m.hideShop; if(m.off){ m.off = Object.assign({}, m.off); Object.keys(m.off).forEach(x => { if(!ids.includes(x) || !prev.includes(x)) delete m.off[x]; }); }
       fresh.forEach(x => { bankLegacy(k, x); k.progress.cook[x] = {i:{}, s:{}}; }); }, true); if(location.hash === '#meal') render(); else location.hash = 'meal'; return; }
+  if(a === 'mealrm' && allItems().some(i => (i.recipes || []).includes(id))){ const nm = mname(R(id));
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Remove ${nm} from this meal?</h3><div class="muted">Do you also want to take its ingredients off your shopping list? Ingredients other recipes still need stay on your list.</div><div class="row mrmrow"><button class="btn" data-act="mclose">Cancel</button><button class="btn" data-act="mealrmkeep" data-id="${esc(id)}">Keep ingredients</button><button class="btn primary" data-act="mealrmall" data-id="${esc(id)}">Remove ingredients too</button></div></div></div>`; return; }
+  if(a === 'mealrmkeep' || a === 'mealrmall'){ $('#modalRoot').innerHTML = ''; const nm = R(id) ? D(R(id)).short || D(R(id)).title : 'Recipe';
+    mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = (m.ids || []).filter(x => x !== id); if(m.off) delete m.off[id]; if(m.now) delete m.now[id]; if(a === 'mealrmall') unlinkRecipe(k, id); });
+    toast(a === 'mealrmall' ? `Removed ${nm} and its ingredients from your list` : `Removed ${nm} from this meal`); return; }
   if(a === 'mealrm'){ mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = (m.ids || []).filter(x => x !== id); if(m.off) delete m.off[id]; if(m.now) delete m.now[id]; }); return; }
   if(a === 'mealnow'){ mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.now = Object.assign({}, m.now || {}, {[id]: true}); }); return; }
   if(a === 'mealtolist'){ shopBack = true; location.hash = 'shopping'; return; }
@@ -2068,7 +2073,8 @@ document.addEventListener('click', async e => {
   if(a === 'mealoff'){ mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); const off = m.off = Object.assign({}, m.off || {}); if(off[id]) delete off[id]; else off[id] = true; }); return; }
   if(a === 'mealrec'){ mealBack = id; location.hash = (el.dataset.edit ? 'edit-' : 'r-') + id; return; }
   if(a === 'mealjump'){ const i = +el.dataset.i, ml = $('#mlanes'), lane = $('#lane-' + i); if(!ml || !lane) return; ml.scrollTo({left: lane.offsetLeft - ml.offsetLeft, behavior: 'smooth'}); document.querySelectorAll('.mtabs button').forEach((b, j) => b.classList.toggle('on', j === i));
-    if(el.classList.contains('mnowr')){ const t = $('.mtabs') || ml; window.scrollTo({top: t.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth'}); } return; }
+    // Switching recipes slides the steps sideways only; the page itself never jumps.
+    lane.classList.remove('pulse'); void lane.offsetWidth; lane.classList.add('pulse'); return; }
   if(a === 'mealshop'){ mealShop = {mode: 'all', sel: {}}; mealIngs(mealOn()).forEach(e => { if(!mealOnList(e)) mealShop.sel[e.key] = true; }); render(); return; }
   if(a === 'mealshopclose'){ mealShop = null; render(); return; }
   if(a === 'mealmode'){ if(mealShop){ mealShop.mode = el.dataset.m; render(); } return; }
@@ -2156,7 +2162,12 @@ function autoImport(el){
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
 document.addEventListener('input', e => { if(e.target.id !== 'mealq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.mealpick .pickrow[data-s]').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
-document.addEventListener('change', e => { if(e.target.id === 'mealeatx'){ const cur = (P().meal || {}).eat || '18:00', v = parseClock(e.target.value, cur); if(!v){ toast('Try a time like 6:30 PM'); e.target.value = clock(cur, 0); return; } mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {eat: v}); }); return; } });
+// The typed time is saved as soon as you leave the box: tap or click anywhere else, or press Enter.
+function commitEat(el){ const cur = (P().meal || {}).eat || '18:00', v = parseClock(el.value, cur);
+  if(!v){ if(el.value.trim() !== clock(cur, 0)) toast('Try a time like 6:30 PM'); el.value = clock(cur, 0); return; }
+  el.value = clock(v, 0); if(v !== cur) mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {eat: v}); }); }
+document.addEventListener('focusout', e => { if(e.target.id === 'mealeatx') commitEat(e.target); });
+document.addEventListener('pointerdown', e => { const el = document.getElementById('mealeatx'); if(el && document.activeElement === el && e.target !== el) el.blur(); });
 document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'mealeatx'){ e.preventDefault(); e.target.blur(); } });
 document.addEventListener('change', e => { if(e.target.id === 'mealeat' && /^\d\d:\d\d/.test(e.target.value)){ const v = e.target.value.slice(0, 5); mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {eat: v}); }); }
   if(e.target.classList && e.target.classList.contains('mealck') && mealShop){ if(e.target.checked) mealShop.sel[e.target.dataset.k] = true; else delete mealShop.sel[e.target.dataset.k]; const n = Object.keys(mealShop.sel).length, b = document.querySelector('.mealshop .pickgo'); if(b){ b.disabled = !n; b.textContent = n ? `Add ${n} to my shopping list` : 'Pick ingredients to add'; } } });

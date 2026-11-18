@@ -860,11 +860,12 @@ function renderMeal(){
   if(!all.length) return back + `<div class="card empty mealempty"><h3>Cook a Meal</h3><p class="muted">${MEAL_P}</p><button class="btn primary" data-act="mealopen">${ICON_MEAL}Select recipes</button></div>`;
   const m = P().meal || {}, eat = m.eat || '18:00';
   // Everything is listed in the order you'd start it: longest recipe first, recipes with no listed time last.
-  const rs = ids.map(R).map((r, i) => ({r, i, t: mealTime(D(r))})).sort((a, b) => (b.t ? b.t.min : -1) - (a.t ? a.t.min : -1) || a.i - b.i).map(x => x.r);
+  const byStart = list => list.map(R).map((r, i) => ({r, i, t: mealTime(D(r))})).sort((a, b) => (b.t ? b.t.min : -1) - (a.t ? a.t.min : -1) || a.i - b.i).map(x => x.r);
+  const rs = byStart(ids), allR = byStart(all);
   const timed = rs.map(r => ({r, t: mealTime(D(r))})), known = timed.filter(x => x.t).sort((a, b) => b.t.min - a.t.min), unknown = timed.filter(x => !x.t);
   const longest = known.length ? known[0].t.min : 0;
   const ings = mealIngs(ids), have = ings.filter(mealOnList).length, allOn = ings.length && have === ings.length;
-  const pills = rs.map(r => `<span class="mchip">${mname(r)}<button class="mchx" data-act="mealrm" data-id="${esc(r.id)}" aria-label="Remove ${mname(r)} from this meal" title="Remove from this meal">✕</button></span>`).join('') + (all.length < MEAL_MAX ? `<button class="mchip add" data-act="mealopen">+ Add recipe</button>` : '');
+  const pills = allR.map(r => { const off = mealOff(r.id); return `<span class="mchip ${off ? 'off' : ''}"><button class="mchn" data-act="mealoff" data-id="${esc(r.id)}" aria-pressed="${!off}" title="${off ? 'Show in this meal again' : 'Hide from this meal'}">${mname(r)}</button><button class="mchx" data-act="mealrm" data-id="${esc(r.id)}" aria-label="Remove ${mname(r)} from this meal" title="Remove from this meal">✕</button></span>`; }).join('') + (all.length < MEAL_MAX ? `<button class="mchip add" data-act="mealopen">+ Add recipe</button>` : '');
   const shopCard = m.hideShop || !ids.length ? '' : `<div class="mshop"><span class="mshopi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
     <button class="mshopb" data-act="${allOn ? 'mealtolist' : 'mealshop'}"><b>${allOn ? 'All on your shopping list ✓' : 'Shop for ingredients'}</b><span>${allOn ? 'Go to your shopping list' : `${ings.length} ingredient${ings.length === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}${have ? ` · ${have} already on your list` : ''}`}</span></button>
     ${have ? `<button class="mshopgo" data-act="mealtolist" aria-label="Go to shopping list" title="Go to shopping list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : ''}
@@ -884,13 +885,16 @@ function renderMeal(){
       return `<button class="step ${done ? 'done' : ''} ${s.kind === 'now' && s.p.all[s.p.cur].key === key ? 'cur' : ''}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? '✓' : n}</span><span class="tx">${x.title ? `<div class="tt">${esc(x.title)}</div>` : ''}<p>${fmt(x.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`; }).join('')).join('');
     return `<section class="mlane ${s.kind}" id="lane-${i}"><div class="mlh"><b>${esc(d.title)}</b><small>${s.text}</small></div>${wait}
       <div class="mlb">${list || '<div class="muted">No steps listed.</div>'}</div><button class="linkbtn mopen" data-act="mealrec" data-id="${esc(r.id)}">Open the full recipe →</button></section>`; }).join('');
+  const untimed = rs.filter(r => stepList(D(r)).some(x => !(x.st.timers || []).length));
+  const andList = a => a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ', and ' + a[a.length - 1];
+  const stepNote = untimed.length && rs.length > 1 ? `<p class="mfine mstepnote">This is a suggested plan. The recipes line up by start time, not step by step, because ${andList(untimed.map(mname))} ${untimed.length === 1 ? "doesn't" : "don't"} say how long each step takes.</p>` : '';
   const tabs = rs.length > 1 ? `<div class="mtabs" role="tablist">${rs.map((r, i) => `<button role="tab" class="${i === 0 ? 'on' : ''}" data-act="mealjump" data-i="${i}">${mname(r)}</button>`).join('')}</div>` : '';
   return back + `<div class="mealpg"><h2 class="mtitle">Cook a Meal</h2><div class="msub">${ids.length} recipe${ids.length === 1 ? '' : 's'}${longest ? ` · start at ${clock(eat, longest)} · about ${fmtDur(longest)}` : ''}</div>
-    <div class="mchips">${pills}</div>${shopCard}
+    <div class="mpl">Tap a recipe to hide it from the meal. Tap ✕ to remove it.</div><div class="mchips">${pills}</div>${shopCard}
     ${ids.length ? `<div class="meat"><label for="mealeatx">We're eating at</label><input id="mealeatx" type="text" inputmode="text" autocomplete="off" value="${clock(eat, 0)}" aria-label="Time you're eating, like 6:30 PM"><button class="mclock" data-act="mealpicker" aria-label="Pick a time" title="Pick a time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button><input type="time" id="mealeat" value="${esc(eat)}" step="300" tabindex="-1" aria-hidden="true" class="mtimehid"></div>
     ${timeline}${unk}${known.length ? `<p class="mfine">Start times are suggestions, so you can start any recipe whenever you like. They use each recipe's listed time and your phone's clock. Read through the steps for anything that needs to chill, rise, or marinate ahead.</p>` : ''}
     <h3 class="mh">Right now</h3><div class="mnow">${nowRows}</div>
-    <h3 class="mh">Steps</h3>${tabs}<div class="mlanes" id="mlanes" style="--n:${rs.length}">${lanes}</div>` : `<div class="card empty">Every recipe is left out. Tap one above to add it back.</div>`}
+    <h3 class="mh">Steps</h3>${stepNote}${tabs}<div class="mlanes" id="mlanes" style="--n:${rs.length}">${lanes}</div>` : `<div class="card empty">Every recipe is left out. Tap one above to add it back.</div>`}
     <button class="linkbtn mclear" data-act="mealclear">Clear this meal</button></div>
     ${mealShop ? renderMealShop(ids, ings) : ''}`;
 }

@@ -1752,7 +1752,7 @@ document.addEventListener('click', async e => {
   if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }
   if(a === 'fsortmenu'){ fSortOpen = !fSortOpen; fCatOpen = false; render(); return; }
   if(a === 'fsortpick'){ fSortK = el.dataset.k; fSortOpen = false; render(); return; }
-  if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); getInvite().then(u => { const el = $('#fr-inv'); if(el && u) el.value = u; }); return; }
+  if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i && !matchMedia('(pointer: coarse)').matches) i.focus(); }, 60); getInvite().then(u => { const el = $('#fr-inv'); if(el && u) el.value = u; }); return; }
   if(a === 'frinvcopy'){ const u = myInvite || await getInvite(); if(!u){ toast("Couldn't make a link. Try again."); return; }
     try { await navigator.clipboard.writeText(u); toast('Invite link copied. Text or email it to your friend.'); } catch(_) { const el = $('#fr-inv'); if(el){ el.value = u; el.focus(); el.select(); } toast('Press and hold the link to copy it.'); } return; }
   if(a === 'addfriendclose'){ addFriendOpen = false; frSent = null; render(); return; }

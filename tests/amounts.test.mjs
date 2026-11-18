@@ -62,6 +62,10 @@ line('1/2 cup (120ml) whole milk (warmed to about 95°F (35°C))', 'Milk', '½ c
 line('6 Tablespoons (85g) unsalted butter, softened', 'Unsalted butter', '6 Tablespoons (85g)');
 line('2 Tablespoons heavy cream or milk)', 'Heavy cream or milk', '2 Tablespoons');
 line('18 large eggs', 'Eggs', '18 large');
+line('1 and 2/3 cups (210g) all-purpose flour', 'All-purpose flour', '1⅔ cups (210g)');
+line('2 and 1/2 teaspoons baking powder', 'Baking powder', '2½ teaspoons');
+line('1 and ½ teaspoons pure vanilla extract', 'Pure vanilla extract', '1½ teaspoons');
+line('1 and a half cups milk', 'Milk', '1½ cups');
 
 console.log('\nMatching the same ingredient across recipes');
 const same = (a, b) => check(`"${a}" = "${b}"`, String(splitIngredient(a).key === splitIngredient(b).key), 'true');

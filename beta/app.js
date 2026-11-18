@@ -396,7 +396,8 @@ function route(){
   if(h.startsWith('edit-')) return {v:'form', id:h.slice(5)};
   if(h === 'add') return {v:'form'};
   if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help','about'].includes(h)) return {v:h};
-  return {v:'shopping'};
+  // New members with nothing saved yet start on Recipes, since adding a recipe comes first.
+  return loaded && !recipes.length && !allItems().length ? {v:'recipes'} : {v:'shopping'};
 }
 // ---------- friends & shared cookbooks ----------
 let fSavedOnly = false, fCat = [], fCatOpen = false, fSortOpen = false, fSortK = 'recent';

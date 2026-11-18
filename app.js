@@ -198,6 +198,7 @@ function renderLanding(){
     <p>Make your kitchen in a minute and save your first recipe. It's free.</p>
     <button class="btn primary" data-act="authmode" data-m="signup">Create your kitchen</button>
     <p class="lp-small">Already have one? <button class="linkbtn" data-act="authmode" data-m="signin">Sign in</button></p>
+    <a class="lp-ig" href="https://www.instagram.com/buttermath.app/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>Follow on Instagram</a>
   </section>
 </div>`;
 }

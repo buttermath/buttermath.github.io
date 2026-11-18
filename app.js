@@ -153,7 +153,7 @@ async function loadAll(quiet){
   render();
 }
 
-function renderLanding(){
+function renderLanding(member){
   const bowl = POT_ART.replace('class="pot"', 'class="lp-bowl"').replace(/\n\s*<g class="drops">.*<\/g>(?=\n)/, '');
   const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
   const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
@@ -166,7 +166,7 @@ function renderLanding(){
       <span class="lp-eyebrow">Attention home cooks and bakers</span>
       <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
       <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one recipe box. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
-      <div class="lp-ctas"><button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button></div>
+      <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="shopping">Go to my shopping list</button><button class="btn" data-act="go" data-h="recipes">My recipes</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs and lemons added up from two recipes">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
@@ -213,10 +213,10 @@ function renderLanding(){
   </section>
   <section class="lp-final">
     ${bowl}
-    <h2 class="lp-h2">Set up your kitchen today.</h2>
-    <p>Make your kitchen in a minute and save your first recipe. It's free.</p>
-    <button class="btn primary" data-act="authmode" data-m="signup">Create your kitchen</button>
-    <p class="lp-small">Already have one? <button class="linkbtn" data-act="authmode" data-m="signin">Sign in</button></p>
+    ${member ? '' : `<h2 class="lp-h2">Set up your kitchen today.</h2>
+    <p>Make your kitchen in a minute and save your first recipe. It's free.</p>`}
+    ${member ? `<button class="btn primary" data-act="go" data-h="shopping">Go to my shopping list</button>` : `<button class="btn primary" data-act="authmode" data-m="signup">Create your kitchen</button>
+    <p class="lp-small">Already have one? <button class="linkbtn" data-act="authmode" data-m="signin">Sign in</button></p>`}
     <a class="lp-ig" href="https://www.instagram.com/buttermath.app/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>Follow on Instagram</a>
   </section>
 </div>`;
@@ -386,7 +386,7 @@ function route(){
   if(h.startsWith('gift-')) return {v:'gift', id:h.slice(5)};
   if(h.startsWith('edit-')) return {v:'form', id:h.slice(5)};
   if(h === 'add') return {v:'form'};
-  if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help'].includes(h)) return {v:h};
+  if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help','about'].includes(h)) return {v:h};
   return {v:'shopping'};
 }
 // ---------- friends & shared cookbooks ----------
@@ -678,6 +678,7 @@ function render0(){
     else if(r.v === 'help') app.innerHTML = renderHelp();
     else if(r.v === 'trips') app.innerHTML = renderTrips();
     else if(r.v === 'admin') app.innerHTML = renderAdmin();
+    else if(r.v === 'about') app.innerHTML = renderLanding(true);
     else app.innerHTML = renderRecipe(r.id);
     maybeTour();
   }
@@ -694,7 +695,7 @@ function render0(){
 function renderHeader(r){
   const n = firstName();
   const kn = user && n && !recovering ? `<span class="kname">${esc(n)}'s Kitchen</span>` : '';
-  return `<div class="bwrap"><h1>Butter <span>Math</span></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
+  return `<div class="bwrap"><h1><a class="logolink" href="#about" data-act="logo" aria-label="Butter Math home">Butter <span>Math</span></a></h1>${kn}</div><div class="hright">${landingOn(r) ? `<div class="lp-nav"><button class="btn lp-signin" data-act="authmode" data-m="signin">Sign in</button></div>` : ''}${user && !recovering ? `<div id="status" class="status ${statusNow.kind}"><i class="dot"></i><span>${esc(statusNow.text)}</span></div><button class="avatar" data-act="menu" aria-label="Your menu" aria-expanded="${menuOpen}">${esc((n || (user.email || '?'))[0].toUpperCase())}</button>${menuOpen ? renderMenu() : ''}` : ''}</div>`;
 }
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
@@ -1855,6 +1856,7 @@ document.addEventListener('click', async e => {
   if(a === 'deltrip'){ e.preventDefault(); const ats = el.dataset.at.split('|'), old = (P().trips || []).slice(); mutate(k => { k.progress.trips = (k.progress.trips || []).filter(t => !ats.includes(String(t.at))); }); toast('Trip removed', () => mutate(k => { k.progress.trips = old; })); return; }
   if(a === 'untrip'){ el.dataset.at.split('|').forEach(at => restoreTrip(at)); return; }
   if(a === 'authmode'){ authView = {mode: el.dataset.m, msg:'', err:'', busy:false}; landing = false; render(); window.scrollTo(0, 0); return; }
+  if(a === 'logo'){ e.preventDefault(); if(user && !recovering){ location.hash = 'about'; } else { authView = {mode:'signin', msg:'', err:'', busy:false}; landing = true; if(location.hash && location.hash !== '#') history.replaceState(null, '', location.pathname); render(); } window.scrollTo(0, 0); return; }
   if(a === 'landing'){ forgetInvite(); forgetGift(); landing = true; render(); window.scrollTo(0, 0); return; }
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); return; }

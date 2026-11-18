@@ -174,6 +174,19 @@ export function addQty(a, b){
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
     const g = x.unit + '|' + x.desc, s = sums.get(g) || {n:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc}; s.n += x.n; s.c++; sums.set(g, s); });
   const plural = (u, n) => n > 1 && /^(cup|clove|can|stick)$/.test(u) ? u + 's' : u;
-  const out = [...sums.values()].map(s => s.c === 1 ? s.orig : nice(s.n) + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : ''));
+  // Spoons, sticks and cups are one family: convert them to one unit so "10 Tbsp + 1 stick" reads "18 Tbsp (2¼ sticks)".
+  const fam = {tsp:1, Tbsp:3, stick:24, cup:48}, okf = {cup:[1/8,1/4,1/3,1/2,2/3,3/4], Tbsp:[1/2], tsp:[1/8,1/4,1/2,3/4]};
+  const fine = (v, u) => { const f = v - Math.floor(v + 1e-9); return f < 1e-6 || 1 - f < 1e-6 || okf[u].some(x => Math.abs(x - f) < 1e-6); };
+  const groups = [...sums.values()], byDesc = new Map(), merged = new Map();
+  groups.forEach(s => { if(fam[s.unit]){ const a = byDesc.get(s.desc) || []; a.push(s); byDesc.set(s.desc, a); } });
+  byDesc.forEach((arr, desc) => {
+    if(new Set(arr.map(s => s.unit)).size < 2) return;
+    const t = arr.reduce((n, s) => n + s.n * fam[s.unit], 0), used = arr.map(s => s.unit), top = Math.max(...used.map(u => fam[u])), d = desc ? ' ' + desc : '';
+    let str = null;
+    if(used.includes('stick')){ const st = t / 24; str = nice(t / 3) + ' Tbsp' + d + (fine(st, 'cup') ? ` (${nice(st)} ${st > 1 ? 'sticks' : 'stick'})` : ''); }
+    else for(const u of ['cup', 'Tbsp', 'tsp']){ if(fam[u] > top) continue; const v = t / fam[u]; if(fine(v, u) && !(u === 'tsp' && t > 12)){ str = nice(v) + ' ' + plural(u, v) + d; break; } }
+    if(str){ merged.set(arr[0], str); arr.slice(1).forEach(s => merged.set(s, null)); }
+  });
+  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 ? s.orig : nice(s.n) + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '')).filter(x => x !== null);
   return out.concat(text).join(' + ');
 }

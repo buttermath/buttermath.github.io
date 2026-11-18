@@ -872,3 +872,5 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .madeit svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
 .madeitw{position:relative;margin-top:12px}.madeitw .madeit{margin-top:0;padding-right:48px}
 .madeitx{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:36px;height:36px}
+.madeitw{display:flex;flex-direction:column;align-items:center;gap:2px}.madeitw .madeit{align-self:stretch;padding-right:14px}
+.madeitw .madeitx{position:static;transform:none;width:auto;height:auto;min-height:36px;border:0;background:none;padding:4px 8px;font:600 13px Inter,sans-serif;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}

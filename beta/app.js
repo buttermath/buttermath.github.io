@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from '../parse.js';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=1';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -128,7 +128,7 @@ async function loadAll(quiet){
     recipes = notPending(r.data || []);
     if(!queue.length && !flushing) kitchen = normalize(k.data);
     if(!k.data){ await sb.from('kitchens').upsert({user_id: user.id, shopping: kitchen.shopping, progress: kitchen.progress}); }
-    loaded = true; setStatus('ok', 'Saved');
+    loaded = true; setStatus('ok', 'Saved'); repairQtys();
     sb.rpc('is_admin').then(({data}) => { const v = data === true; if(v !== isAdmin){ isAdmin = v; render(); } }, () => {});
   }catch(e){ console.error(e); setStatus('err', "Can't reach your kitchen"); loaded = true; }
   render();
@@ -280,7 +280,7 @@ function addIngredientsTo(k, recipeId, groups){
       if(linked && !touched.has(it.id)) return;
       if(!linked) it.recipes = (it.recipes || []).concat(recipeId);
       if(qty) it.qty = addQty(it.qty, qty);
-      touched.add(it.id);
+      fixItem(it); touched.add(it.id);
     } else {
       const id = 'i-' + recipeId.slice(0, 8) + '-' + key.replace(/[^a-z0-9]+/g, '-').slice(0, 30);
       items.push({id, name, qty, key, section: guessSection(name), recipes:[recipeId]});
@@ -305,13 +305,23 @@ function syncMade(k, id){
   else if(!full && o.counted){ o.counted = false; const c = m[id] || {n:0}; m[id] = Object.assign({}, c, {n: Math.max(0, (c.n || 0) - 1)}); }
 }
 const ingLines = d => (d.ingredients || []).flatMap(g => g.items || []).filter(l => splitIngredient(l).key);
+// An item's amount is always the sum of its recipes' lines, so taking a recipe off and adding it back never doubles it.
+function qtyFromRecipes(it){
+  const rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
+  const key = it.key || splitIngredient(it.name).key; let q = '';
+  rs.forEach(x => ingLines(D(R(x))).forEach(l => { const p = splitIngredient(l); if(p.key === key && p.qty) q = addQty(q, p.qty); }));
+  return q;
+}
+function fixItem(it){ let ch = false; const q = qtyFromRecipes(it); if(q !== null && q !== (it.qty || '')){ it.qty = q; ch = true; }
+  const n = String(it.name || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim(); if(n && n !== it.name){ it.name = n; ch = true; } return ch; }
+function repairQtys(){ if(!loaded || !(kitchen.shopping.items || []).some(i => fixItem(JSON.parse(JSON.stringify(i))))) return; mutate(k => { k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {
     if(!(i.recipes || []).includes(id)) return true;
     if(keys && !keys.has(i.key || splitIngredient(i.name).key)) return true;
     i.recipes = i.recipes.filter(x => x !== id);
-    if(i.recipes.length || i.custom) return true;
+    if(i.recipes.length){ fixItem(i); return true; } if(i.custom) return true;
     delete marks[i.id]; return false;
   });
 }

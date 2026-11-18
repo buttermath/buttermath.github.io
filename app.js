@@ -45,7 +45,7 @@ function normalize(row){
 
 let statusNow = {kind:'', text:''};
 function setStatus(kind, text){ statusNow = {kind, text}; const el = $('#status'); if(!el) return; el.className = 'status ' + kind; el.querySelector('span').textContent = text; }
-let toastT; function toast(t, undo){ const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 5000 : 2400); }
+let toastT; function toast(t, undo){ const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2400); }
 
 /* ------------- saving the kitchen row (shopping + progress) -------------
    Each change is a small function. It runs on the local copy right away, and on save
@@ -1099,7 +1099,7 @@ function deleteRecipe(id){
   if(pendingDel) commitDelete();
   const at = recipes.indexOf(r);
   recipes = recipes.filter(x => x.id !== id);
-  pendingDel = {r, at, t: setTimeout(commitDelete, 5000)};
+  pendingDel = {r, at, t: setTimeout(commitDelete, 4000)};
   if(location.hash !== '#recipes') location.hash = 'recipes'; else render();
   toast('Recipe removed', () => {
     if(!pendingDel || pendingDel.r.id !== id) return;

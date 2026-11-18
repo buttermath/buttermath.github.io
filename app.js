@@ -326,6 +326,7 @@ function addFresh(k, id, lines){
 }
 const ingListed = (id, line) => { const key = splitIngredient(line).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]) && isActive(id) && !(P().done || {})[id]; };
 let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null;
+const srcCredit = srcs => srcs.length ? `<div class="srcline">Recipe from <a href="${esc(srcs[0].url)}" target="_blank" rel="noopener">${esc(hostOf(srcs[0].url))}</a></div>` : '';
 const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./, ''); }catch(e){ return 'website'; } };
 const ICON_PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
 const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
@@ -479,11 +480,12 @@ function renderFrecipe(key){
   let n = 0;
   const steps = (d.steps || []).map(sec => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map(st => { n++; return `<div class="step ro"><span class="num">${n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p></span></div>`; }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
-  const notes = (d.notes && d.notes.length) || srcs.length ? `<div class="card panel extras">${d.notes && d.notes.length ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${srcs.map((l, li) => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${li === 0 ? 'View original recipe' : esc(l.label || 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
+  const more = srcs.slice(1);
+  const notes = (d.notes && d.notes.length) || more.length ? `<div class="card panel extras">${d.notes && d.notes.length ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${more.map(l => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${esc(l.label || 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
   return `<button class="back" data-act="go" data-h="f-${esc(fid)}">← ${esc(kitchenOf(f.name))}</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}</div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2></div>
-    <div class="byl">${avatar(fid, f.name, 'xs')}From ${esc(kitchenOf(f.name))}</div>
+    ${srcCredit(srcs)}<div class="byl">${avatar(fid, f.name, 'xs')}From ${esc(kitchenOf(f.name))}</div>
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}</div>
     ${autoTags(d).length ? `<div class="rtags">${autoTags(d).map(t => `<span class="rtag ro">${esc(t)}</span>`).join('')}</div>` : ''}
     <div class="actrow factrow">${fActRow(fid, rid)}</div>
@@ -501,8 +503,24 @@ function renderSendSheet(r){
     <button class="btn primary bigbtn" id="send-go" data-act="sendgo" data-id="${esc(r.id)}"${acc.length === 1 ? '' : ' disabled'}>${acc.length === 1 ? 'Send' : 'Pick a friend to send'}</button>`
     : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add friend</button>`}
     <div class="ordiv">or</div>
-    <button class="btn outline bigbtn" data-act="reclink" data-id="${esc(r.id)}">${ICON_LINK}Copy link to this recipe</button>
-    <div class="frhint">For friends who aren't on Butter Math yet. They'll get the recipe when they sign up or log in.</div></div>`;
+    <button class="btn outline bigbtn" data-act="reccopy" data-id="${esc(r.id)}">${ICON_LINK}Copy to share in a text</button>
+    <div class="frhint">For friends who aren't on Butter Math yet. ${srcOf(D(r)) ? `Copies the original ${esc(hostOf(srcOf(D(r))))} link` : 'Copies the ingredients and steps'}, plus a link to save it in their own free Butter Math recipe box.</div></div>`;
+}
+const srcOf = d => ((d.links || []).find(l => /^https?:\/\//i.test(l.url || '')) || {}).url || '';
+function shareText(d, link){
+  const plain = x => prettyFractions(String(x || '')).replace(/<[^>]+>/g, '').trim();
+  const bm = `Save it to your own free Butter Math recipe box: ${link || 'https://buttermath.app'}`;
+  const title = plain(d.title) || 'Recipe', src = srcOf(d);
+  if(src) return `${title}\n${src}\n\n${bm}`;
+  const out = [title];
+  if(d.yield || d.total) out.push([d.yield, d.total].filter(Boolean).map(plain).join(' · '));
+  const ings = (d.ingredients || []).flatMap(g => typeof g === 'string' ? ['• ' + plain(g)] : [...(g.group ? ['', plain(g.group) + ':'] : []), ...(g.items || []).map(i => '• ' + plain(i))]);
+  if(ings.length) out.push('', 'INGREDIENTS', ...ings);
+  let n = 0; const steps = (d.steps || []).flatMap(sec => typeof sec === 'string' ? [`${++n}. ${plain(sec)}`] : [...(sec.section ? ['', plain(sec.section) + ':'] : []), ...(sec.items || []).map(st => `${++n}. ${st.title ? plain(st.title) + ': ' : ''}${plain(st.text)}`)]);
+  if(steps.length) out.push('', 'STEPS', ...steps);
+  if(d.notes && d.notes.length) out.push('', 'GOOD TO KNOW', ...d.notes.map(x => '• ' + plain(x)));
+  out.push('', bm);
+  return out.join('\n');
 }
 
 async function saveCopy(data, from){
@@ -787,11 +805,12 @@ function renderRecipe(id){
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
-  const notes = hasNotes || srcs.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${srcs.map((l, li) => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${li === 0 ? 'View original recipe' : esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
+  const more = srcs.slice(1);
+  const notes = hasNotes || more.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${more.map(l => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
   return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn editpill" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe">${ICON_PEN}<span>Edit</span></button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu"><button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Remove recipe</button></div>` : ''}</div></div>
-    ${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
+    ${srcCredit(srcs)}${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
     <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">✕</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
     <div class="prog-line" style="margin-top:14px"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div>
@@ -1708,6 +1727,8 @@ document.addEventListener('click', async e => {
   if(a === 'reclink'){ let u = sendLink && sendLink.id === id ? sendLink.u : null; if(!u){ el.disabled = true; u = await recipeLink(id); el.disabled = false; }
     if(!u){ toast("Couldn't make a link. Try again."); return; }
     try { await navigator.clipboard.writeText(u); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
+  if(a === 'reccopy'){ const r = R(id); if(!r) return; const link = sendLink && sendLink.id === id ? sendLink.u : null; const txt = shareText(D(r), link);
+    try { await navigator.clipboard.writeText(txt); toast('Copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this and paste it into a text:', txt); } return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
   if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;
     const {data, error} = await sb.rpc('send_recipe', {recipe: id, friends: to, msg: (($('#send-note') || {}).value || '').trim()});

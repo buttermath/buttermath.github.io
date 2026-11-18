@@ -1704,6 +1704,26 @@ function confirmBox(title, body, okText, fn, html){
 }
 let confirmFn = null;
 
+/* ---------------- swipe down to close sheets (phones) ---------------- */
+{ let sw = null;
+  document.addEventListener('touchstart', e => {
+    const sh = e.target.closest && e.target.closest('.asksheet'); sw = null;
+    if(!sh || innerWidth >= 720 || e.touches.length !== 1 || e.target.closest('input,textarea,select')) return;
+    for(let n = e.target; n && n !== sh; n = n.parentElement) if(n.scrollTop > 0) return;
+    if(sh.scrollTop > 0) return;
+    sw = {sh, y: e.touches[0].clientY, t: Date.now(), dy: 0};
+  }, {passive: true});
+  document.addEventListener('touchmove', e => { if(!sw) return; const dy = e.touches[0].clientY - sw.y; sw.dy = dy; if(dy > 0){ sw.sh.style.transition = 'none'; sw.sh.style.transform = `translateY(${dy}px)`; } }, {passive: true});
+  document.addEventListener('touchend', () => {
+    if(!sw) return; const {sh, dy, t} = sw; sw = null;
+    if(dy > 110 || (dy > 40 && dy / Math.max(1, Date.now() - t) > .6)){
+      sh.style.transition = 'transform .18s ease-in'; sh.style.transform = 'translateY(100%)';
+      setTimeout(() => { const bg = sh.previousElementSibling; if(bg && bg.classList.contains('sheetbg')) bg.click(); }, 170);
+    } else if(dy > 0){ sh.style.transition = 'transform .2s ease-out'; sh.style.transform = ''; }
+  });
+  document.addEventListener('touchcancel', () => { if(sw){ sw.sh.style.transform = ''; sw = null; } });
+}
+
 /* ---------------- events ---------------- */
 document.addEventListener('click', async e => {
   if(dragJustEnded){ dragJustEnded = false; e.preventDefault(); return; }

@@ -146,7 +146,7 @@ function renderLanding(){
     <div class="lp-copy">
       <span class="lp-eyebrow">Attention home cooks and bakers</span>
       <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
-      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one cookbook. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
+      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one recipe box. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
       <div class="lp-ctas"><button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button></div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs and lemons added up from two recipes">
@@ -168,7 +168,7 @@ function renderLanding(){
     <span class="lp-eyebrow">Maybe this sounds familiar</span>
     <h2 class="lp-h2">Your recipes are stored everywhere. Your grocery list is in a notes app or written on scratch paper.</h2>
     <div class="lp-three">
-      ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Butter Math keeps them all in one cookbook.")}
+      ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Butter Math keeps them all in one recipe box.")}
       ${card('The butter math', 'Two recipes both call for butter, eggs and lemons. Butter Math adds up every ingredient so you buy enough the first time.')}
       ${card('One shopping trip', 'Your list is sorted by grocery aisle and you can keep track as you shop for multiple recipes. Check things off as you shop and nothing gets left on the shelf.')}
     </div>
@@ -187,7 +187,7 @@ function renderLanding(){
     <span class="lp-eyebrow">Made for sharing</span>
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
-      ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share cookbooks', "Add friends and family to see each other's cookbooks and save a copy of their best recipes to your own cookbook.")}
+      ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share recipes', "Add friends and family to see each other's recipes and save a copy of their best recipes to your own recipe box.")}
       ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few. Possibilities are endless.')}
       ${feat('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>
@@ -388,7 +388,7 @@ function renderFriends(){
   const n = inc.length + inbox.length;
   const isEmpty = !acc.length && !n && !out.length && !saves.length;
   const head = `<div class="fr-h"><h2>Friends</h2>${isEmpty ? '' : `<button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button>`}</div>`;
-  const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share cookbooks</b><span>You'll be able to see each other's recipes</span></div></div>
+  const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share recipes</b><span>You'll be able to see each other's recipes</span></div></div>
     <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
   const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
     ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
@@ -396,16 +396,16 @@ function renderFriends(){
   const saved = saves.map(s => `<div class="savebar" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.500C19 15.600 12 20 12 20z"/></svg><span><b>${esc(s.saver_name)}</b> saved your recipe <b>${esc(s.title)}</b>!</span><button data-act="svdismiss" data-id="${esc(s.id)}" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('');
   const books = acc.map(f => `<div class="cbk crow" role="link" tabindex="0" data-act="go" data-h="f-${esc(f.friend_id)}" aria-label="Open ${esc(kitchenOf(f.name))}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span><button class="rmfr2" data-act="frremove" data-id="${esc(f.friend_id)}" aria-label="Remove ${esc(f.name)} as a friend" title="Remove friend"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 11h6"/></svg></button></div>`).join('');
   const waiting = out.map(f => `<div class="cbk wait">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(f.name)}</b><span>Waiting for them to accept</span></span><button class="linkbtn" data-act="frcancel" data-id="${esc(f.friend_id)}">Cancel</button></div>`).join('');
-  const empty = isEmpty ? `<div class="card empty frempty"><b>Share cookbooks with friends and family</b><span>When they accept, you can browse each other's recipes and save their recipes to your cookbook.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
+  const empty = isEmpty ? `<div class="card empty frempty"><b>Share recipes with friends and family</b><span>When they accept, you can browse each other's recipes and save their recipes to your recipe box.</span><button class="btn primary" data-act="addfriend">${ICON_ADDF}Add friend</button></div>` : '';
   return head + saved + (n ? `<div class="fr-sec">New <span class="dotn">${n}</span></div>${reqs}${shares}` : '')
-    + (acc.length ? `<div class="fr-sec">Cookbooks</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
+    + (acc.length ? `<div class="fr-sec">Friends</div>${books}` : '') + (out.length ? `<div class="fr-sec">Sent requests</div>${waiting}` : '') + empty
     + (addFriendOpen ? renderAddFriend() : '');
 }
 async function inviteMail(to){
   const {data, error} = await sb.rpc('create_invite_link'); if(error || !data) return null;
   const url = location.origin + location.pathname + '#invite-' + data, me = firstName();
   const subj = `${me || 'A friend'} invited you to Butter Math`;
-  const body = `Hi!\n\nI've been saving my recipes on Butter Math, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share cookbooks:\n\n${url}\n\n${me || ''}`.trim();
+  const body = `Hi!\n\nI've been saving my recipes on Butter Math, a free site that keeps all your recipes in one place and turns them into one shopping list. Join me so we can share recipes:\n\n${url}\n\n${me || ''}`.trim();
   const E = encodeURIComponent;
   return {url, mail: 'mailto:' + E(to).replace(/%40/g, '@') + '?subject=' + E(subj) + '&body=' + E(body), gmail: 'https://mail.google.com/mail/?view=cm&fs=1&to=' + E(to) + '&su=' + E(subj) + '&body=' + E(body)};
 }
@@ -422,20 +422,20 @@ function renderAddFriend(){
 function fTile(fid, row){
   const d = row.data || {}, saved = savedCopy(fid, row.id), tt = autoTags(d).slice(0, 3);
   return `<div class="tile" role="link" tabindex="0" style="--c:${esc(d.color || '#888')}" data-act="go" data-h="fr-${esc(fid)}~${esc(row.id)}" data-q="${esc((d.title + ' ' + autoTags(d).join(' ')).toLowerCase())}">
-    <span class="art">${pic(d)}</span>${saved ? `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(row.id)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button>` : `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(row.id)}">${ICON_PLUS2}Save</button>`}
+    <span class="art">${pic(d)}</span>${saved ? `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(row.id)}" aria-label="Saved. Tap to remove from your recipe box" title="Tap to unsave">${ICON_OK}Saved</button>` : `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(row.id)}">${ICON_PLUS2}Save</button>`}
     <span class="body">${tt.length ? `<span class="ttags">${tt.map(t => `<i>${esc(t)}</i>`).join('')}</span>` : ''}<h2>${esc(d.title)}</h2><span class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : ''}</span></span></div>`;
 }
 function renderFbook(fid){
   const f = friendBy(fid);
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div></div>`; }
-  if(!f || f.status !== 'accepted') return `<button class="back" data-act="go" data-h="friends">← Friends</button><div class="card empty">This cookbook isn't shared with you.</div>`;
+  if(!f || f.status !== 'accepted') return `<button class="back" data-act="go" data-h="friends">← Friends</button><div class="card empty">These recipes aren't shared with you.</div>`;
   const b = fbook[fid]; if(!b) { setTimeout(() => loadFbook(fid)); }
   const rows = (b && b.rows) || [];
   return `<button class="back" data-act="go" data-h="friends">← Friends</button>
     <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span></div>
     ${rows.length ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
     ${rows.length > 1 ? fFilterBar(rows, fid) : ''}
-    ${!b || b.loading && !rows.length ? `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>` : b.err ? `<div class="card empty">Couldn't load this cookbook. Try again in a moment.</div>` : rows.length ? fGrid(fid, rows) : `<div class="card empty">${esc(f.name)} hasn't shared any recipes yet.</div>`}`;
+    ${!b || b.loading && !rows.length ? `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div></div>` : b.err ? `<div class="card empty">Couldn't load these recipes. Try again in a moment.</div>` : rows.length ? fGrid(fid, rows) : `<div class="card empty">${esc(f.name)} hasn't shared any recipes yet.</div>`}`;
 }
 function fFilterBar(rows, fid){
   const nSaved = rows.filter(r => savedCopy(fid, r.id)).length; if(!nSaved) fSavedOnly = false;
@@ -457,8 +457,8 @@ function fGrid(fid, rows){
 }
 function fActRow(fid, rid){
   const saved = savedCopy(fid, rid);
-  return saved ? `<button class="savebtn done inl" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(rid)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button><button class="golink" data-act="openmine" data-id="${esc(saved.id)}">Go to your cookbook →</button>`
-    : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my cookbook</button>`;
+  return saved ? `<button class="savebtn done inl" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(rid)}" aria-label="Saved. Tap to remove from your recipe box" title="Tap to unsave">${ICON_OK}Saved</button><button class="golink" data-act="openmine" data-id="${esc(saved.id)}">Go to your recipe box →</button>`
+    : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my recipe box</button>`;
 }
 const BOOK_ART = `<svg class="book" viewBox="0 0 160 96" aria-hidden="true"><ellipse cx="80" cy="90" rx="66" ry="4" fill="#141414" opacity=".12"/><rect x="8" y="76" width="144" height="9" rx="4" fill="#D7263D" stroke="#141414" stroke-width="2.5"/><path d="M14 76 L14 70 Q46 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M146 76 L146 70 Q114 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 73 Q47 64 78 74M142 73 Q113 64 82 74" fill="none" stroke="#CFC8B6" stroke-width="1.5"/><g fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"><path class="pg p1" d="M80 73 Q112 60 144 68"/><path class="pg p2" d="M80 73 Q112 60 144 68"/><path class="pg p3" d="M80 73 Q112 60 144 68"/></g></svg>`;
 function openMine(id){
@@ -581,7 +581,7 @@ async function recipeLink(id){
 function renderInviteCard(){
   if(!inviteInfo || inviteInfo.bad) return '';
   if(inviteInfo.name === '__self'){ setTimeout(() => { forgetInvite(); inviteInfo = null; toast("That's your own invite link. Share it with a friend."); render(); }); return ''; }
-  return `<div class="modal"><div class="card mcard" data-stop>${avatar(inviteInfo.t, inviteInfo.name || '?', 'big')}<h3>${esc(inviteInfo.name || 'Someone')} wants to share cookbooks</h3><p>You'll be able to see each other's recipes and save copies.</p>
+  return `<div class="modal"><div class="card mcard" data-stop>${avatar(inviteInfo.t, inviteInfo.name || '?', 'big')}<h3>${esc(inviteInfo.name || 'Someone')} wants to share recipes</h3><p>You'll be able to see each other's recipes and save copies.</p>
     <button class="btn primary bigbtn" data-act="invaccept">Accept</button><button class="btn outline bigbtn" data-act="invno">Decline</button></div></div>`;
 }
 
@@ -702,7 +702,7 @@ function renderShopping(){
       <button class="btn" type="button" data-act="addclose">Done</button>
     </form>` : items.length || chipRecipes.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from a recipe</button><button class="btn" data-act="addopen">+ Type an item</button></div>` : ''}
   ${!items.length && !chipRecipes.length && !Q && f !== 'have' ? `<section class="shopstart"><h3>Your list is currently empty</h3><p class="muted">Add ingredients from your recipe(s) or add individual ingredients.</p>
-    <ol><li><i>1</i><span>Add a recipe from your cookbook.</span></li><li><i>2</i><span>The recipe ingredients land here, sorted by aisle and added up across recipes.</span></li><li><i>3</i><span>Check things off as you shop.</span></li></ol>
+    <ol><li><i>1</i><span>Add a recipe from your recipe box.</span></li><li><i>2</i><span>The recipe ingredients land here, sorted by aisle and added up across recipes.</span></li><li><i>3</i><span>Check things off as you shop.</span></li></ol>
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Type an item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to my list</b> while you are on any recipe page.</p>` : ''}
   <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
@@ -719,9 +719,9 @@ function renderPickSheet(all){
   return `<div class="sheetbg" data-act="pickclose"></div><div class="asksheet picksheet" role="dialog" aria-label="Add from a recipe">
     <div class="pickhead"><div class="askt">Add from a recipe</div><button class="ibtn" data-act="pickclose" aria-label="Close">✕</button></div>
     <p class="muted pickp">Select which recipe(s) you're cooking. All ingredients will be added to your shopping list.</p>
-    ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your cookbook" aria-label="Search your cookbook">` : ''}
+    ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
     <div class="picklist">${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
-      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">Your cookbook is empty. Add a recipe first.</div>`}</div>
+      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">Your recipe box is empty. Add a recipe first.</div>`}</div>
     <button class="btn primary pickgo" data-act="pickgo" ${n ? '' : 'disabled'}>${n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'}</button>
   </div>`;
 }
@@ -1558,8 +1558,8 @@ const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="10" width="32" height="44" rx="5"/><path d="M20 22h16M20 30h16M20 38h10"/><circle cx="46" cy="44" r="10" class="acc"/><path d="M46 39v10M41 44h10" class="w"/></svg>`, title: 'Add to your shopping list', text: 'When you\'re ready to shop, open a recipe and tap <b>Add ingredients to my list</b>. Add as many recipes as you like.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'Go to your <b>Shopping list</b> tab. Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your cookbook', text: 'Use the Recipes tab as your own personal cookbook to store as many recipes as you\'d like.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your cookbook, or send them one of yours.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your recipe box', text: 'Use the Recipes tab as your own personal recipe box to store as many recipes as you\'d like.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your recipe box, or send them one of yours.'},
 ];
 let tourStep = -1;
 function showTour(i){
@@ -1618,7 +1618,7 @@ function renderPrivacy(){
   <div class="card panel prose"><h3>Your privacy</h3>
     <p class="muted">Last updated November 16, 2026</p>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
-    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own cookbook, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from their cookbook. Any copies a friend has saved of your recipes will stay in their cookbook, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Butter Math doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
+    <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own recipe box, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from them. Any copies a friend has saved of your recipes will stay in their recipe box, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Butter Math doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
     <p><b>Adding recipes from a link.</b> When you paste a recipe link, Butter Math's server visits that page to copy the recipe into your form. The website you linked sees a visit from Butter Math, not from you. The link isn't saved unless you save the recipe.</p>
     <p><b>Adding recipes from a screenshot.</b> Screenshots are read on your own device to pull out the recipe text. The image is never uploaded or stored. The reading tool is downloaded from jsDelivr, a public code library, the first time you use it. Your screenshot is never sent there.</p>
     <p><b>Pasted text.</b> Recipe text you paste is sorted into the form on your device. Only what you save is stored.</p>
@@ -1694,7 +1694,7 @@ document.addEventListener('click', async e => {
   if(a === 'fraccept' || a === 'frdecline'){ el.disabled = true; const f = friendBy(id); const {error} = await sb.rpc('respond_friend_request', {friend: id, accept: a === 'fraccept'}); if(error){ toast("Couldn't do that. Try again."); el.disabled = false; return; } if(a === 'fraccept' && f) toast(`You and ${f.name} are now friends`); else if(a === 'frdecline') toast('Request declined'); await loadFriends(true); return; }
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
   if(a === 'frremove'){ const f = friendBy(id); if(!f) return; const n = savedFrom(f).length;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's cookbooks.</div>
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's recipes.</div>
       <div class="rmbtns">${n ? `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend but keep saved recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove friend and saved recipes</button>` : `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn ghost" data-act="mclose">Cancel</button></div></div></div>`; return; }
   if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); const {error} = await sb.rpc('remove_friend', {friend: id}); if(error){ toast("Couldn't remove them. Try again."); return; }
     let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
@@ -1708,7 +1708,7 @@ document.addEventListener('click', async e => {
     const was = el.innerHTML; el.disabled = true; const slow = setTimeout(() => { el.classList.add('busy'); el.textContent = 'Saving…'; }, 500);
     try{ const mine = await saveCopy(row.data, {id: row.id, owner: fid, name: f.name}); clearTimeout(slow);
       sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
-      const ar = el.closest('.factrow'); if(ar) ar.innerHTML = fActRow(fid, id); else el.outerHTML = `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your cookbook" title="Tap to unsave">${ICON_OK}Saved</button>`;
+      const ar = el.closest('.factrow'); if(ar) ar.innerHTML = fActRow(fid, id); else el.outerHTML = `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your recipe box" title="Tap to unsave">${ICON_OK}Saved</button>`;
       syncFbar(fid); fadeSwap(id);
       toast('Recipe saved!'); }catch(err){ clearTimeout(slow); console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
   if(a === 'openmine'){ openMine(id); return; }
@@ -1720,7 +1720,7 @@ document.addEventListener('click', async e => {
     const ar = el.closest('.factrow'), tile = el.closest('.tile'); if(ar) ar.innerHTML = fActRow(fid, id); else if(fSavedOnly && tile && rowsSaved(fid) > 0) tile.remove(); else el.outerHTML = `<button class="savebtn" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(id)}">${ICON_PLUS2}Save</button>`;
     if(fSavedOnly && !rowsSaved(fid)){ fSavedOnly = false; render(); } else syncFbar(fid);
     fadeSwap(id);
-    toast('Removed from your cookbook', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
+    toast('Removed from your recipe box', async () => { clearTimeout(pt); const {data: row, error: e2} = await sb.from('recipes').insert({id: mine.id, user_id: user.id, sort: mine.sort, data: mine.data}).select('id, sort, data').single(); if(e2){ toast("Couldn't undo. Save it again."); return; } recipes.push(row); mutate(k => { k.progress.active[row.id] = before.active === true; if(before.cook) k.progress.cook[row.id] = before.cook; }); app.__h = null; render(); });
     return; }
   if(a === 'privtog'){ const on = !isPriv(id); mutate(k => { const p = k.progress.private = k.progress.private || {}; if(on) p[id] = true; else delete p[id]; }, true); const sm = el.querySelector('small'), tg = el.querySelector('.tog'); if(sm) sm.textContent = on ? 'Only you can see this recipe' : 'Friends can see this recipe'; if(tg) tg.classList.toggle('on', on); toast(on ? 'Private. Only you can see this recipe.' : 'Friends can see this recipe'); return; }
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; sendLink = null; if(friends === null) loadFriends(true); recipeLink(id).then(u => { if(sendSheet === id) sendLink = {id, u}; }); render(); return; }
@@ -1815,7 +1815,7 @@ document.addEventListener('click', async e => {
   if(a === 'unmark'){ mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; if(!o.before) return; o.s = Object.assign({}, o.before); delete o.before; syncMade(k, id); }); toast('Back to where you were'); return; }
   if(a === 'again'){ mutate(k => { bankLegacy(k, id); k.progress.cook[id] = {i:{}, s:{}}; }); addSheet = {id, again: true}; render(); window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   if(a === 'recipex'){ const r = R(id); if(!r) return;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><div class="mhead"><h3>${esc(D(r).title)}</h3><button class="ibtn mx" data-act="mclose" aria-label="Close">✕</button></div><div class="muted">Archive will hide the recipe, but can be unhidden at any time. Removing the recipe will delete it from your cookbook entirely.</div><div class="row"><button class="btn" data-act="archive" data-id="${esc(id)}">Archive</button><button class="btn dangerbtn" data-act="delrecipe" data-id="${esc(id)}">Remove</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><div class="mhead"><h3>${esc(D(r).title)}</h3><button class="ibtn mx" data-act="mclose" aria-label="Close">✕</button></div><div class="muted">Archive will hide the recipe, but can be unhidden at any time. Removing the recipe will delete it from your recipe box entirely.</div><div class="row"><button class="btn" data-act="archive" data-id="${esc(id)}">Archive</button><button class="btn dangerbtn" data-act="delrecipe" data-id="${esc(id)}">Remove</button></div></div></div>`;
     return; }
   if(a === 'archive'){ $('#modalRoot').innerHTML = ''; const r = R(id); mutate(k => { (k.progress.archived = k.progress.archived || {})[id] = true; }); toast(D(r).title + ' archived'); if(location.hash !== '#recipes') location.hash = 'recipes'; return; }
   if(a === 'unarch'){ const r = R(id); mutate(k => { if(k.progress.archived) delete k.progress.archived[id]; }); toast(D(r).title + ' is back'); return; }

@@ -874,7 +874,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .madeitx{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:36px;height:36px}
 .madeitw{display:flex;flex-direction:column;align-items:center;gap:2px}.madeitw .madeit{align-self:stretch;padding-right:14px}
 .madeitw .madeitx{position:static;transform:none;width:auto;height:auto;min-height:36px;border:0;background:none;padding:4px 8px;font:600 13px Inter,sans-serif;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.errs{margin-bottom:14px}.errnote{font-size:14px;margin:4px 0 8px}.errlist{max-height:420px;overflow:auto}
+.errrow{padding:10px 2px;border-top:1px solid var(--line)}.errrow summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:3px}.errrow summary::-webkit-details-marker{display:none}
+.errrow summary b{font-size:14px;overflow-wrap:anywhere}.errrow summary small{font-size:12.5px;color:var(--muted)}.errd{font-size:13px;color:var(--muted);margin-top:6px}
+.errd pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11.5px;background:#FBFAF7;border-radius:8px;padding:8px;margin:6px 0 0;max-height:180px;overflow:auto}
+.madeitw{flex-direction:row;align-items:stretch;gap:0;border:1.5px dashed #C9C2BA;border-radius:12px;background:#fff;overflow:hidden}
+.madeitw .madeit{flex:1;min-width:0;align-self:auto;justify-content:flex-start;gap:7px;border:0;border-radius:0;padding:8px 10px;min-height:44px;background:none;font-size:13.5px;line-height:1.25}.madeitw .madeit svg{width:18px;height:18px;flex:none}
+.madeitw .madeitx{align-self:stretch;min-height:44px;padding:0 11px;border-left:1px solid var(--line);text-decoration:none;font-size:13px;white-space:nowrap;flex:none}
 .madeitw{display:block;position:relative;border:0;background:none;overflow:visible}
 .madeitw .madeit{border:1.5px dashed #C9C2BA;border-radius:12px;background:#fff;justify-content:center;gap:8px;padding:11px 44px;font-size:14px;line-height:1.3;text-align:center}.madeitw .madeit svg{width:20px;height:20px}
 .madeitw .madeitx{position:absolute;top:50%;right:4px;transform:translateY(-50%);width:36px;height:36px;min-height:0;padding:0;border:0;background:none;font-size:15px;font-weight:600;color:var(--muted);text-decoration:none}
+@media(max-width:719px){.asksheet{overscroll-behavior:contain}.asksheet::before{content:"";display:block;flex:none;width:40px;height:5px;border-radius:3px;background:#D6CFC7;margin:-8px auto 0}}
 .madeitw{margin-bottom:12px}
+html:has(.asksheet),body:has(.asksheet){overflow:hidden;overscroll-behavior:none}.sheetbg{touch-action:none}

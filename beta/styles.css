@@ -867,3 +867,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .lp-ig{display:inline-flex;align-items:center;gap:8px;margin-top:4px;font-weight:600;font-size:15px;color:#141414;text-decoration:none;min-height:44px}
 .lp-ig svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
 .lp-ig:hover{color:var(--accent)}
+.pichint{margin:6px 2px 0;font-size:13px;line-height:1.4;color:var(--muted)}
+.madeit{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:11px 14px;border:1.5px dashed #C9C2BA;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;color:#141414;background:#fff;min-height:44px}
+.madeit svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}

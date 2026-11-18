@@ -749,7 +749,7 @@ function renderShopping(){
     }).join('') + `</div></div>`;
   });
   const secOpts = kitchen.shopping.sections;
-  return `${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
+  return `${shopBack && mealIds().length ? `<button class="back" data-act="go" data-h="meal">← Back to your meal</button>` : ''}${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
     ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap a recipe to hide or show its ingredients. Done shopping? Drag it to Past trips.</div>` : ''}
     ${items.length ? `<div class="cartline"><button class="cl-cart ${f === 'cart' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="cart" aria-pressed="${f === 'cart'}" aria-label="Show the ${cnt.cart} item${cnt.cart === 1 ? '' : 's'} in your cart"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg><span><b>${cnt.cart}</b> in your cart</span></button><button class="cl-need ${f === 'need' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="need" aria-pressed="${f === 'need'}" aria-label="Show the ${cnt.need} item${cnt.need === 1 ? '' : 's'} you still need"><span><b>${cnt.need}</b> still needed</span></button></div>
     <div class="bar"><i style="width:${pct}%"></i></div>` : ''}
@@ -793,7 +793,8 @@ function renderPickSheet(all){
 /* ---------------- Cook a Meal (beta) ---------------- */
 // Pick a few recipes, see when to start each one so they finish together, follow every recipe side by side, and shop for all of it at once.
 // Start times come only from the time each recipe lists. Nothing is guessed: a recipe with no usable time says so.
-let mealPick = null, mealShop = null, mealBack = null, mealTick = null;
+let mealPick = null, mealShop = null, mealBack = null, mealTick = null, shopBack = false;
+const MEAL_MAX = 5;
 const ICON_MEAL = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z"/><path d="M2 11h20"/><path d="M9 7c0-1.5 1-2 1-3.5M14 7c0-1.5 1-2 1-3.5"/></svg>';
 const FRAC = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3};
 function durMin(s){
@@ -813,6 +814,12 @@ function clock(eat, before){ const [h, m] = String(eat || '18:00').split(':').ma
   return day === 0 ? s : day === -1 ? s + ' the day before' : s + ` ${-day} days before`; }
 // Minutes from now until a recipe should start, using this device's own clock (so it's always your local time).
 function minsUntil(eat, before){ const [h, m] = String(eat || '18:00').split(':').map(Number); const d = new Date(); const now = d.getHours() * 60 + d.getMinutes(); return h * 60 + m - before - now; }
+// Read a typed time like "6", "6:30", "6:30 pm" or "18:30". With no AM/PM, it keeps the AM/PM you already had.
+function parseClock(s, cur){ const m = String(s || '').trim().toLowerCase().replace(/\s+/g, '').replace(/\./g, '').match(/^(\d{1,2})(?::?(\d{2}))?(a|am|p|pm)?$/); if(!m) return null;
+  let h = +m[1]; const mi = +(m[2] || 0); if(mi > 59) return null; const ap = m[3];
+  if(ap){ if(h < 1 || h > 12) return null; if(ap[0] === 'p' && h < 12) h += 12; if(ap[0] === 'a' && h === 12) h = 0; }
+  else if(h > 23) return null; else if(h >= 1 && h <= 12){ const pm = +String(cur || '18:00').split(':')[0] >= 12; if(h === 12) h = pm ? 12 : 0; else if(pm) h += 12; }
+  return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0'); }
 const mealIds = () => ((P().meal || {}).ids || []).filter(x => R(x) && !isArch(x));
 const mealOff = id => !!(((P().meal || {}).off) || {})[id];
 const mealOn = () => mealIds().filter(x => !mealOff(x));
@@ -832,7 +839,7 @@ function renderMealPick(){
   const n = Object.keys(mealPick.sel).length;
   return `<div class="sheetbg" data-act="mealpickclose"></div><div class="asksheet picksheet mealpick" role="dialog" aria-label="Cook a Meal">
     <div class="pickhead"><div class="askt">Cook a Meal</div><button class="ibtn" data-act="mealpickclose" aria-label="Close">✕</button></div>
-    <p class="muted pickp">${MEAL_P}</p>
+    <p class="muted pickp">${MEAL_P} Pick up to ${MEAL_MAX}.</p>
     ${list.length > 6 ? `<input id="mealq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
     <div class="picklist">${list.map(r => { const d = D(r), sel = !!mealPick.sel[r.id], t = mealTime(d);
       return `<button class="pickrow ${sel ? 'sel' : ''}" data-act="mealtog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${t ? fmtDur(t.min) : 'No time listed'}</small></span><span class="pbox">${sel ? '✓' : ''}</span></button>`; }).join('')}</div>
@@ -845,40 +852,45 @@ function laneState(r, eat){
   const p = progressOf(r), t = mealTime(D(r));
   if(!p.total) return {kind: 'none', p, t, text: 'No steps listed'};
   if(p.done === p.total) return {kind: 'done', p, t, text: 'All steps done ✓'};
-  if(t && p.done === 0){ const w = minsUntil(eat, t.min); if(w > 0) return {kind: 'wait', p, t, text: `Starts at ${clock(eat, t.min)}`, w}; }
+  if(t && p.done === 0 && !(((P().meal || {}).now) || {})[r.id]){ const w = minsUntil(eat, t.min); if(w > 0) return {kind: 'wait', p, t, text: `Suggested start ${clock(eat, t.min)}`, w}; }
   return {kind: 'now', p, t, text: `Step ${p.cur + 1} of ${p.total}`};
 }
 function renderMeal(){
   const all = mealIds(), ids = mealOn(), back = `<button class="back" data-act="go" data-h="recipes">← Recipes</button>`;
-  if(all.length < 2) return back + `<div class="card empty mealempty"><h3>Cook a Meal</h3><p class="muted">${MEAL_P}</p><button class="btn primary" data-act="mealopen">${ICON_MEAL}Select recipes</button></div>`;
-  const m = P().meal || {}, eat = m.eat || '18:00', rs = ids.map(R);
+  if(!all.length) return back + `<div class="card empty mealempty"><h3>Cook a Meal</h3><p class="muted">${MEAL_P}</p><button class="btn primary" data-act="mealopen">${ICON_MEAL}Select recipes</button></div>`;
+  const m = P().meal || {}, eat = m.eat || '18:00';
+  // Everything is listed in the order you'd start it: longest recipe first, recipes with no listed time last.
+  const rs = ids.map(R).map((r, i) => ({r, i, t: mealTime(D(r))})).sort((a, b) => (b.t ? b.t.min : -1) - (a.t ? a.t.min : -1) || a.i - b.i).map(x => x.r);
   const timed = rs.map(r => ({r, t: mealTime(D(r))})), known = timed.filter(x => x.t).sort((a, b) => b.t.min - a.t.min), unknown = timed.filter(x => !x.t);
   const longest = known.length ? known[0].t.min : 0;
   const ings = mealIngs(ids), have = ings.filter(mealOnList).length, allOn = ings.length && have === ings.length;
-  const pills = all.map(x => { const off = mealOff(x); return `<button class="mchip ${off ? 'off' : ''}" data-act="mealoff" data-id="${esc(x)}" aria-pressed="${!off}" title="${off ? 'Add back to this meal' : 'Leave out of this meal'}">${off ? '' : '<span class="mck2" aria-hidden="true">✓</span>'}${mname(R(x))}</button>`; }).join('') + `<button class="mchip add" data-act="mealopen">+ Add recipe</button>`;
+  const pills = rs.map(r => `<span class="mchip">${mname(r)}<button class="mchx" data-act="mealrm" data-id="${esc(r.id)}" aria-label="Remove ${mname(r)} from this meal" title="Remove from this meal">✕</button></span>`).join('') + (all.length < MEAL_MAX ? `<button class="mchip add" data-act="mealopen">+ Add recipe</button>` : '');
   const shopCard = m.hideShop || !ids.length ? '' : `<div class="mshop"><span class="mshopi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
-    <button class="mshopb" data-act="${allOn ? 'go' : 'mealshop'}" data-h="shopping"><b>${allOn ? 'All on your shopping list ✓' : 'Shop for ingredients'}</b><span>${allOn ? 'Go to your shopping list' : `${ings.length} ingredient${ings.length === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}${have ? ` · ${have} already on your list` : ''}`}</span></button>
-    ${have ? `<button class="mshopgo" data-act="go" data-h="shopping" aria-label="Go to shopping list" title="Go to shopping list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : ''}
+    <button class="mshopb" data-act="${allOn ? 'mealtolist' : 'mealshop'}"><b>${allOn ? 'All on your shopping list ✓' : 'Shop for ingredients'}</b><span>${allOn ? 'Go to your shopping list' : `${ings.length} ingredient${ings.length === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}${have ? ` · ${have} already on your list` : ''}`}</span></button>
+    ${have ? `<button class="mshopgo" data-act="mealtolist" aria-label="Go to shopping list" title="Go to shopping list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : ''}
     <button class="mshopx" data-act="mealshophide" aria-label="Close" title="Close">✕</button></div>`;
   const rows = known.map(({r, t}) => `<li><span class="mt">${clock(eat, t.min)}</span><div class="mtcard"><span><b>Start ${esc(D(r).title)}</b><small>${fmtDur(t.min)} ${t.from === 'total' ? 'total' : '(prep + cook)'}</small></span></div></li>`).join('');
   const timeline = known.length ? `<h3 class="mh">When to start</h3><ol class="mline">${rows}<li><span class="mt">${clock(eat, 0)}</span><div class="mtcard ready"><span><b>Ready to eat</b><small>${known.length === rs.length ? 'Everything finishes together' : 'The timed recipes finish together'}</small></span></div></li></ol>` : '';
   const unk = unknown.length ? `<div class="mnote">${unknown.map(({r}) => `<b>${esc(D(r).title)}</b>`).join(', ')} ${unknown.length === 1 ? "doesn't" : "don't"} list a total time, so ${unknown.length === 1 ? "it isn't" : "they aren't"} on the timeline. <button class="linkbtn" data-act="mealrec" data-id="${esc(unknown[0].r.id)}" data-edit="1">Add a time</button></div>` : '';
   const st = rs.map(r => laneState(r, eat));
   const nowRows = rs.map((r, i) => { const s = st[i], cur = s.kind === 'now' ? s.p.all[s.p.cur].st : null;
-    return `<button class="mnowr ${s.kind}" data-act="mealjump" data-i="${i}"><span class="mnn"><b>${mname(r)}</b><small>${s.text}</small></span>${cur ? `<span class="mnt">${fmt(cur.title || cur.text)}</span>` : s.kind === 'wait' ? `<span class="mnt">Nothing to do yet</span>` : ''}</button>`; }).join('');
+    return `<button class="mnowr ${s.kind}" data-act="mealjump" data-i="${i}"><span class="mnn"><b>${mname(r)}</b><small>${s.text}</small></span>${cur ? `<span class="mnt">${fmt(cur.title || cur.text)}</span>` : s.kind === 'wait' && s.p.all[0] ? `<span class="mnt">Up next: ${fmt(s.p.all[0].st.title || s.p.all[0].st.text)}</span>` : ''}</button>`; }).join('');
+  const maxOff = Math.max(0, ...rs.map((r, i) => st[i].kind === 'wait' && st[i].t ? longest - st[i].t.min : 0)), scale = maxOff ? Math.min(2, 360 / maxOff) : 0;
   const lanes = rs.map((r, i) => { const d = D(r), c = cookOf(r.id), s = st[i]; let n = 0;
+    const off = s.kind === 'wait' && s.t ? longest - s.t.min : 0;
+    const wait = off > 0 ? `<div class="mwait" style="height:${Math.max(104, Math.round(off * scale))}px"><b>Don't start yet</b><small>Suggested start ${clock(eat, s.t.min)}, ${fmtDur(off)} after ${mname(rs[0])}</small><button class="btn mstart" data-act="mealnow" data-id="${esc(r.id)}">Start now</button></div>` : '';
     const list = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((x, k) => { const key = si + '-' + k; n++; const done = !!c.s[key];
       const tm = (x.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">⏲ ${esc(t.label)}</span>`).join('');
       return `<button class="step ${done ? 'done' : ''} ${s.kind === 'now' && s.p.all[s.p.cur].key === key ? 'cur' : ''}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? '✓' : n}</span><span class="tx">${x.title ? `<div class="tt">${esc(x.title)}</div>` : ''}<p>${fmt(x.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`; }).join('')).join('');
-    return `<section class="mlane ${s.kind}" id="lane-${i}"><div class="mlh"><b>${esc(d.title)}</b><small>${s.text}${s.kind === 'wait' ? ' · nothing to do yet' : ''}</small></div>
+    return `<section class="mlane ${s.kind}" id="lane-${i}"><div class="mlh"><b>${esc(d.title)}</b><small>${s.text}</small></div>${wait}
       <div class="mlb">${list || '<div class="muted">No steps listed.</div>'}</div><button class="linkbtn mopen" data-act="mealrec" data-id="${esc(r.id)}">Open the full recipe →</button></section>`; }).join('');
   const tabs = rs.length > 1 ? `<div class="mtabs" role="tablist">${rs.map((r, i) => `<button role="tab" class="${i === 0 ? 'on' : ''}" data-act="mealjump" data-i="${i}">${mname(r)}</button>`).join('')}</div>` : '';
   return back + `<div class="mealpg"><h2 class="mtitle">Cook a Meal</h2><div class="msub">${ids.length} recipe${ids.length === 1 ? '' : 's'}${longest ? ` · start at ${clock(eat, longest)} · about ${fmtDur(longest)}` : ''}</div>
-    <div class="mpl">Tap a recipe to leave it out of this meal.</div><div class="mchips">${pills}</div>${shopCard}
-    ${ids.length ? `<label class="meat"><span>We're eating at</span><input type="time" id="mealeat" value="${esc(eat)}" step="300"></label>
-    ${timeline}${unk}${known.length ? `<p class="mfine">Start times use each recipe's listed time and your phone's clock. Read through the steps for anything that needs to chill, rise, or marinate ahead.</p>` : ''}
+    <div class="mchips">${pills}</div>${shopCard}
+    ${ids.length ? `<div class="meat"><label for="mealeatx">We're eating at</label><input id="mealeatx" type="text" inputmode="text" autocomplete="off" value="${clock(eat, 0)}" aria-label="Time you're eating, like 6:30 PM"><button class="mclock" data-act="mealpicker" aria-label="Pick a time" title="Pick a time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button><input type="time" id="mealeat" value="${esc(eat)}" step="300" tabindex="-1" aria-hidden="true" class="mtimehid"></div>
+    ${timeline}${unk}${known.length ? `<p class="mfine">Start times are suggestions, so you can start any recipe whenever you like. They use each recipe's listed time and your phone's clock. Read through the steps for anything that needs to chill, rise, or marinate ahead.</p>` : ''}
     <h3 class="mh">Right now</h3><div class="mnow">${nowRows}</div>
-    <h3 class="mh">Steps</h3>${tabs}<div class="mlanes" id="mlanes">${lanes}</div>` : `<div class="card empty">Every recipe is left out. Tap one above to add it back.</div>`}
+    <h3 class="mh">Steps</h3>${tabs}<div class="mlanes" id="mlanes" style="--n:${rs.length}">${lanes}</div>` : `<div class="card empty">Every recipe is left out. Tap one above to add it back.</div>`}
     <button class="linkbtn mclear" data-act="mealclear">Clear this meal</button></div>
     ${mealShop ? renderMealShop(ids, ings) : ''}`;
 }
@@ -2037,14 +2049,18 @@ document.addEventListener('click', async e => {
   if(a === 'mealopen'){ const sel = {}; mealIds().forEach(x => { sel[x] = true; }); mealPick = {sel}; render(); return; }
   if(a === 'mealfrom'){ const sel = {}; mealIds().forEach(x => { sel[x] = true; }); if(R(id)) sel[id] = true; moreOpen = false; mealPick = {sel}; render(); return; }
   if(a === 'mealpickclose'){ mealPick = null; render(); return; }
-  if(a === 'mealtog'){ if(!mealPick) return; if(mealPick.sel[id]) delete mealPick.sel[id]; else mealPick.sel[id] = true;
+  if(a === 'mealtog'){ if(!mealPick) return; if(mealPick.sel[id]) delete mealPick.sel[id]; else { if(Object.keys(mealPick.sel).length >= MEAL_MAX){ toast(`A meal can have up to ${MEAL_MAX} recipes`); return; } mealPick.sel[id] = true; }
     const sel = !!mealPick.sel[id], n = Object.keys(mealPick.sel).length; el.classList.toggle('sel', sel); el.setAttribute('aria-pressed', sel); el.querySelector('.pbox').textContent = sel ? '✓' : '';
     const go = $('.mealgo'); if(go){ go.disabled = n < 2; go.textContent = mealGoText(n); } return; }
-  if(a === 'mealgo'){ if(!mealPick) return; const ids = recipes.filter(r => mealPick.sel[r.id] && !isArch(r.id)).map(r => r.id); if(ids.length < 2) return; mealPick = null;
+  if(a === 'mealgo'){ if(!mealPick) return; const ids = recipes.filter(r => mealPick.sel[r.id] && !isArch(r.id)).map(r => r.id); if(ids.length < 2) return; if(ids.length > MEAL_MAX){ toast(`A meal can have up to ${MEAL_MAX} recipes`); return; } mealPick = null;
     // A recipe joining the meal that was already finished starts fresh, so its steps don't show as done. Its "made" count is kept.
     const prev = mealIds(), fresh = ids.filter(x => { if(prev.includes(x)) return false; const p = progressOf(R(x)); return p.total > 0 && p.done === p.total; });
     mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = ids; delete m.hideShop; if(m.off){ m.off = Object.assign({}, m.off); Object.keys(m.off).forEach(x => { if(!ids.includes(x) || !prev.includes(x)) delete m.off[x]; }); }
       fresh.forEach(x => { bankLegacy(k, x); k.progress.cook[x] = {i:{}, s:{}}; }); }, true); if(location.hash === '#meal') render(); else location.hash = 'meal'; return; }
+  if(a === 'mealrm'){ mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = (m.ids || []).filter(x => x !== id); if(m.off) delete m.off[id]; if(m.now) delete m.now[id]; }); return; }
+  if(a === 'mealnow'){ mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.now = Object.assign({}, m.now || {}, {[id]: true}); }); return; }
+  if(a === 'mealtolist'){ shopBack = true; location.hash = 'shopping'; return; }
+  if(a === 'mealpicker'){ const t = $('#mealeat'); if(t){ try{ t.showPicker(); }catch(err){ t.focus(); t.click(); } } return; }
   if(a === 'mealoff'){ mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); const off = m.off = Object.assign({}, m.off || {}); if(off[id]) delete off[id]; else off[id] = true; }); return; }
   if(a === 'mealrec'){ mealBack = id; location.hash = (el.dataset.edit ? 'edit-' : 'r-') + id; return; }
   if(a === 'mealjump'){ const i = +el.dataset.i, ml = $('#mlanes'), lane = $('#lane-' + i); if(!ml || !lane) return; ml.scrollTo({left: lane.offsetLeft - ml.offsetLeft, behavior: 'smooth'}); document.querySelectorAll('.mtabs button').forEach((b, j) => b.classList.toggle('on', j === i));
@@ -2136,6 +2152,8 @@ function autoImport(el){
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
 document.addEventListener('input', e => { if(e.target.id !== 'mealq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.mealpick .pickrow[data-s]').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
+document.addEventListener('change', e => { if(e.target.id === 'mealeatx'){ const cur = (P().meal || {}).eat || '18:00', v = parseClock(e.target.value, cur); if(!v){ toast('Try a time like 6:30 PM'); e.target.value = clock(cur, 0); return; } mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {eat: v}); }); return; } });
+document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'mealeatx'){ e.preventDefault(); e.target.blur(); } });
 document.addEventListener('change', e => { if(e.target.id === 'mealeat' && /^\d\d:\d\d/.test(e.target.value)){ const v = e.target.value.slice(0, 5); mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {eat: v}); }); }
   if(e.target.classList && e.target.classList.contains('mealck') && mealShop){ if(e.target.checked) mealShop.sel[e.target.dataset.k] = true; else delete mealShop.sel[e.target.dataset.k]; const n = Object.keys(mealShop.sel).length, b = document.querySelector('.mealshop .pickgo'); if(b){ b.disabled = !n; b.textContent = n ? `Add ${n} to my shopping list` : 'Pick ingredients to add'; } } });
 document.addEventListener('input', e => { if(e.target.id !== 'pickq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pickrow[data-s]').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
@@ -2213,7 +2231,7 @@ document.addEventListener('submit', async e => {
   }
 });
 document.addEventListener('change', e => { if(!e.target.classList || !e.target.classList.contains('sendck')) return; const n = document.querySelectorAll('.sendck:checked').length, b = $('#send-go'); if(b){ b.disabled = !n; b.textContent = n ? 'Send' : 'Pick a friend to send'; } });
-window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; mealPick = null; mealShop = null; if(mealBack && !['#r-' + mealBack, '#edit-' + mealBack, '#meal'].includes(location.hash)) mealBack = null; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
+window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; mealPick = null; mealShop = null; if(mealBack && !['#r-' + mealBack, '#edit-' + mealBack, '#meal'].includes(location.hash)) mealBack = null; if(location.hash !== '#shopping') shopBack = false; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
   if(form && !/^#(add|edit-)/.test(location.hash)){ if(form.photoUrl) URL.revokeObjectURL(form.photoUrl); form = null; } // leaving the form without saving: next visit starts fresh
   render(); });
 

@@ -172,7 +172,7 @@ export function addQty(a, b, o = {}){
   const parts = String(a).split(' + ').concat(String(b).split(' + '));
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
-    const g = x.unit + '|' + x.desc, s = sums.get(g) || {n:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc}; s.n += x.n; s.c++; sums.set(g, s); });
+    const g = x.unit ? x.unit + '|' + x.desc : '|', s = sums.get(g) || {n:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc}; s.n += x.n; s.c++; if(!s.desc) s.desc = x.desc; sums.set(g, s); });
   const plural = (u, n) => n > 1 && /^(cup|clove|can|stick)$/.test(u) ? u + 's' : u;
   // Spoons, sticks and cups are one family, and so are pounds and ounces. When amounts are added up they're
   // written the way you'd measure them: "4⅓ cups + 1 Tbsp + 1 tsp", never "4.42 cups". Butter goes in

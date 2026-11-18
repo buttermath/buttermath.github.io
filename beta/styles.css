@@ -972,3 +972,18 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .mfor{font-size:12px!important;color:#8A847F!important}
 @media(min-width:900px){.mtabs{display:none}.mlanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));overflow:visible;margin:0;padding:0}.mlane{flex:auto}.mealpg{max-width:none}}
 .btn.primary.mealfab{background:#D7263D;color:#fff;border-color:#141414}.btn.primary.mealfab:hover{background:#B81E33}
+/* Cook a Meal: round 3 */
+.mchip{gap:4px;padding:0 4px 0 12px;cursor:default}.mchx{width:30px;height:30px;border:0;background:none;border-radius:50%;font:700 13px Inter,sans-serif;color:var(--muted);cursor:pointer;display:grid;place-items:center}.mchx:hover{background:#F3EFEA;color:#141414}
+.mchip.add{padding:0 12px;cursor:pointer}
+.meat{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;position:relative}.meat label{font-size:15px;font-weight:600}
+.meat #mealeatx{width:104px;font:700 16px Inter,sans-serif;background:#FCE4E7;color:#B81E33;border:1.5px solid transparent;border-radius:999px;padding:7px 12px;min-height:38px;text-align:center}.meat #mealeatx:focus{outline:none;border-color:#B81E33;background:#fff}
+.mclock{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer}.mclock svg{width:18px;height:18px;fill:none;stroke:#141414;stroke-width:2;stroke-linecap:round}
+.mtimehid{position:absolute;right:8px;bottom:0;width:38px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+.mline{gap:0}.mline li{border-top:1px solid var(--line);padding:2px 0}.mline li:first-child{border-top:0}
+.mline .mtcard,.mline li:first-child .mtcard{border:0;box-shadow:none;background:none;padding:10px 0;border-radius:0}
+.mline .mt{padding-top:10px}.mline .mtcard.ready{background:none;color:var(--ink)}.mline .mtcard.ready small{color:var(--muted)}
+.mnowr.wait,.mnowr.none{opacity:1}.mnowr.wait .mnn small{color:var(--muted)}
+.mlane.wait .mlb{opacity:1}.mlane.wait{background:#fff}
+.mwait{border:1.5px dashed #C9C2BA;border-radius:12px;background:repeating-linear-gradient(135deg,#FBFAF7 0 10px,#F3EFEA 10px 20px);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px;padding:12px;box-sizing:border-box}
+.mwait b{font-size:15px}.mwait small{font-size:13px;color:var(--muted)}.mwait .mstart{margin-top:auto;min-height:36px;padding:0 14px;font-size:14px;background:#fff}
+@media(min-width:900px){.mlanes{grid-template-columns:repeat(var(--n),minmax(180px,1fr));overflow-x:auto}}

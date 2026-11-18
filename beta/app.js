@@ -1713,7 +1713,7 @@ let confirmFn = null;
     if(sh.scrollTop > 0) return;
     sw = {sh, y: e.touches[0].clientY, t: Date.now(), dy: 0};
   }, {passive: true});
-  document.addEventListener('touchmove', e => { if(!sw) return; const dy = e.touches[0].clientY - sw.y; sw.dy = dy; if(dy > 0){ sw.sh.style.transition = 'none'; sw.sh.style.transform = `translateY(${dy}px)`; } }, {passive: true});
+  document.addEventListener('touchmove', e => { if(!sw) return; const dy = e.touches[0].clientY - sw.y; sw.dy = dy; if(dy > 0){ if(e.cancelable) e.preventDefault(); sw.sh.style.transition = 'none'; sw.sh.style.transform = `translateY(${dy}px)`; } }, {passive: false});
   document.addEventListener('touchend', () => {
     if(!sw) return; const {sh, dy, t} = sw; sw = null;
     if(dy > 110 || (dy > 40 && dy / Math.max(1, Date.now() - t) > .6)){

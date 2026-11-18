@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { STARTERS } from './starter.js';
 import { art, guessArt as guessKind } from './art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=5';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=6';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -347,8 +347,17 @@ function fixItem(it){ let ch = false; const q = qtyFromRecipes(it); if(q !== nul
 // A recipe that's finished or archived no longer counts toward items it shares with recipes still on the list.
 function pruneDone(k){ const pr = k.progress, on = x => pr.active[x] !== false && !(pr.done || {})[x] && !(pr.archived || {})[x]; let ch = false;
   k.shopping.items.forEach(i => { const rs = i.recipes || []; if(rs.some(on) && rs.some(x => !on(x))){ i.recipes = rs.filter(on); ch = true; } }); return ch; }
-function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !b) return;
-  mutate(k => { pruneDone(k); k.shopping.items.forEach(fixItem); }, true); }
+// Older imports read "1 and ⅔ cups flour" as an item named "And ⅔ cups flour". Rename those (or merge into the matching item) so amounts add up again.
+function fixAnd(k){ let ch = false; const items = k.shopping.items;
+  for(const it of items.slice()){ if(!/^and\s+(?:[\d½¼¾⅓⅔⅛⅜⅝⅞]|a\s+half|half)/i.test(it.name || '')) continue;
+    const p = splitIngredient('1 ' + it.name); if(!p.qty || p.key === (it.key || '')) continue;
+    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...(it.recipes || [])])]; items.splice(items.indexOf(it), 1); }
+    else { it.name = p.name; it.key = p.key; }
+    ch = true; }
+  return ch; }
+function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a2 = fixAnd(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a2 && !b) return;
+  mutate(k => { pruneDone(k); fixAnd(k); k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {

@@ -167,28 +167,38 @@ function parsePart(p){
   for(const [re, u] of UNIT_NORM){ if(re.test(unit)){ unit = unit.replace(re, u); break; } }
   return {n, unit, desc};
 }
-export function addQty(a, b){
+export function addQty(a, b, o = {}){
   if(!a) return b || ''; if(!b) return a;
   const parts = String(a).split(' + ').concat(String(b).split(' + '));
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
     const g = x.unit + '|' + x.desc, s = sums.get(g) || {n:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc}; s.n += x.n; s.c++; sums.set(g, s); });
   const plural = (u, n) => n > 1 && /^(cup|clove|can|stick)$/.test(u) ? u + 's' : u;
-  // Units in the same family convert to one: spoons, sticks and cups ("10 Tbsp + 1 stick" reads "18 Tbsp (2¼ sticks)"), and pounds and ounces ("1 lb + 8 oz" reads "1½ lb").
+  // Spoons, sticks and cups are one family, and so are pounds and ounces. When amounts are added up they're
+  // written the way you'd measure them: "4⅓ cups + 1 Tbsp + 1 tsp", never "4.42 cups". Butter goes in
+  // sticks + Tbsp ("2 sticks + 2 Tbsp").
   const FAM = {tsp:['v',1], Tbsp:['v',3], stick:['v',24], cup:['v',48], oz:['w',1], lb:['w',16]};
-  const okf = {cup:[1/8,1/4,1/3,1/2,2/3,3/4], Tbsp:[1/2], tsp:[1/8,1/4,1/2,3/4], lb:[1/4,1/2,3/4], oz:[1/4,1/2,3/4]};
-  const ORDER = {v:['cup', 'Tbsp', 'tsp'], w:['lb', 'oz']};
-  const fine = (v, u) => { const f = v - Math.floor(v + 1e-9); return f < 1e-6 || 1 - f < 1e-6 || okf[u].some(x => Math.abs(x - f) < 1e-6); };
+  const isButter = /(^| )butter$/.test(o.key || '') && !/(peanut|almond|cashew|apple|sunflower|cocoa|seed|nut) butter$/.test(o.key || '');
+  const spoons = t => { const tb = Math.floor(t / 3 + 1e-9), ts = t - tb * 3; return [tb ? tb + ' Tbsp' : '', ts > 1e-6 ? nice(ts) + ' tsp' : ''].filter(Boolean).join(' + ') || '0 tsp'; };
+  const cups = t => {
+    const w = Math.floor(t / 48 + 1e-9), rem = t - w * 48;
+    let best = null; for(const f of [0, 1/4, 1/3, 1/2, 2/3, 3/4]){ const r = rem - f * 48; if(r < -1e-6) continue;
+      const score = r < 1e-6 ? 0 : Math.abs(r / 3 - Math.round(r / 3)) < 1e-6 ? 1 : 2; if(!best || score < best[0] || (score === best[0] && r < best[2] - 1e-6)) best = [score, f, r]; }
+    const c = w + best[1], r = best[2] < 1e-6 ? 0 : best[2];
+    if(!c) return spoons(t);
+    return nice(c) + ' ' + (c > 1 ? 'cups' : 'cup') + (r ? ' + ' + spoons(r) : '');
+  };
+  const sticks = t => { const s = Math.floor(t / 24 + 1e-9), r = t - s * 24; return s ? `${s} ${s > 1 ? 'sticks' : 'stick'}` + (r > 1e-6 ? ' + ' + spoons(r) : '') : spoons(t); };
+  const pounds = (t, top) => { if(top < 16) return nice(t) + ' oz'; const l = Math.floor(t / 16 + 1e-9), r = t - l * 16;
+    if([0, 4, 8, 12].some(x => Math.abs(r - x) < 1e-6)) return nice(t / 16) + ' lb'; return (l ? l + ' lb + ' : '') + nice(r) + ' oz'; };
   const groups = [...sums.values()], byFam = new Map(), merged = new Map();
-  groups.forEach(s => { const f = FAM[s.unit]; if(f){ const g = f[0] + '|' + s.desc, a = byFam.get(g) || []; a.push(s); byFam.set(g, a); } });
+  groups.forEach(s => { const f = FAM[s.unit]; if(f){ const a = byFam.get(f[0]) || []; a.push(s); byFam.set(f[0], a); } });
   byFam.forEach(arr => {
-    if(new Set(arr.map(s => s.unit)).size < 2) return;
-    const kind = FAM[arr[0].unit][0], used = arr.map(s => s.unit), d = arr[0].desc ? ' ' + arr[0].desc : '';
+    if(arr.reduce((n, s) => n + s.c, 0) < 2) return;
+    const kind = FAM[arr[0].unit][0], used = arr.map(s => s.unit), dd = (arr.find(s => s.desc) || {}).desc, d = dd ? ' ' + dd : '';
     const t = arr.reduce((n, s) => n + s.n * FAM[s.unit][1], 0), top = Math.max(...used.map(u => FAM[u][1]));
-    let str = null;
-    if(used.includes('stick')){ const st = t / 24; str = nice(t / 3) + ' Tbsp' + d + (fine(st, 'cup') ? ` (${nice(st)} ${st > 1 ? 'sticks' : 'stick'})` : ''); }
-    else for(const u of ORDER[kind]){ if(FAM[u][1] > top) continue; const v = t / FAM[u][1]; if(fine(v, u) && !(u === 'tsp' && t > 12)){ str = nice(v) + ' ' + plural(u, v) + d; break; } }
-    if(str){ merged.set(arr[0], str); arr.slice(1).forEach(s => merged.set(s, null)); }
+    const str = kind === 'w' ? pounds(t, top) : used.includes('stick') || (isButter && t >= 24) ? sticks(t) : top >= 48 ? cups(t) : spoons(t);
+    merged.set(arr[0], str.replace(/^([^+]*?)( \+ |$)/, (m, a, b) => a + d + b)); arr.slice(1).forEach(s => merged.set(s, null));
   });
   const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 ? s.orig : nice(s.n) + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '')).filter(x => x !== null);
   return out.concat(text).join(' + ');

@@ -4,6 +4,7 @@
 import { addQty, splitIngredient } from '../parse.js';
 
 const sum = (...q) => q.reduce((a, b) => addQty(a, b), '');
+const butter = (...q) => q.reduce((a, b) => addQty(a, b, {key: 'unsalted butter'}), '');
 let failed = 0;
 const check = (label, got, want) => {
   const ok = got === want;
@@ -14,29 +15,38 @@ const check = (label, got, want) => {
 console.log('\nAdding amounts across recipes');
 check('½ cup + ½ cup', sum('½ cup', '½ cup'), '1 cup');
 check('⅔ cup + ½ cup + ½ cup', sum('⅔ cup', '½ cup', '½ cup'), '1⅔ cups');
+check('1⅔ cups + 2¾ cups (no decimals)', sum('1⅔ cups (209g)', '2¾ cups'), '4⅓ cups + 1 Tbsp + 1 tsp');
+check('½ cup + ⅔ cup', sum('½ cup whole', '⅔ cup whole'), '1 cup whole + 2 Tbsp + 2 tsp');
 check('1 tsp + 1 tsp', sum('1 teaspoon', '1 tsp'), '2 tsp');
 check('2 cups + 1 cup', sum('2 cups', '1 cup'), '3 cups');
 check('18 large + 36 large', sum('18 large', '36 large'), '54 large');
 check('½ cup whole + ½ cup whole', sum('½ cup (120ml) whole', '½ cup (120ml) whole'), '1 cup whole');
 check('3 cups (375g) + 1 cup (125g)', sum('3 cups (375g)', '1 cup (125g)'), '4 cups');
 
-console.log('\nConverting spoons, sticks and cups');
-check('10 Tbsp + 1 stick', sum('10 Tbsp', '1 stick'), '18 Tbsp (2¼ sticks)');
-check('4 Tbsp + 6 Tbsp + 1 stick', sum('4 tablespoons', '6 Tablespoons (85g)', '1 stick'), '18 Tbsp (2¼ sticks)');
-check('1 stick + 4 Tbsp', sum('1 stick', '4 Tbsp'), '12 Tbsp (1½ sticks)');
+console.log('\nButter in sticks + Tbsp');
+check('10 Tbsp + 1 stick', butter('10 Tbsp', '1 stick'), '2 sticks + 2 Tbsp');
+check('4 Tbsp + 6 Tbsp + 1 stick', butter('4 tablespoons', '6 Tablespoons (85g)', '1 stick'), '2 sticks + 2 Tbsp');
+check('4 Tbsp + 6 Tbsp of butter', butter('4 Tbsp', '6 Tbsp'), '1 stick + 2 Tbsp');
+check('2 Tbsp + 3 Tbsp of butter', butter('2 Tbsp', '3 Tbsp'), '5 Tbsp');
+check('½ cup + ½ cup of butter', butter('½ cup', '½ cup'), '2 sticks');
+check('1 stick + 4 Tbsp', sum('1 stick', '4 Tbsp'), '1 stick + 4 Tbsp');
 check('2 sticks + 1 stick', sum('2 sticks', '1 stick'), '3 sticks');
+check('peanut butter stays in Tbsp', addQty('4 Tbsp', '6 Tbsp', {key: 'peanut butter'}), '10 Tbsp');
+
+console.log('\nConverting spoons and cups');
 check('½ cup + 4 Tbsp', sum('½ cup', '4 Tbsp'), '¾ cup');
-check('2 Tbsp + ¼ cup', sum('2 Tbsp', '¼ cup'), '6 Tbsp');
-check('1 cup + 2 Tbsp', sum('1 cup', '2 Tbsp'), '1⅛ cups');
+check('2 Tbsp + ¼ cup', sum('2 Tbsp', '¼ cup'), '¼ cup + 2 Tbsp');
+check('1 cup + 2 Tbsp', sum('1 cup', '2 Tbsp'), '1 cup + 2 Tbsp');
 check('1 Tbsp + 3 tsp', sum('1 Tbsp', '3 tsp'), '2 Tbsp');
-check('1 Tbsp + 1 tsp', sum('1 Tbsp', '1 tsp'), '4 tsp');
-check('½ tsp + 1 Tbsp', sum('½ tsp', '1 Tbsp'), '3½ tsp');
+check('1 Tbsp + 1 tsp', sum('1 Tbsp', '1 tsp'), '1 Tbsp + 1 tsp');
+check('½ tsp + 1 Tbsp', sum('½ tsp', '1 Tbsp'), '1 Tbsp + ½ tsp');
+check('4 Tbsp + 6 Tbsp (not butter)', sum('4 Tbsp', '6 Tbsp'), '10 Tbsp');
 
 console.log('\nConverting pounds and ounces');
 check('1 lb + 8 oz', sum('1 lb', '8 oz'), '1½ lb');
 check('2 lb + 12 oz + 4 oz', sum('2 lb', '12 oz', '4 oz'), '3 lb');
 check('8 oz (225g) + 1 lb', sum('8 oz (225g)', '1 lb'), '1½ lb');
-check('1 lb + 3 oz', sum('1 lb', '3 oz'), '19 oz');
+check('1 lb + 3 oz', sum('1 lb', '3 oz'), '1 lb + 3 oz');
 
 console.log('\nKeeping things apart that should stay apart');
 check('1 cup + 1 tsp (no messy 49 tsp)', sum('1 cup', '1 tsp'), '1 cup + 1 tsp');

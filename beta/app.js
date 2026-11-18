@@ -207,7 +207,7 @@ function renderLanding(member){
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
       ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share recipes', "Add friends and family to see each other's recipes and save a copy of their best recipes to your own recipe box.")}
-      ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few. Possibilities are endless.')}
+      ${feat('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few.')}
       ${feat('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>
   </section>

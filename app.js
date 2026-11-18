@@ -1218,6 +1218,8 @@ function drawAisles(focus){
   }, {passive: false});
   const end = () => { if(!ad) return; const {li} = ad; ad = null; li.classList.remove('lifting'); save(li.dataset.s); };
   document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+  document.addEventListener('touchstart', e => { if(e.target.closest && e.target.closest('.agrip')) e.preventDefault(); }, {passive: false});
+  document.addEventListener('touchmove', e => { if(ad) e.preventDefault(); }, {passive: false});
   document.addEventListener('keydown', e => {
     const g = e.target.closest && e.target.closest('.agrip'); if(!g || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
     e.preventDefault(); const li = g.closest('li'), list = li.parentElement;

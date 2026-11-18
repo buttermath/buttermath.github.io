@@ -706,7 +706,7 @@ function renderShopping(){
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Type an item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to my list</b> while you are on any recipe page.</p>` : ''}
   <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
-  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish trip</b> to save what's in your cart to <b>Past trips</b> and clear it off your list.</p><div class="te-btns"><button class="btn primary" data-act="resetshop">Finish trip</button><button class="btn" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>`}` : ''}
+  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish trip</b> to save everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn primary" data-act="resetshop">Finish trip</button><button class="btn" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}`;
 }
@@ -1193,43 +1193,24 @@ function finishRecipeTrip(id){
   });
   toast(name + ' moved to Past trips');
 }
-function newTrip(clearRest){
-  const at = new Date().toISOString(), live = recipes.filter(r => isActive(r.id) && !(P().done || {})[r.id]);
-  const fin0 = live.filter(r => { const its = allItems().filter(i => (i.recipes || []).includes(r.id)); return its.length && its.every(i => P().shop[i.id]); });
-  const moved = fin0.map(r => D(r).short || D(r).title);
+function newTrip(){
+  const at = new Date().toISOString(), live = recipes.filter(r => isActive(r.id) && !(P().done || {})[r.id]), liveIds = live.map(r => r.id);
   const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress});
   mutate(k => {
-    const marks = k.progress.shop = k.progress.shop || {}, logged = k.progress.logged = k.progress.logged || {};
-    Object.keys(logged).forEach(id => { if(!marks[id]) delete logged[id]; });
-    const itemsOf = id => k.shopping.items.filter(i => (i.recipes || []).includes(id));
-    const fin = live.filter(r => { const its = itemsOf(r.id); return its.length && its.every(i => marks[i.id]); }).map(r => r.id);
-    const loose = k.shopping.items.filter(i => !(i.recipes || []).some(x => R(x)) && marks[i.id]);
-    const shown = k.shopping.items.filter(i => marks[i.id] && !logged[i.id] && ((i.recipes || []).some(x => live.some(r => r.id === x)) || loose.includes(i)));
-    const names = live.filter(r => fin.includes(r.id) || shown.some(i => (i.recipes || []).includes(r.id))).map(r => D(r).short || D(r).title);
+    const marks = k.progress.shop = k.progress.shop || {}; k.progress.logged = {};
+    const own = i => (i.recipes || []).some(x => R(x));
+    const vis = k.shopping.items.filter(i => !(i.recipes || []).length || (i.recipes || []).some(x => liveIds.includes(x)) || (i.custom && !own(i)));
+    const loose = vis.filter(i => !own(i)), used = live.filter(r => vis.some(i => (i.recipes || []).includes(r.id)));
     const t = k.progress.trips = k.progress.trips || [];
-    if((shown.length || fin.length) && !(t[0] && t[0].at === at)){
-      t.unshift({at, rids: fin, r: names, items: shown.map(i => Object.assign({id: i.id, n: i.name, q: i.qty || '', s: marks[i.id]}, loose.includes(i) ? {c: 1, sec: i.section || 'Other'} : {}))});
+    if(vis.length && !(t[0] && t[0].at === at)){
+      t.unshift({at, rids: used.map(r => r.id), r: used.map(r => D(r).short || D(r).title), items: vis.map(i => Object.assign({id: i.id, n: i.name, q: i.qty || '', s: marks[i.id] === 'bought' || marks[i.id] === 'have' ? marks[i.id] : 'skip'}, loose.includes(i) ? {c: 1, sec: i.section || 'Other'} : {}))});
       if(t.length > 60) t.length = 60;
     }
-    fin.forEach(id => { k.progress.active[id] = false; (k.progress.done = k.progress.done || {})[id] = true; });
-    const stillNeeded = i => (i.recipes || []).some(x => live.some(r => r.id === x) && !fin.includes(x));
-    k.shopping.items.forEach(i => { if(marks[i.id] && !stillNeeded(i) && !loose.includes(i)){ delete marks[i.id]; delete logged[i.id]; } });
-    loose.forEach(i => { delete marks[i.id]; delete logged[i.id]; });
-    Object.keys(marks).forEach(id => { if(marks[id] === 'bought') marks[id] = 'have'; });
+    used.forEach(({id}) => { k.progress.active[id] = false; (k.progress.done = k.progress.done || {})[id] = true; });
+    vis.forEach(i => { delete marks[i.id]; });
     k.shopping.items = k.shopping.items.filter(i => !loose.includes(i));
-    shown.forEach(i => { if(marks[i.id]) logged[i.id] = true; });
-    if(clearRest){
-      const liveIds = live.map(r => r.id);
-      k.shopping.items = k.shopping.items.filter(i => {
-        if(i.custom && !(i.recipes || []).some(x => R(x))){ delete marks[i.id]; delete logged[i.id]; return false; }
-        if(!(i.recipes || []).some(x => liveIds.includes(x))) return true;
-        i.recipes = i.recipes.filter(x => !liveIds.includes(x)); if(i.recipes.length) return true;
-        delete marks[i.id]; delete logged[i.id]; return false;
-      });
-      liveIds.forEach(id => { k.progress.active[id] = false; (k.progress.done = k.progress.done || {})[id] = true; });
-    }
   });
-  toast(clearRest ? 'Trip saved. Your list is cleared.' : moved.length ? moved.join(', ') + ' moved to Past trips' : 'Trip saved. Your list is ready.', () => {
+  toast('Trip saved. Your list is cleared.', () => {
     mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); });
 }
 /* enter-kitchen gate */
@@ -1463,8 +1444,8 @@ function restoreTrip(at){
     ids.forEach(id => { k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id]; });
     (t[i].items || []).forEach(it => {
       const item = (it.id && k.shopping.items.find(x => x.id === it.id)) || k.shopping.items.find(x => x.name === it.n && (!ids.length || (x.recipes || []).some(r => ids.includes(r))));
-      if(item) marks[item.id] = it.s;
-      else if(it.c){ const nid = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); k.shopping.items.push({id: nid, name: it.n, qty: it.q || '', section: it.sec || 'Other', key: splitIngredient(it.n).key, recipes: [], custom: true}); marks[nid] = it.s; }
+      if(item){ if(it.s === 'bought' || it.s === 'have') marks[item.id] = it.s; }
+      else if(it.c){ const nid = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); k.shopping.items.push({id: nid, name: it.n, qty: it.q || '', section: it.sec || 'Other', key: splitIngredient(it.n).key, recipes: [], custom: true}); if(it.s === 'bought' || it.s === 'have') marks[nid] = it.s; }
     });
     t.splice(i, 1);
   });
@@ -1481,11 +1462,11 @@ function renderTrips(){
     const names = [...new Set(g.trips.flatMap(t => t.r || []))];
     const when = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'});
     const seen = new Map(); all.forEach(i => { const key = i.id || i.n; if(!seen.has(key)) seen.set(key, i); });
-    const uniq = [...seen.values()], gt = uniq.filter(i => i.s === 'bought'), hd = uniq.filter(i => i.s === 'have');
+    const uniq = [...seen.values()], gt = uniq.filter(i => i.s === 'bought'), hd = uniq.filter(i => i.s === 'have'), sk = uniq.filter(i => i.s === 'skip');
     const ats = g.trips.map(t => t.at).join('|');
-    return `<details class="card trip" ${n === 0 ? 'open' : ''}><summary><div><b>${esc(when)}</b><div class="muted">${gt.length} bought · ${hd.length} already had</div></div><button class="tripx" data-act="deltrip" data-at="${esc(ats)}" aria-label="Remove this trip" title="Remove trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="chev">▾</span></summary>
+    return `<details class="card trip" ${n === 0 ? 'open' : ''}><summary><div><b>${esc(when)}</b><div class="muted">${[`${gt.length} bought`, `${hd.length} already had`].concat(sk.length ? [`${sk.length} didn't get`] : []).join(' · ')}</div></div><button class="tripx" data-act="deltrip" data-at="${esc(ats)}" aria-label="Remove this trip" title="Remove trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="chev">▾</span></summary>
       <div class="tbody">${names.length ? `<div class="tname">${esc(names.join(', '))}</div>` : ''}
-      ${uniq.length ? `<details class="tings"><summary>See ingredients</summary>${gt.length ? `<h4>Bought</h4>${list(gt)}` : ''}${hd.length ? `<h4>Already had</h4>${list(hd)}` : ''}</details>` : '<div class="muted" style="font-size:14px">Nothing was marked.</div>'}
+      ${uniq.length ? `<details class="tings"><summary>See ingredients</summary>${gt.length ? `<h4>Bought</h4>${list(gt)}` : ''}${hd.length ? `<h4>Already had</h4>${list(hd)}` : ''}${sk.length ? `<h4>Didn't get</h4>${list(sk)}` : ''}</details>` : '<div class="muted" style="font-size:14px">Nothing was marked.</div>'}
       <div class="row" style="margin-top:12px"><button class="btn" data-act="untrip" data-at="${esc(ats)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Back to shopping list</button></div></div></details>`;
   }).join('');
   return `<button class="back" data-act="go" data-h="shopping">← Shopping list</button>
@@ -1773,14 +1754,13 @@ document.addEventListener('click', async e => {
     return;
   }
   if(a === 'resetshop'){
-    const need = visibleItems().filter(i => !shop[i.id]).length;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Your cart goes to Past trips.${need ? ' Anything left stays on your list unless you choose to clear cart.' : ''}</div>${need ? `<label class="clearopt"><input type="checkbox" id="clearRest"><span>Clear ${need} remaining item${need === 1 ? '' : 's'}?</span></label>` : ''}<div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Everything on your list goes to Past trips, marked as bought, already had or didn't get. Your list starts fresh.</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
     return;
   }
   if(a === 'ing'){ const c = cookOf(id), key = el.dataset.k, v = !c.i[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.i = o.i || {})[key] = v; }); return; }
   if(a === 'step'){ const c = cookOf(id), key = el.dataset.k, v = !c.s[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.s = o.s || {})[key] = v; delete o.before; syncMade(k, id); }); return; }
   if(a === 'resetrecipe'){ confirmBox('Reset progress?', 'Unchecks every ingredient and step.', 'Reset', () => mutate(k => { bankLegacy(k, id); k.progress.cook[id] = {i:{}, s:{}}; })); return; }
-  if(a === 'finishok'){ const c = !!($('#clearRest') || {}).checked; $('#modalRoot').innerHTML = ''; newTrip(c); return; }
+  if(a === 'finishok'){ $('#modalRoot').innerHTML = ''; newTrip(); return; }
   if(a === 'fav'){ e.stopPropagation(); const v = !favOf(id); mutate(k => { const f = k.progress.fav = k.progress.fav || {}; if(v) f[id] = true; else delete f[id]; }); return; }
   if(a === 'catmenu'){ catOpen = !catOpen; sortOpen = false; render(); return; }
   if(a === 'catclear'){ e.stopPropagation(); recTags = []; catOpen = false; render(); return; }

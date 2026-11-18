@@ -864,3 +864,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .shop-head > .lbl + .row{padding-right:46px}
 .frinvl{margin:16px 2px 6px;font-size:14px;line-height:1.4;color:var(--muted)}
 .frinv{color:var(--muted);background:#FBFAF7}
+.lp-ig{display:inline-flex;align-items:center;gap:8px;margin-top:4px;font-weight:600;font-size:15px;color:#141414;text-decoration:none;min-height:44px}
+.lp-ig svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.lp-ig:hover{color:var(--accent)}

@@ -727,7 +727,7 @@ function renderShopping(){
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Type an item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to my list</b> while you are on any recipe page.</p>` : ''}
   <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
-  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to save everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn primary" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>`}` : ''}
+  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to move everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn primary" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${(P().trips || []).length})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}`;
 }
@@ -1780,7 +1780,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if(a === 'resetshop'){
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Everything on your list goes to Past trips, marked as bought, already had or didn't get. Your list starts fresh.</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish trip</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Everything on your current list moves to Past trips. Your shopping list starts fresh.</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish</button></div></div></div>`;
     return;
   }
   if(a === 'ing'){ const c = cookOf(id), key = el.dataset.k, v = !c.i[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.i = o.i || {})[key] = v; }); return; }

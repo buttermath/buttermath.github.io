@@ -1001,8 +1001,10 @@ function renderRecipe(id){
   ${sendSheet === r.id ? renderSendSheet(r) : ''}
   ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap + to add'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
 }
-// On wide screens the Cook a Meal button sits at the right edge of the page card instead of the far edge of the window.
-function placeFab(){ const b = document.querySelector('.mealfab'), m = document.querySelector('main'); if(!b || !m) return; b.style.right = innerWidth >= 820 ? Math.max(16, innerWidth - m.getBoundingClientRect().right) + 'px' : ''; }
+// On wide screens the Cook a Meal button sits on the checkered space just right of the page card, when there's room for it there.
+function placeFab(){ const b = document.querySelector('.mealfab'), m = document.querySelector('main'); if(!b || !m) return; b.style.left = ''; b.style.right = '';
+  if(innerWidth < 820) return; const mr = m.getBoundingClientRect().right;
+  if(innerWidth - mr >= b.offsetWidth + 32){ b.style.left = (mr + 16) + 'px'; b.style.right = 'auto'; } else b.style.right = Math.max(16, innerWidth - mr) + 'px'; }
 window.addEventListener('resize', placeFab);
 function renderFab(r){
   const old = $('#fab'); if(old) old.remove();

@@ -45,7 +45,25 @@ function normalize(row){
 
 let statusNow = {kind:'', text:''};
 function setStatus(kind, text){ statusNow = {kind, text}; const el = $('#status'); if(!el) return; el.className = 'status ' + kind; el.querySelector('span').textContent = text; }
-let toastT; function toast(t, undo){ const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2400); }
+let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2400); }
+
+/* ---------------- error log ---------------- */
+// Problems members run into go to the error_log table and show on the Admin page. Never stores recipe text or passwords.
+let errN = 0, errLast = '', errPend = [];
+function logErr(kind, msg, detail){
+  try{
+    msg = String(msg || '').slice(0, 300);
+    if(!msg || /ResizeObserver loop|^Script error\.?$/.test(msg) || errN >= 20 || msg === errLast) return;
+    errN++; errLast = msg;
+    const sv = document.querySelector('script[src*="app.js"]'), ver = sv ? ((sv.getAttribute('src').match(/v=(\w+)/) || [])[1] || '') : '';
+    errPend.push({kind, msg, detail: String(detail || '').slice(0, 1500), page: (location.pathname + location.hash).slice(0, 200), ua: navigator.userAgent.slice(0, 300), ver: ver.slice(0, 20)});
+    flushErr();
+  }catch(_){}
+}
+function flushErr(){ if(!sb || !errPend.length) return; const rows = errPend.splice(0); try{ sb.from('error_log').insert(rows).then(() => {}, () => {}); }catch(_){} }
+window.addEventListener('error', e => logErr('crash', e.message, (e.error && e.error.stack) || ((e.filename || '') + ':' + (e.lineno || ''))));
+window.addEventListener('unhandledrejection', e => { const r = e.reason || {}; logErr('crash', r.message || String(r), r.stack || ''); });
+{ const ce = console.error.bind(console); console.error = (...a) => { ce(...a); const x = a[0]; let m = x && x.message; if(!m){ try{ m = typeof x === 'string' ? x : JSON.stringify(x); }catch(_){ m = String(x); } } logErr('error', m, (x && (x.stack || [x.details, x.hint, x.code].filter(Boolean).join(' · '))) || ''); }; }
 
 /* ------------- saving the kitchen row (shopping + progress) -------------
    Each change is a small function. It runs on the local copy right away, and on save
@@ -86,6 +104,7 @@ async function boot(){
   }
   const mod = window.__mockSupabase || await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
   sb = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  flushErr();
   sb.auth.onAuthStateChange((event, s) => {
     if(event === 'PASSWORD_RECOVERY'){ recovering = true; session = s; user = s && s.user; render(); return; }
     const was = user && user.id;
@@ -1282,13 +1301,24 @@ function enterKitchen(){
   }, Math.max(0, 1600 - (Date.now() - t0))); };
   go();
 }
-let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null, adminFr = null, admSort = 'new', admQ = '';
+let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null, adminFr = null, adminErr = null, admSort = 'new', admQ = '';
+function renderErrors(){
+  const e = adminErr, head = n => `<div class="card panel errs"><h3>Errors${n !== '' ? ` <small>${n}</small>` : ''}</h3>`;
+  if(!e) return head('') + `<div class="muted">Checking…</div></div>`;
+  if(e.err) return head('') + `<div class="muted">Couldn't load the error log right now.</div></div>`;
+  if(!e.length) return head(0) + `<div class="muted">No errors logged yet.</div></div>`;
+  const dev = ua => { ua = ua || ''; const d = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other'; const b = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : ''; return d + (b ? ' · ' + b : ''); };
+  const when = t => new Date(t).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+  const lbl = {shown:'Shown to member', error:'Error', crash:'Crash'};
+  return head(e.length) + `<p class="muted errnote">The last 50 problems members ran into, newest first. Tap one for details.</p><div class="errlist">${e.map(x => `<details class="errrow"><summary><b>${esc(x.msg)}</b><small>${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div>`;
+}
 function renderAdmin(){
   const back = `<button class="back" data-act="go" data-h="shopping">← Shopping list</button><h2 class="ptitle">Admin</h2>`;
   if(!isAdmin) return back + `<div class="card empty">This page is only for the site administrator.</div>`;
   if(!adminData && !adminBusy){
     adminBusy = true;
     sb.rpc('admin_users').then(({data, error}) => { adminBusy = false; adminData = error ? {err: true} : (data || []); render(); });
+    sb.rpc('admin_errors').then(({data, error}) => { adminErr = error ? {err: true} : (data || []); render(); }, () => { adminErr = {err: true}; render(); });
     sb.rpc('admin_usage').then(({data, error}) => { adminUsage = error ? {err: true} : data; render(); }, () => {});
     sb.rpc('admin_friend_counts').then(({data, error}) => { adminFr = {}; if(!error) (data || []).forEach(f => { adminFr[String(f.email || '').toLowerCase()] = f; }); render(); }, () => {});
   }
@@ -1304,7 +1334,7 @@ function renderAdmin(){
   const q = admQ.trim().toLowerCase();
   const friendLine = u => { const f = fr(u); if(!adminFr) return ''; if(!f) return ' · 0 friends';
     return ` · ${f.friends} friend${f.friends == 1 ? '' : 's'}${f.pending ? ` (${f.pending} waiting)` : ''}${f.shared ? ` · ${f.shared} recipe${f.shared == 1 ? '' : 's'} sent` : ''}`; };
-  return back + renderHealth() + `<div class="card panel"><h3>Members <small>${adminData.length}</small></h3>
+  return back + renderHealth() + renderErrors() + `<div class="card panel"><h3>Members <small>${adminData.length}</small></h3>
     ${using !== null ? `<div class="muted afr">${using} of ${adminData.length} member${adminData.length === 1 ? ' has' : 's have'} at least one friend.</div>` : ''}
     <div class="atools"><input class="tin" id="adm-q" data-keep type="search" placeholder="Search members" value="${esc(admQ)}" autocomplete="off" aria-label="Search members">
     <select class="tin" id="adm-sort" aria-label="Sort members">${[['new', 'Newest joined'], ['old', 'Oldest joined'], ['az', 'A–Z'], ['active', 'Last signed in'], ['friends', 'Most friends']].map(([k, l]) => `<option value="${k}"${admSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
@@ -1674,6 +1704,26 @@ function confirmBox(title, body, okText, fn, html){
 }
 let confirmFn = null;
 
+/* ---------------- swipe down to close sheets (phones) ---------------- */
+{ let sw = null;
+  document.addEventListener('touchstart', e => {
+    const sh = e.target.closest && e.target.closest('.asksheet'); sw = null;
+    if(!sh || innerWidth >= 720 || e.touches.length !== 1 || e.target.closest('input,textarea,select')) return;
+    for(let n = e.target; n && n !== sh; n = n.parentElement) if(n.scrollTop > 0) return;
+    if(sh.scrollTop > 0) return;
+    sw = {sh, y: e.touches[0].clientY, t: Date.now(), dy: 0};
+  }, {passive: true});
+  document.addEventListener('touchmove', e => { if(!sw) return; const dy = e.touches[0].clientY - sw.y; sw.dy = dy; if(dy > 0){ if(e.cancelable) e.preventDefault(); sw.sh.style.transition = 'none'; sw.sh.style.transform = `translateY(${dy}px)`; } }, {passive: false});
+  document.addEventListener('touchend', () => {
+    if(!sw) return; const {sh, dy, t} = sw; sw = null;
+    if(dy > 110 || (dy > 40 && dy / Math.max(1, Date.now() - t) > .6)){
+      sh.style.transition = 'transform .18s ease-in'; sh.style.transform = 'translateY(100%)';
+      setTimeout(() => { const bg = sh.previousElementSibling; if(bg && bg.classList.contains('sheetbg')) bg.click(); }, 170);
+    } else if(dy > 0){ sh.style.transition = 'transform .2s ease-out'; sh.style.transform = ''; }
+  });
+  document.addEventListener('touchcancel', () => { if(sw){ sw.sh.style.transform = ''; sw = null; } });
+}
+
 /* ---------------- events ---------------- */
 document.addEventListener('click', async e => {
   if(dragJustEnded){ dragJustEnded = false; e.preventDefault(); return; }
@@ -1694,7 +1744,7 @@ document.addEventListener('click', async e => {
   if(a === 'delopen'){ delOpen = true; render(); setTimeout(() => { const w = $('#del-word'); if(w) w.focus(); }, 50); return; }
   if(a === 'delclose'){ if(e.target.closest('[data-stop]') && el.classList.contains('modal')) return; delOpen = false; render(); return; }
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
-  if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; } location.hash = el.dataset.h; return; }
+  if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; adminErr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }

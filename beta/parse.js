@@ -26,6 +26,29 @@ function metaFrom(line, out){
 const looksIng = l => l.length < 140 && (new RegExp('^(\\d|['+FRAC+']|one |two |three |a |an |pinch|dash|handful|juice of|zest of|salt|pepper|kosher salt|black pepper)','i')).test(l);
 const cleanStep = l => l.replace(/^(step\s*)?\d+\s*[.):-]\s*/i,'').replace(/^step\s*\d+\s*/i,'').trim();
 
+// Some recipes (Claude's, and many apps) write each step as a short numbered title, an optional time line like "3m" or "2m 30s",
+// then the instructions on the next lines. Join those back into one step: "Heat the pan (3 min). Heat a large skillet…".
+const isNumStep = l => /^(step\s*)?\d+\s*[.):-]\s*\S/i.test(l);
+const DUR = /^(?:\d+\s*(?:h|hrs?|hours?|m|mins?|minutes?|s|secs?|seconds?)\s*)+$/i;
+function durText(l){ return l.match(/\d+\s*[a-z]+/gi).map(x => { const [, n, u] = x.match(/(\d+)\s*([a-z]+)/i); return n + ' ' + (/^h/i.test(u) ? 'hr' : /^m/i.test(u) ? 'min' : 'sec'); }).join(' '); }
+function groupSteps(steps){
+  const idx = steps.map((l, i) => isNumStep(l) ? i : -1).filter(i => i >= 0);
+  if(idx.length < 2) return steps;
+  const bodyAfter = i => { let j = i + 1; if(j < steps.length && DUR.test(steps[j])) j++; return j < steps.length && !isNumStep(steps[j]) && !DUR.test(steps[j]); };
+  if(idx.filter(bodyAfter).length < Math.ceil(idx.length / 2)) return steps;
+  const out = steps.slice(0, idx[0]);
+  idx.forEach((s, k) => {
+    const end = k + 1 < idx.length ? idx[k + 1] : steps.length;
+    const title = cleanStep(steps[s]), rest = steps.slice(s + 1, end);
+    const dur = rest.filter(l => DUR.test(l)).map(durText)[0] || '';
+    const heads = rest.filter(l => isHead(l)), body = rest.filter(l => !DUR.test(l) && !isHead(l)).join(' ');
+    const isTitle = title.length <= 60 && !/[.!?]$/.test(title);
+    out.push(!body ? title + (dur ? ` (${dur})` : '') : isTitle ? `${title}${dur ? ` (${dur})` : ''}. ${body}` : `${title}${dur ? ` (${dur})` : ''} ${body}`);
+    out.push(...heads);
+  });
+  return out;
+}
+
 export function parseRecipeText(raw){
   const out = {title:'', yield:'', prep:'', cook:'', total:'', ingredients:'', steps:'', notes:''};
   let lines = String(raw||'').split(/\r?\n/)
@@ -57,7 +80,7 @@ export function parseRecipeText(raw){
   ings = ings.filter(l => l.length < 200);
   // A short line ending in ":" or a "For the ..." line is a group heading.
   out.ingredients = ings.map(l => /^for (the )?/i.test(l) && l.length < 50 && !l.endsWith(':') ? l + ':' : l).map(prettyFractions).join('\n');
-  out.steps = steps.map(cleanStep).filter(Boolean).map(prettyFractions).join('\n');
+  out.steps = groupSteps(steps).map(cleanStep).filter(Boolean).map(prettyFractions).join('\n');
   out.notes = notes.join('\n');
   return out;
 }
@@ -77,8 +100,10 @@ export function groupsToIngText(groups){
   return (groups||[]).map(g => (g.group ? g.group + ':\n' : '') + (g.items||[]).join('\n')).join('\n\n');
 }
 export function findTimers(text){
+  const ms = String(text).match(/(\d+)\s*(?:minutes?|mins?)\s*(?:and\s*)?(\d+)\s*(?:seconds?|secs?)\b/i);
+  if(ms){ const n = +ms[1] + +ms[2] / 60; return n > 0 ? [{label: ms[0].replace(/\s+/g,' '), min: n}] : []; }
   const m = String(text).match(/(\d+)(?:\s*(?:-|–|to)\s*\d+)?\s*(minutes?|mins?|hours?|hrs?)\b/i);
-  if(!m) return [];
+  if(!m){ const sx = String(text).match(/(\d+)\s*(?:seconds?|secs?)\b/i); return sx && +sx[1] > 0 ? [{label: sx[0].replace(/\s+/g,' '), min: +sx[1] / 60}] : []; }
   const n = +m[1] * (/^h/i.test(m[2]) ? 60 : 1);
   return n > 0 && n <= 24*60 ? [{label: m[0].replace(/\s+/g,' '), min: n}] : [];
 }

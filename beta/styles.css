@@ -987,3 +987,7 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .mwait{border:1.5px dashed #C9C2BA;border-radius:12px;background:repeating-linear-gradient(135deg,#FBFAF7 0 10px,#F3EFEA 10px 20px);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px;padding:12px;box-sizing:border-box}
 .mwait b{font-size:15px}.mwait small{font-size:13px;color:var(--muted)}.mwait .mstart{margin-top:auto;min-height:36px;padding:0 14px;font-size:14px;background:#fff}
 @media(min-width:900px){.mlanes{grid-template-columns:repeat(var(--n),minmax(180px,1fr));overflow-x:auto}}
+.mchn{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;min-height:36px}
+.mchip.off{border-color:var(--line);background:#F3EFEA;color:#A39C96}.mchip.off .mchn{text-decoration:line-through}.mstepnote{margin:-6px 2px 2px}
+.mrmrow{flex-wrap:wrap;justify-content:flex-end}
+.mlane.pulse{animation:mpulse 1s ease-out}@keyframes mpulse{0%{box-shadow:0 0 0 3px #D7263D}100%{box-shadow:0 0 0 0 rgba(215,38,61,0)}}

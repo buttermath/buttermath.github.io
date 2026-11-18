@@ -165,10 +165,10 @@ function renderLanding(member){
     <div class="lp-copy">
       <span class="lp-eyebrow">Attention home cooks and bakers</span>
       <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
-      <p class="lp-lede">Save recipes from any website, social media post or screenshot, and keep them all in one recipe box. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
+      <p class="lp-lede">Save recipes from any website, social media post, or screenshot, and keep them all in one recipe box. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="shopping">Go to my shopping list</button><button class="btn" data-act="go" data-h="recipes">My recipes</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
-    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs and lemons added up from two recipes">
+    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs, and lemons added up from two recipes">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>
@@ -188,7 +188,7 @@ function renderLanding(member){
     <h2 class="lp-h2">Your recipes are stored everywhere. Your grocery list is in a notes app or written on scratch paper.</h2>
     <div class="lp-three">
       ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Butter Math keeps them all in one recipe box.")}
-      ${card('The butter math', 'Two recipes both call for butter, eggs and lemons. Butter Math adds up every ingredient so you buy enough the first time.')}
+      ${card('The butter math', 'Two recipes both call for butter, eggs, and lemons. Butter Math adds up every ingredient so you buy enough the first time.')}
       ${card('One shopping trip', 'Your list is sorted by grocery aisle and you can keep track as you shop for multiple recipes. Check things off as you shop and nothing gets left on the shelf.')}
     </div>
   </section>
@@ -1401,7 +1401,7 @@ function renderHealth(){
     <div class="muted" style="font-size:14px;margin-top:6px">Last sign-in: ${days === null ? '—' : days === 0 ? 'today' : days + ' day' + (days === 1 ? '' : 's') + ' ago'}. Supabase pauses free sites after 7 quiet days.</div>
     ${(() => { const lb = P().lastBackup, bd = lb ? Math.floor((Date.now() - lb) / 864e5) : null, late = bd === null || bd > 14; return `<div class="hbk${late ? ' late' : ''}">Last backup: ${bd === null ? 'none recorded yet' : (bd === 0 ? 'today' : bd === 1 ? 'yesterday' : bd + ' days ago') + ' (' + new Date(lb).toLocaleDateString(undefined, {month: 'long', day: 'numeric'}) + ')'}${bd !== null && bd > 14 ? '. Overdue. Download a new one.' : bd === null ? '. Download one now.' : ''}</div>`; })()}
     <div class="row" style="margin-top:12px"><button class="btn" data-act="backup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>Download backup</button><label class="btn" id="f-restorelbl"><input type="file" id="f-restore" accept=".zip,.json,application/zip,application/json" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>Restore from backup</label></div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos, and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div>`;
 }
 const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
@@ -1627,7 +1627,7 @@ function renderAccount(){
     ${recipes.length ? '' : '<div class="muted" style="margin-top:8px">You don\'t have any recipes yet.</div>'}
   </div>
   <div class="card panel danger" style="margin-top:16px"><h3>Delete account</h3>
-    <p style="margin:6px 0 12px">Permanently deletes your account, all your recipes and photos, your shopping list and your cooking progress. This can't be undone.</p>
+    <p style="margin:6px 0 12px">Permanently deletes your account, all your recipes and photos, your shopping list, and your cooking progress. This can't be undone.</p>
     <button class="btn dangerbtn" data-act="delopen">Delete my account and data</button>
   </div>
   ${delOpen ? `<div class="modal" data-act="delclose"><div class="card" data-stop><h3>Delete everything?</h3>
@@ -1640,7 +1640,7 @@ function renderFeedback(){
   const su = encodeURIComponent('Butter Math feedback');
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose fb"><h3>Send feedback</h3>
-    <p>Ideas, bugs or questions? Email us at <b>${FB_EMAIL}</b>.</p>
+    <p>Ideas, bugs, or questions? Email us at <b>${FB_EMAIL}</b>.</p>
     <div class="fbbtns"><button class="btn primary sm" data-act="copyemail">Copy email address</button></div>
   </div>`;
 }
@@ -1678,7 +1678,7 @@ function renderHelp(){
   const step = (n, t) => `<div class="hstep"><div class="hnum">${n}</div><div><h4>${t.title}</h4><p>${t.text}</p></div></div>`;
   return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card panel prose help"><h3>How Butter Math works</h3>
-    <p class="muted">Plan, shop and cook from one place.</p>
+    <p class="muted">Plan, shop, and cook from one place.</p>
     ${TOUR.map((t, i) => step(i + 1, t)).join('')}
     <h4 class="htips">Good to know</h4>
     <ul>
@@ -1704,7 +1704,7 @@ function renderTerms(){
     <p><b>Your content.</b> What you add is yours, and you're responsible for it. Only save content you have the right to use. Recipes saved from other websites still belong to their creators and are for your own personal use.</p>
     <p><b>Copyright concerns.</b> Recipes and photos that members save remain the property of their creators. If you believe something stored on Butter Math infringes your copyright, email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a> with a description of the work, where you believe it appears, and your contact details. We'll review your request and remove the content where appropriate.</p>
     <p><b>Copyright agent.</b> Butter Math's designated agent for copyright notices under the Digital Millennium Copyright Act is Hayley Beck, P.O. Box 63073, St. Louis, MO 63163, phone 314-499-1637, email <a href="mailto:hello@buttermath.app">hello@buttermath.app</a>.</p>
-    <p><b>Acceptable use.</b> You agree not to upload content that is unlawful, harmful or abusive, and not to disrupt, overload or misuse the site or interfere with other members' accounts.</p>
+    <p><b>Acceptable use.</b> You agree not to upload content that is unlawful, harmful, or abusive, and not to disrupt, overload, or misuse the site or interfere with other members' accounts.</p>
     <p><b>Provided as is.</b> Butter Math is provided "as is" and "as available", without warranties of any kind. Features may change, and the site may be suspended or discontinued at any time. We recommend keeping your own copy of any recipes and photos you upload to the site.</p>
     <p><b>Liability.</b> To the fullest extent permitted by law, Butter Math is not liable for any loss or damage resulting from your use of the site.</p>
     <p><b>Accounts.</b> You can delete your account at any time from <b>Account</b>. Accounts that break these terms may be suspended or removed.</p>
@@ -1716,7 +1716,7 @@ function renderPrivacy(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Your privacy</h3>
     <p class="muted">Last updated November 16, 2026</p>
-    <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared or used for advertising.</p>
+    <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list, and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared, or used for advertising.</p>
     <p><b>Friends.</b> When you and another member become friends, you can each see the other's recipes and recipe photos, except ones marked private or archived. You can save copies of their recipes to your own recipe box, and any recipe you send to a friend is shared as a copy. Your friends are notified when you save their recipes. Friends never see your shopping list, cooking progress, or favorites. You can remove a friend at any time and choose to remove any recipes you've copied from them. Any copies a friend has saved of your recipes will stay in their recipe box, even if you're no longer friends. Friend requests are initiated by adding your friend's email address, because each account is linked to one. Butter Math doesn't send emails to the people you add. Whether an email address has an account is visible only to the site administrator.</p>
     <p><b>Adding recipes from a link.</b> When you paste a recipe link, Butter Math's server visits that page to copy the recipe into your form. The website you linked sees a visit from Butter Math, not from you. The link isn't saved unless you save the recipe.</p>
     <p><b>Adding recipes from a screenshot.</b> Screenshots are read on your own device to pull out the recipe text. The image is never uploaded or stored. The reading tool is downloaded from jsDelivr, a public code library, the first time you use it. Your screenshot is never sent there.</p>
@@ -1724,7 +1724,7 @@ function renderPrivacy(){
     <p><b>Passwords stay secret.</b> Passwords are stored encrypted. No one, including the site administrator, can see yours.</p>
     <p><b>Photos.</b> Uploaded photos are stored at private, unguessable web addresses that aren't listed anywhere. Anyone with a photo's exact address could open it, so avoid uploading anything sensitive.</p>
     <p><b>Emails.</b> Butter Math only sends account emails, such as confirming your address or resetting your password. There are no newsletters or marketing emails.</p>
-    <p><b>Backups.</b> To protect against data loss, the site administrator regularly downloads a backup copy of the site's data, including member names, email addresses, recipes, shopping lists and photos. Backups are kept privately, protected by two-step sign-in, and deleted after 90 days. They're only used to restore data after a problem.</p>
+    <p><b>Backups.</b> To protect against data loss, the site administrator regularly downloads a backup copy of the site's data, including member names, email addresses, recipes, shopping lists, and photos. Backups are kept privately, protected by two-step sign-in, and deleted after 90 days. They're only used to restore data after a problem.</p>
     <p><b>Where it's stored.</b> Accounts and data are kept by Supabase, a database service. The website itself is hosted on GitHub Pages, and its fonts are loaded from Google Fonts. Account emails are sent through Supabase.</p>
     <p><b>Leaving.</b> You can delete your account at any time from <b>Account</b>, which permanently removes your account and everything you've saved. Copies in older backups are deleted when those backups expire, within 90 days.</p>
     <p><b>Age.</b> Butter Math is for ages 13 and up.</p>

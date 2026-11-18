@@ -1652,12 +1652,20 @@ const TOUR = [
 let tourStep = -1;
 function showTour(i){
   tourStep = i; const t = TOUR[i], last = i === TOUR.length - 1;
-  $('#modalRoot').innerHTML = `<div class="modal"><div class="card tour" data-stop>
+  const arw = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+  $('#modalRoot').innerHTML = `<div class="modal"><div class="card tour" data-stop><button class="tourx" data-act="tourend" aria-label="Close the tour">✕</button>
     <div class="tourart">${t.art()}</div>
-    <div class="tourbody"><div class="tourdots">${TOUR.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-    <h3>${t.title}</h3><p>${t.text}</p>
-    <div class="row tourbtns">${i ? `<button class="btn" data-act="tourgo" data-i="${i - 1}">Back</button>` : `<button class="btn outline" data-act="tourend">Skip</button>`}<button class="btn primary" data-act="${last ? 'tourend' : 'tourgo'}" data-i="${i + 1}">${last ? 'Let\'s cook' : 'Next'}</button></div></div>
+    <div class="tourbody"><h3>${t.title}</h3><p>${t.text}</p>
+    <div class="tournav"><button class="tarrow" data-act="tourgo" data-i="${i - 1}" aria-label="Previous" ${i ? '' : 'disabled'}>${arw('M15 5l-7 7 7 7')}</button>
+    <div class="tourdots" aria-label="Step ${i + 1} of ${TOUR.length}">${TOUR.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
+    ${last ? `<button class="btn primary tourdone" data-act="tourend">Let's cook</button>` : `<button class="tarrow next" data-act="tourgo" data-i="${i + 1}" aria-label="Next">${arw('M9 5l7 7-7 7')}</button>`}</div></div>
   </div></div>`;
+}
+/* swipe left or right to move through the tour */
+{ let tx = null, ty = 0;
+  document.addEventListener('touchstart', e => { const t = e.target.closest && e.target.closest('.tour'); tx = t ? e.touches[0].clientX : null; ty = t ? e.touches[0].clientY : 0; }, {passive: true});
+  document.addEventListener('touchend', e => { if(tx === null || tourStep < 0) return; const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty; tx = null;
+    if(Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return; const j = tourStep + (dx < 0 ? 1 : -1); if(j >= 0 && j < TOUR.length) showTour(j); }, {passive: true});
 }
 function maybeTour(){
   if(tourStep >= 0 || !kitchen || P().tourDone || recipes.length || allItems().length || giftToken() || claiming) return;

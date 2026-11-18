@@ -312,6 +312,13 @@ function qtyFromRecipes(it){
   rs.forEach(x => ingLines(D(R(x))).forEach(l => { const p = splitIngredient(l); if(p.key === key && p.qty) q = addQty(q, p.qty); }));
   return q;
 }
+let mathOpen = new Set();
+function mathOf(it, colOf){
+  const rs = (it.recipes || []).filter(x => R(x)); if(rs.length < 2 || !it.qty) return '';
+  const parts = rs.map(x => [x, qtyFromRecipes(Object.assign({}, it, {recipes: [x]})) || '']); if(parts.filter(p => p[1]).length < 2) return '';
+  const open = mathOpen.has(it.id);
+  return `<button class="mathbtn" data-act="math" data-id="${esc(it.id)}" aria-expanded="${open}">${open ? 'Hide the math' : 'Show the math'}</button>${open ? `<div class="math">${parts.map(([x, q]) => `<div class="mrow"><b>${q ? fmt(q) : 'Amount not listed'}</b><span class="msrc"><span class="mdot" style="--c:${colOf(x)}"></span>${esc(D(R(x)).short || D(R(x)).title)}</span></div>`).join('')}<div class="mrow tot"><span class="msrc">Total</span><b>${fmt(it.qty)}</b></div></div>` : ''}`;
+}
 function fixItem(it){ let ch = false; const q = qtyFromRecipes(it); if(q !== null && q !== (it.qty || '')){ it.qty = q; ch = true; }
   const n = String(it.name || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim(); if(n && n !== it.name){ it.name = n; ch = true; } return ch; }
 // A recipe that's finished or archived no longer counts toward items it shares with recipes still on the list.
@@ -694,7 +701,7 @@ function renderShopping(){
       const st = shop[it.id] || '';
       const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + (it.recipes || []).map(x => { const rr = R(x); return rr ? `<span class="tag" style="--c:${colOf(x)}">${esc(D(rr).short || D(rr).title)}</span>` : ''; }).join('');
       return `<div class="item ${st}"><button class="check" data-act="bought" data-id="${esc(it.id)}" aria-label="In my cart">${CHECK}</button>
-      <div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? `<div class="qty">${fmt(it.qty)}</div>` : ''}<div class="tags">${tags}</div></div>
+      <div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? `<div class="qty">${fmt(it.qty)}</div>` : ''}${mathOf(it, colOf)}<div class="tags">${tags}</div></div>
       <button class="have" data-act="have" data-id="${esc(it.id)}">${st === 'have' ? 'Have it ✓' : 'Have it'}</button><button class="del" data-act="delitem" data-id="${esc(it.id)}" aria-label="Remove ${esc(it.name)}">✕</button></div>`;
     }).join('') + `</div></div>`;
   });
@@ -1730,6 +1737,7 @@ document.addEventListener('click', async e => {
     try { await navigator.clipboard.writeText(u); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
   if(a === 'reccopy'){ const r = R(id); if(!r) return; const link = sendLink && sendLink.id === id ? sendLink.u : null; const txt = shareText(D(r), link);
     try { await navigator.clipboard.writeText(txt); toast('Copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this and paste it into a text:', txt); } return; }
+  if(a === 'math'){ if(mathOpen.has(id)) mathOpen.delete(id); else mathOpen.add(id); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
   if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;
     const {data, error} = await sb.rpc('send_recipe', {recipe: id, friends: to, msg: (($('#send-note') || {}).value || '').trim()});

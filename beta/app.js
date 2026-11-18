@@ -441,6 +441,8 @@ function renderAddFriend(){
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Butter Math.</p>`}</div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
     <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
+    <p class="frinvl">Not on Butter Math yet? Copy your invite link and text it to them.</p>
+    <div class="emrow"><input class="tin frinv" id="fr-inv" readonly value="${esc(myInvite || '')}" placeholder="Making your invite link…" aria-label="Your invite link"><button class="btn" type="button" data-act="frinvcopy">Copy</button></div>
   </div>`;
 }
 function fTile(fid, row){
@@ -562,6 +564,8 @@ async function saveCopy(data, from){
   }catch(e){ console.warn('photo copy skipped', e); } })();
   recipes.push(row); return row;
 }
+let myInvite = null;
+function getInvite(){ if(myInvite) return Promise.resolve(myInvite); return sb.rpc('create_invite_link').then(({data}) => { if(data) myInvite = location.origin + location.pathname + '#invite-' + data; return myInvite; }, () => null); }
 async function copyInviteLink(){
   const {data, error} = await sb.rpc('create_invite_link');
   if(error || !data){ toast("Couldn't make a link. Try again."); return; }
@@ -1694,7 +1698,9 @@ document.addEventListener('click', async e => {
   if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }
   if(a === 'fsortmenu'){ fSortOpen = !fSortOpen; fCatOpen = false; render(); return; }
   if(a === 'fsortpick'){ fSortK = el.dataset.k; fSortOpen = false; render(); return; }
-  if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); return; }
+  if(a === 'addfriend'){ addFriendOpen = true; render(); setTimeout(() => { const i = $('#fr-email'); if(i) i.focus(); }, 60); getInvite().then(u => { const el = $('#fr-inv'); if(el && u) el.value = u; }); return; }
+  if(a === 'frinvcopy'){ const u = myInvite || await getInvite(); if(!u){ toast("Couldn't make a link. Try again."); return; }
+    try { await navigator.clipboard.writeText(u); toast('Invite link copied. Text or email it to your friend.'); } catch(_) { const el = $('#fr-inv'); if(el){ el.value = u; el.focus(); el.select(); } toast('Press and hold the link to copy it.'); } return; }
   if(a === 'addfriendclose'){ addFriendOpen = false; frSent = null; render(); return; }
   if(a === 'frmailed') return;
   if(a === 'frmail'){ if(!frSent) return; el.disabled = true; const mail = await inviteMail(frSent.em); el.disabled = false;

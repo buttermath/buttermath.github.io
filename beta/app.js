@@ -395,7 +395,7 @@ function route(){
   if(h.startsWith('gift-')) return {v:'gift', id:h.slice(5)};
   if(h.startsWith('edit-')) return {v:'form', id:h.slice(5)};
   if(h === 'add') return {v:'form'};
-  if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help','about'].includes(h)) return {v:h};
+  if(['recipes','friends','account','settings','privacy','trips','admin','terms','feedback','help','about','meal'].includes(h)) return {v:h};
   // New members with nothing saved yet start on Recipes, since adding a recipe comes first.
   return loaded && !recipes.length && !allItems().length ? {v:'recipes'} : {v:'shopping'};
 }
@@ -690,7 +690,9 @@ function render0(){
     else if(r.v === 'trips') app.innerHTML = renderTrips();
     else if(r.v === 'admin') app.innerHTML = renderAdmin();
     else if(r.v === 'about') app.innerHTML = renderLanding(true);
+    else if(r.v === 'meal') app.innerHTML = renderMeal();
     else app.innerHTML = renderRecipe(r.id);
+    if(mealPick) app.insertAdjacentHTML('beforeend', renderMealPick());
     maybeTour();
   }
   const sameView = (r.v + (r.id || '')) === lastView;
@@ -780,9 +782,96 @@ function renderPickSheet(all){
     <div class="pickhead"><div class="askt">Add from a recipe</div><button class="ibtn" data-act="pickclose" aria-label="Close">✕</button></div>
     <p class="muted pickp">Select which recipe(s) you're cooking. All ingredients will be added to your shopping list.</p>
     ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
-    <div class="picklist"><button class="pickrow picknew" data-act="picknew"><span class="pt"><b>+ Add a new recipe</b><small>From a link, pasted text or a photo</small></span><span class="pplus" aria-hidden="true">+</span></button>${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
+    <div class="picklist"><button class="pickrow picknew" data-act="picknew"><span class="pt"><b>+ Add a new recipe</b><small>From a link, pasted text, or screenshot</small></span><span class="pplus" aria-hidden="true">+</span></button>${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
       return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">No recipes yet. Add one above and its ingredients go straight to your list.</div>`}</div>
     ${list.length ? `<button class="btn primary pickgo" data-act="pickgo" ${n ? '' : 'disabled'}>${n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'}</button>` : `<button class="btn primary pickgo" data-act="picknew">Add a new recipe</button>`}
+  </div>`;
+}
+
+/* ---------------- Cook a Meal (beta) ---------------- */
+// Pick a few recipes, see when to start each one so they finish together, follow every recipe's steps, and shop for all of it at once.
+// Start times come only from the time each recipe lists. Nothing is guessed: a recipe with no usable time says so.
+let mealPick = null, mealShop = null, mealFold = new Set();
+const ICON_MEAL = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z"/><path d="M2 11h20"/><path d="M9 7c0-1.5 1-2 1-3.5M14 7c0-1.5 1-2 1-3.5"/></svg>';
+const FRAC = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3};
+function durMin(s){
+  s = String(s || '').toLowerCase().replace(/\band\b/g, ' ').trim(); if(!s || /overnight/.test(s)) return null;
+  const iso = s.match(/^pt(?:(\d+)h)?(?:(\d+)m)?$/); if(iso){ const v = (+iso[1] || 0) * 60 + (+iso[2] || 0); return v || null; }
+  const rx = /(\d+(?:\.\d+)?)(?:\s+(\d+)\/(\d+)|\s*([½¼¾⅓⅔]))?(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(days?|d\b|hours?|hrs?|hr\b|h\b|minutes?|mins?|min\b|m\b)/g;
+  let t = 0, hit = false, m;
+  while((m = rx.exec(s))){ let v = m[5] ? +m[5] : +m[1]; if(m[2]) v += +m[2] / +m[3]; if(m[4]) v += FRAC[m[4]];
+    const u = m[6]; t += /^d/.test(u) ? v * 1440 : /^h/.test(u) ? v * 60 : v; hit = true; }
+  return hit && t > 0 ? Math.round(t) : null;
+}
+// Total time if the recipe lists one, otherwise prep + cook when both are listed.
+function mealTime(d){ const t = durMin(d.total); if(t) return {min: t, from: 'total'}; const p = durMin(d.prep), c = durMin(d.cook); if(p && c) return {min: p + c, from: 'prep + cook'}; return null; }
+function fmtDur(n){ const d = Math.floor(n / 1440), h = Math.floor(n % 1440 / 60), m = n % 60; return [d ? d + ' day' + (d > 1 ? 's' : '') : '', h ? h + ' hr' : '', m ? m + ' min' : ''].filter(Boolean).join(' '); }
+function clock(eat, before){ const [h, m] = String(eat || '18:00').split(':').map(Number); const t = h * 60 + m - before; const day = Math.floor(t / 1440), x = ((t % 1440) + 1440) % 1440;
+  const hh = Math.floor(x / 60), mm = x % 60; const s = `${hh % 12 || 12}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'}`;
+  return day === 0 ? s : day === -1 ? s + ' the day before' : s + ` ${-day} days before`; }
+const mealIds = () => ((P().meal || {}).ids || []).filter(x => R(x) && !isArch(x));
+// Every ingredient across the meal, one row per item, amounts added up the same way the shopping list adds them.
+function mealIngs(ids){
+  const map = new Map();
+  ids.forEach(id => ingLines(D(R(id))).forEach(l => { const p = splitIngredient(l); if(!p.key) return;
+    let e = map.get(p.key); if(!e){ const it = allItems().find(i => (i.key || splitIngredient(i.name).key) === p.key); e = {key: p.key, name: p.name, qty: '', rids: [], section: it ? (it.section || 'Other') : guessSection(p.name)}; map.set(p.key, e); }
+    if(p.qty) e.qty = addQty(e.qty, p.qty, {key: p.key}); if(!e.rids.includes(id)) e.rids.push(id); }));
+  return [...map.values()];
+}
+const mealOnList = e => allItems().some(i => (i.key || splitIngredient(i.name).key) === e.key && e.rids.every(x => (i.recipes || []).includes(x) && onListRid(x)) && !P().shop[i.id]);
+const mdot = r => `<span class="mdot2" style="--c:${esc(D(r).color || '#C9C2BA')}" aria-hidden="true"></span>`;
+function renderMealPick(){
+  const list = recipes.filter(r => !isArch(r.id)).slice().sort((a, b) => String(D(a).title || '').localeCompare(String(D(b).title || '')));
+  const n = Object.keys(mealPick.sel).length;
+  return `<div class="sheetbg" data-act="mealpickclose"></div><div class="asksheet picksheet mealpick" role="dialog" aria-label="Cook a Meal">
+    <div class="pickhead"><div class="askt">Cook a Meal</div><button class="ibtn" data-act="mealpickclose" aria-label="Close">✕</button></div>
+    <p class="muted pickp">Pick the recipes you're making together. We'll show when to start each one so everything's ready at the same time.</p>
+    ${list.length > 6 ? `<input id="mealq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
+    <div class="picklist">${list.map(r => { const d = D(r), sel = !!mealPick.sel[r.id], t = mealTime(d);
+      return `<button class="pickrow ${sel ? 'sel' : ''}" data-act="mealtog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" aria-pressed="${sel}">${mdot(r)}<span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${t ? fmtDur(t.min) : 'No time listed'}</small></span><span class="pbox">${sel ? '✓' : ''}</span></button>`; }).join('')}</div>
+    <button class="btn primary pickgo mealgo" data-act="mealgo" ${n >= 2 ? '' : 'disabled'}>${mealGoText(n)}</button>
+  </div>`;
+}
+const mealGoText = n => n >= 2 ? `Start Cookin' (${n})` : n === 1 ? 'Pick one more recipe' : 'Pick 2 or more recipes';
+function renderMeal(){
+  const ids = mealIds(), back = `<button class="back" data-act="go" data-h="recipes">← Recipes</button>`;
+  if(ids.length < 2) return back + `<div class="card empty mealempty"><h3>Cook a Meal</h3><p class="muted">Pick two or more recipes to cook together. We'll show when to start each one so everything's ready at the same time.</p><button class="btn primary" data-act="mealopen">${ICON_MEAL}Pick recipes</button></div>`;
+  const m = P().meal || {}, eat = m.eat || '18:00', rs = ids.map(R);
+  const timed = rs.map(r => ({r, t: mealTime(D(r))})), known = timed.filter(x => x.t).sort((a, b) => b.t.min - a.t.min), unknown = timed.filter(x => !x.t);
+  const longest = known.length ? known[0].t.min : 0;
+  const ings = mealIngs(ids), have = ings.filter(mealOnList).length, allOn = ings.length && have === ings.length;
+  const chips = rs.map(r => { const t = mealTime(D(r)); return `<button class="mchip" data-act="go" data-h="r-${esc(r.id)}">${mdot(r)}${esc(D(r).short || D(r).title)}${t ? ` · ${fmtDur(t.min)}` : ''}</button>`; }).join('') + `<button class="mchip add" data-act="mealopen">+ Add</button>`;
+  const shopCard = m.hideShop ? '' : `<div class="mshop"><span class="mshopi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
+    <button class="mshopb" data-act="${allOn ? 'go' : 'mealshop'}" data-h="shopping"><b>${allOn ? 'All on your shopping list ✓' : 'Shop for ingredients'}</b><span>${allOn ? 'Tap to see your list' : `${ings.length} ingredient${ings.length === 1 ? '' : 's'} from ${ids.length} recipes${have ? ` · ${have} already on your list` : ''}`}</span></button>
+    <button class="mshopx" data-act="mealshophide" aria-label="Close" title="Close">✕</button></div>`;
+  const rows = known.map(({r, t}) => { const p = progressOf(r); return `<li><span class="mt">${clock(eat, t.min)}</span><div class="mtcard">${mdot(r)}<span><b>Start ${esc(D(r).title)}</b><small>${fmtDur(t.min)} ${t.from === 'total' ? 'total' : '(prep + cook)'}${p.done ? ` · ${p.done === p.total ? 'all steps done ✓' : `${p.done} of ${p.total} steps done`}` : ''}</small></span></div></li>`; }).join('');
+  const timeline = known.length ? `<h3 class="mh">When to start</h3><ol class="mline">${rows}<li><span class="mt">${clock(eat, 0)}</span><div class="mtcard ready"><span><b>Ready to eat</b><small>${known.length === rs.length ? 'Everything finishes together' : 'The timed recipes finish together'}</small></span></div></li></ol>` : '';
+  const unk = unknown.length ? `<div class="mnote">${unknown.map(({r}) => `<b>${esc(D(r).title)}</b>`).join(', ')} ${unknown.length === 1 ? "doesn't" : "don't"} list a total time, so ${unknown.length === 1 ? "it isn't" : "they aren't"} on the timeline. <button class="linkbtn" data-act="go" data-h="edit-${esc(unknown[0].r.id)}">Add a time</button></div>` : '';
+  const steps = rs.map(r => { const d = D(r), c = cookOf(r.id), p = progressOf(r), fold = mealFold.has(r.id); let n = 0;
+    const list = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => { const key = si + '-' + k; n++; const done = !!c.s[key];
+      const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">⏲ ${esc(t.label)}</span>`).join('');
+      return `<button class="step ${done ? 'done' : ''} ${!done && p.all[p.cur] && p.all[p.cur].key === key ? 'cur' : ''}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? '✓' : n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`; }).join('')).join('');
+    return `<section class="card mrec"><button class="mrech" data-act="mealfold" data-id="${esc(r.id)}" aria-expanded="${!fold}">${mdot(r)}<span class="mrt"><b>${esc(d.title)}</b><small>${p.total ? (p.done === p.total ? 'All steps done ✓' : `${p.done} of ${p.total} steps`) : 'No steps listed'}</small></span>${ICON_CHEV}</button>
+      ${fold ? '' : `<div class="mrecb">${list || '<div class="muted">No steps listed. <button class="linkbtn" data-act="go" data-h="r-' + esc(r.id) + '">Open the recipe</button></div>'}<button class="linkbtn mopen" data-act="go" data-h="r-${esc(r.id)}">Open the full recipe →</button></div>`}</section>`; }).join('');
+  return back + `<div class="mealpg"><h2 class="mtitle">Cook a Meal</h2><div class="msub">${ids.length} recipes${longest ? ` · start at ${clock(eat, longest)} · about ${fmtDur(longest)}` : ''}</div>
+    <div class="mchips">${chips}</div>${shopCard}
+    <label class="meat"><span>We're eating at</span><input type="time" id="mealeat" value="${esc(eat)}" step="300"></label>
+    ${timeline}${unk}${known.length ? `<p class="mfine">Start times use each recipe's listed time. Read through the steps for anything that needs to chill, rise or marinate ahead.</p>` : ''}
+    <h3 class="mh">Steps</h3>${steps}
+    <button class="linkbtn mclear" data-act="mealclear">Clear this meal</button></div>
+    ${mealShop ? renderMealShop(ids, ings) : ''}`;
+}
+function renderMealShop(ids, ings){
+  const all = mealShop.mode === 'all', order = aisleOrder(), secs = [...new Set(ings.map(e => e.section))].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const picked = all ? ings.filter(e => !mealOnList(e)) : ings.filter(e => mealShop.sel[e.key]);
+  const rowsOf = s => ings.filter(e => e.section === s).map(e => { const on = mealOnList(e), ck = all ? !on : !!mealShop.sel[e.key];
+    return `<label class="mrow2 ${on ? 'have' : ''}">${all ? `<i class="mck ${ck ? 'on' : ''}" aria-hidden="true">${ck ? CHECK : ''}</i>` : `<input type="checkbox" class="mealck" data-k="${esc(e.key)}" ${ck ? 'checked' : ''}>`}<span class="mn"><b>${esc(e.name)}</b><small>${e.qty ? fmt(e.qty) : 'Amount not listed'}${on ? ' · already on your list' : ''}</small></span><span class="mdots">${e.rids.map(x => mdot(R(x))).join('')}</span></label>`; }).join('');
+  return `<div class="sheetbg" data-act="mealshopclose"></div><div class="asksheet picksheet mealshop" role="dialog" aria-label="Shop for ingredients">
+    <div class="pickhead"><div class="askt">Shop for ingredients</div><button class="ibtn" data-act="mealshopclose" aria-label="Close">✕</button></div>
+    <p class="muted pickp">Shared ingredients are added up across recipes.</p>
+    <div class="mseg" role="radiogroup" aria-label="What to add"><button role="radio" aria-checked="${all}" class="${all ? 'on' : ''}" data-act="mealmode" data-m="all">Get all ingredients</button><button role="radio" aria-checked="${!all}" class="${all ? '' : 'on'}" data-act="mealmode" data-m="sel">Select ingredients</button></div>
+    <div class="mlist">${secs.map(s => `<div class="msec">${esc(s)}</div>${rowsOf(s)}`).join('')}</div>
+    <button class="btn primary pickgo" data-act="mealadd" ${picked.length ? '' : 'disabled'}>${picked.length ? `Add ${picked.length} to my shopping list` : all ? 'Everything is on your list' : 'Pick ingredients to add'}</button>
   </div>`;
 }
 
@@ -869,7 +958,7 @@ function renderRecipe(id){
   const notes = hasNotes || more.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${more.map(l => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
   return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
-    <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe" aria-label="Edit recipe">${ICON_PEN}</button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu"><button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Remove recipe</button></div>` : ''}</div></div>
+    <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe" aria-label="Edit recipe">${ICON_PEN}</button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu">${isArch(r.id) ? '' : `<button role="menuitem" class="privrow mealrow" data-act="mealfrom" data-id="${esc(r.id)}">${ICON_MEAL.replace('class="bi"', '')}<span class="pl"><b>Cook with other recipes…</b><small>Start a Meal with this recipe</small></span></button>`}<button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Remove recipe</button></div>` : ''}</div></div>
     ${srcCredit(srcs)}${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
     <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">✕</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
@@ -891,6 +980,7 @@ function renderRecipe(id){
 }
 function renderFab(r){
   const old = $('#fab'); if(old) old.remove();
+  if(r.v === 'recipes' && !mealPick && recipes.filter(x => !isArch(x.id)).length >= 2){ const n = mealIds().length; const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab mealfab'; b.innerHTML = ICON_MEAL + (n >= 2 ? `Your meal (${n})` : 'Cook a Meal'); b.title = 'Pick a few recipes to cook together'; b.dataset.act = n >= 2 ? 'go' : 'mealopen'; b.dataset.h = 'meal'; document.body.appendChild(b); return; }
   if(r.v !== 'recipe' || choosing) return; const rr = R(r.id); if(!rr) return; const p = progressOf(rr); if(p.cur < 0 || p.done === 0) return;
   const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab'; b.textContent = '↓ Current step'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
 }
@@ -1918,6 +2008,24 @@ document.addEventListener('click', async e => {
   if(a === 'sclear'){ shopQ = ''; const qi = $('#shopq'); if(qi) qi.value = ''; render(); const q = $('#shopq'); if(q) q.focus({preventScroll:true}); return; }
   if(a === 'more'){ moreOpen = !moreOpen; render(); return; }
   if(a === 'addask'){ addSheet = {id}; render(); return; }
+  if(a === 'mealopen'){ const sel = {}; mealIds().forEach(x => { sel[x] = true; }); mealPick = {sel}; render(); return; }
+  if(a === 'mealfrom'){ const sel = {}; mealIds().forEach(x => { sel[x] = true; }); if(R(id)) sel[id] = true; moreOpen = false; mealPick = {sel}; render(); return; }
+  if(a === 'mealpickclose'){ mealPick = null; render(); return; }
+  if(a === 'mealtog'){ if(!mealPick) return; if(mealPick.sel[id]) delete mealPick.sel[id]; else mealPick.sel[id] = true;
+    const sel = !!mealPick.sel[id], n = Object.keys(mealPick.sel).length; el.classList.toggle('sel', sel); el.setAttribute('aria-pressed', sel); el.querySelector('.pbox').textContent = sel ? '✓' : '';
+    const go = $('.mealgo'); if(go){ go.disabled = n < 2; go.textContent = mealGoText(n); } return; }
+  if(a === 'mealgo'){ if(!mealPick) return; const ids = recipes.filter(r => mealPick.sel[r.id] && !isArch(r.id)).map(r => r.id); if(ids.length < 2) return; mealPick = null; mealFold = new Set();
+    mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = ids; delete m.hideShop; }, true); if(location.hash === '#meal') render(); else location.hash = 'meal'; return; }
+  if(a === 'mealfold'){ if(mealFold.has(id)) mealFold.delete(id); else mealFold.add(id); render(); return; }
+  if(a === 'mealshop'){ mealShop = {mode: 'all', sel: {}}; mealIngs(mealIds()).forEach(e => { if(!mealOnList(e)) mealShop.sel[e.key] = true; }); render(); return; }
+  if(a === 'mealshopclose'){ mealShop = null; render(); return; }
+  if(a === 'mealmode'){ if(mealShop){ mealShop.mode = el.dataset.m; render(); } return; }
+  if(a === 'mealshophide'){ mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {hideShop: true}); }); return; }
+  if(a === 'mealadd'){ if(!mealShop) return; const ids = mealIds(), ings = mealIngs(ids);
+    const keys = new Set((mealShop.mode === 'all' ? ings.filter(e => !mealOnList(e)) : ings.filter(e => mealShop.sel[e.key])).map(e => e.key)); if(!keys.size) return; mealShop = null;
+    mutate(k => ids.forEach(rid => { const lines = ingLines(D(R(rid))).filter(l => keys.has(splitIngredient(l).key)); if(lines.length) addFresh(k, rid, lines); }));
+    toast(`Added ${keys.size} ingredient${keys.size === 1 ? '' : 's'} to your shopping list`); return; }
+  if(a === 'mealclear'){ const prev = JSON.parse(JSON.stringify(P().meal || {})); mutate(k => { k.progress.meal = {eat: (k.progress.meal || {}).eat}; }, true); location.hash = 'recipes'; toast('Meal cleared. Your recipes and list are unchanged.', () => mutate(k => { k.progress.meal = prev; })); return; }
   if(a === 'pickopen'){ pickSheet = {sel: {}}; ui.addOpen = false; render(); return; }
   if(a === 'picknew'){ pickSheet = null; location.hash = 'add'; shopAdd = true; render(); return; }
   if(a === 'pickclose'){ pickSheet = null; render(); return; }
@@ -1995,6 +2103,9 @@ function autoImport(el){
   const u = el.value.trim();
   if(form && form.forId === 'new' && /^https?:\/\/\S+\.\S+/i.test(u) && u !== form.lastImport){ form.lastImport = u; importLink(); }
 }
+document.addEventListener('input', e => { if(e.target.id !== 'mealq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.mealpick .pickrow[data-s]').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
+document.addEventListener('change', e => { if(e.target.id === 'mealeat' && /^\d\d:\d\d/.test(e.target.value)){ const v = e.target.value.slice(0, 5); mutate(k => { k.progress.meal = Object.assign({}, k.progress.meal || {}, {eat: v}); }); }
+  if(e.target.classList && e.target.classList.contains('mealck') && mealShop){ if(e.target.checked) mealShop.sel[e.target.dataset.k] = true; else delete mealShop.sel[e.target.dataset.k]; const n = Object.keys(mealShop.sel).length, b = document.querySelector('.mealshop .pickgo'); if(b){ b.disabled = !n; b.textContent = n ? `Add ${n} to my shopping list` : 'Pick ingredients to add'; } } });
 document.addEventListener('input', e => { if(e.target.id !== 'pickq') return; const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pickrow[data-s]').forEach(r => { r.hidden = !!q && !r.dataset.s.includes(q); }); });
 document.addEventListener('input', e => { if(e.target.id !== 'adm-q') return; admQ = e.target.value; const q = admQ.trim().toLowerCase(); let n = 0;
   document.querySelectorAll('.ascroll .arow').forEach(r => { const hit = !q || r.dataset.s.includes(q); r.hidden = !hit; if(hit) n++; }); const z = document.querySelector('.anone'); if(z) z.hidden = n > 0; });
@@ -2070,7 +2181,7 @@ document.addEventListener('submit', async e => {
   }
 });
 document.addEventListener('change', e => { if(!e.target.classList || !e.target.classList.contains('sendck')) return; const n = document.querySelectorAll('.sendck:checked').length, b = $('#send-go'); if(b){ b.disabled = !n; b.textContent = n ? 'Send' : 'Pick a friend to send'; } });
-window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
+window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; mealPick = null; mealShop = null; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
   if(form && !/^#(add|edit-)/.test(location.hash)){ if(form.photoUrl) URL.revokeObjectURL(form.photoUrl); form = null; } // leaving the form without saving: next visit starts fresh
   render(); });
 

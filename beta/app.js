@@ -1001,9 +1001,12 @@ function renderRecipe(id){
   ${sendSheet === r.id ? renderSendSheet(r) : ''}
   ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap + to add'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
 }
+// On wide screens the Cook a Meal button sits at the right edge of the page card instead of the far edge of the window.
+function placeFab(){ const b = document.querySelector('.mealfab'), m = document.querySelector('main'); if(!b || !m) return; b.style.right = innerWidth >= 820 ? Math.max(16, innerWidth - m.getBoundingClientRect().right) + 'px' : ''; }
+window.addEventListener('resize', placeFab);
 function renderFab(r){
   const old = $('#fab'); if(old) old.remove();
-  if(r.v === 'recipes' && !mealPick && recipes.filter(x => !isArch(x.id)).length >= 2){ const n = mealIds().length; const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab mealfab'; b.innerHTML = ICON_MEAL + (n >= 2 ? `Your meal (${n})` : 'Cook a Meal'); b.title = 'Pick a few recipes to cook together'; b.dataset.act = n >= 2 ? 'go' : 'mealopen'; b.dataset.h = 'meal'; document.body.appendChild(b); return; }
+  if(r.v === 'recipes' && !mealPick && recipes.filter(x => !isArch(x.id)).length >= 2){ const n = mealIds().length; const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab mealfab'; b.innerHTML = ICON_MEAL + (n >= 2 ? `Your meal (${n})` : 'Cook a Meal'); b.title = 'Pick a few recipes to cook together'; b.dataset.act = n >= 2 ? 'go' : 'mealopen'; b.dataset.h = 'meal'; document.body.appendChild(b); placeFab(); return; }
   if(r.v !== 'recipe' || choosing) return; const rr = R(r.id); if(!rr) return; const p = progressOf(rr); if(p.cur < 0 || p.done === 0) return;
   const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab'; b.textContent = '↓ Current step'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
 }

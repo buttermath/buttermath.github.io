@@ -843,7 +843,7 @@ function renderRecipe(id){
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
     <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">✕</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
     <div class="prog-line" style="margin-top:14px"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div>
-    ${p.total && p.done === p.total && !d.photoMine && !(P().photoAsked || {})[r.id] ? `<div class="madeitw"><label class="madeit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Made it? Add your photo<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}" data-asked="1"></label><button class="madeitx" data-act="madeitx" data-id="${esc(r.id)}">Add later</button></div>` : ''}
+    ${p.total && p.done === p.total && (P().photoAsked || {})[r.id] !== madeOf(r.id).n ? `<div class="madeitw"><label class="madeit"${d.photo ? ` data-act="madeitswap" data-id="${esc(r.id)}"` : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Made it? Add your photo<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}" data-asked="1"></label><button class="madeitx" data-act="madeitx" data-id="${esc(r.id)}">Add later</button></div>` : ''}
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Add ingredients to my list</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" aria-label="Keep screen on" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span class="wl">Screen on</span></button><button class="btn wake sendbtn" data-act="sendopen" data-id="${esc(r.id)}" aria-label="Send to a friend" title="Send to a friend">${ICON_SEND}</button></div>
   </div></div>
@@ -912,7 +912,7 @@ function renderForm(id){
       <label class="picbtn" title="Upload your own photo" aria-label="Upload your own photo"><input type="file" id="f-photo" accept="image/*" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></label>
       ${photoNow ? `<button class="picbtn picx" type="button" data-act="rmphoto" title="Use the drawing" aria-label="Use the drawing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}
     </div>
-    <p class="pichint">Your own photo works best. Photos from websites belong to their creators.</p>
+    <p class="pichint">Please use your own photo. Images from other websites belong to their creators.</p>
     ${r && onList(r.id) ? `<label class="cb"><input type="checkbox" id="f-addlist" data-keep> Add new ingredients to list</label>` : ''}
     </fieldset>
     <div class="row" style="margin-top:16px"><button class="btn primary sm" type="button" data-act="saveform" data-id="${r ? esc(r.id) : ''}" ${f.busy || (!r && !f.filled) ? 'disabled' : ''}>${f.busy ? 'Saving…' : r ? 'Save changes' : 'Save recipe'}</button></div>
@@ -1750,7 +1750,8 @@ document.addEventListener('click', async e => {
     try { await navigator.clipboard.writeText(u); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
   if(a === 'reccopy'){ const r = R(id); if(!r) return; const link = sendLink && sendLink.id === id ? sendLink.u : null; const txt = shareText(D(r), link);
     try { await navigator.clipboard.writeText(txt); toast('Copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this and paste it into a text:', txt); } return; }
-  if(a === 'madeitx'){ mutate(k => { (k.progress.photoAsked = k.progress.photoAsked || {})[id] = true; }); return; }
+  if(a === 'madeitx'){ mutate(k => { (k.progress.photoAsked = k.progress.photoAsked || {})[id] = madeOf(id).n; }); return; }
+  if(a === 'madeitswap'){ e.preventDefault(); const inp = el.querySelector('input[type=file]'); confirmBox('Replace your photo?', 'Your new photo will replace the current one.', 'Replace', () => { if(inp){ document.body.appendChild(inp); inp.click(); } }); return; }
   if(a === 'math'){ if(mathOpen.has(id)) mathOpen.delete(id); else mathOpen.add(id); render(); return; }
   if(a === 'sendclose'){ sendSheet = null; render(); return; }
   if(a === 'sendgo'){ const to = [...document.querySelectorAll('.sendck:checked')].map(x => x.value); if(!to.length){ toast('Pick who to send it to'); return; } el.disabled = true;
@@ -1907,7 +1908,7 @@ document.addEventListener('change', async e => {
   if(e.target.id === 'f-ocr'){ const f = e.target.files[0]; e.target.value = ''; if(f) readPhoto(f); return; }
   if(e.target.dataset && e.target.dataset.photoFor && e.target.files[0]){
     const id = e.target.dataset.photoFor, row = R(id); if(!row) return;
-    if(e.target.dataset.asked) mutate(k => { (k.progress.photoAsked = k.progress.photoAsked || {})[id] = true; });
+    if(e.target.dataset.asked) mutate(k => { (k.progress.photoAsked = k.progress.photoAsked || {})[id] = madeOf(id).n; });
     photoBusy = id; render();
     try{
       const blob = await shrink(e.target.files[0], 1400);

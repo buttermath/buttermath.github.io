@@ -907,3 +907,4 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .tarrow svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .tourdone{flex:none}
 .pickrow.picknew{background:#FFF4F5}.pickrow.picknew b{color:#B81E33}.pplus{width:28px;height:28px;flex:none;border-radius:8px;border:1.5px dashed #D7263D;color:#D7263D;display:grid;place-items:center;font-weight:700;font-size:18px;line-height:1}
+.actrow{gap:8px}@media(max-width:599px){.actrow .grow{padding:11px 18px}}

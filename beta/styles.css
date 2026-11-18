@@ -861,3 +861,4 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .math .mdot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
 .math .tot{border-top:1px solid var(--line);margin-top:4px;padding-top:7px}.math .tot b{font-weight:700}
 .math + .tags{display:none}
+.shop-head > .lbl + .row{padding-right:46px}

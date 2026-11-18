@@ -20,6 +20,7 @@ check('½ cup + ⅔ cup', sum('½ cup whole', '⅔ cup whole'), '1 cup whole + 2
 check('1 tsp + 1 tsp', sum('1 teaspoon', '1 tsp'), '2 tsp');
 check('2 cups + 1 cup', sum('2 cups', '1 cup'), '3 cups');
 check('18 large + 36 large', sum('18 large', '36 large'), '54 large');
+check('6 large + 5 (eggs)', sum('6 large', '5'), '11 large');
 check('½ cup whole + ½ cup whole', sum('½ cup (120ml) whole', '½ cup (120ml) whole'), '1 cup whole');
 check('3 cups (375g) + 1 cup (125g)', sum('3 cups (375g)', '1 cup (125g)'), '4 cups');
 
@@ -52,7 +53,7 @@ console.log('\nKeeping things apart that should stay apart');
 check('1 cup + 1 tsp (no messy 49 tsp)', sum('1 cup', '1 tsp'), '1 cup + 1 tsp');
 check('5 Tbsp + 1 tsp', sum('5 Tbsp', '1 tsp'), '5 Tbsp + 1 tsp');
 check('1 cup + 4 oz (volume vs weight)', sum('1 cup', '4 oz'), '1 cup + 4 oz');
-check('1 large + 2', sum('1 large', '2'), '1 large + 2');
+
 
 console.log('\nReading ingredient lines');
 const line = (s, name, qty) => { const p = splitIngredient(s); check(`"${s.slice(0, 40)}"`, `${p.name} | ${p.qty}`, `${name} | ${qty}`); };

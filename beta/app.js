@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=4';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=5';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -306,15 +306,18 @@ function syncMade(k, id){
 }
 const ingLines = d => (d.ingredients || []).flatMap(g => g.items || []).filter(l => splitIngredient(l).key);
 // An item's amount is always the sum of its recipes' lines, so taking a recipe off and adding it back never doubles it.
+// Only recipes still on the list count toward an item. Finished or archived ones stay linked (so a past trip can be restored) but add nothing.
+const onListRid = x => isActive(x) && !(P().done || {})[x];
 function qtyFromRecipes(it){
-  const rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
+  let rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
+  const live = rs.filter(onListRid); if(live.length) rs = live;
   const key = it.key || splitIngredient(it.name).key; let q = '';
   rs.forEach(x => ingLines(D(R(x))).forEach(l => { const p = splitIngredient(l); if(p.key === key && p.qty) q = addQty(q, p.qty, {key}); }));
   return q;
 }
 let mathOpen = new Set();
 function mathOf(it, colOf){
-  const rs = (it.recipes || []).filter(x => R(x)); if(rs.length < 2 || !it.qty) return '';
+  const rs = (it.recipes || []).filter(x => R(x) && onListRid(x)); if(rs.length < 2 || !it.qty) return '';
   const parts = rs.map(x => [x, qtyFromRecipes(Object.assign({}, it, {recipes: [x]})) || '']); if(parts.filter(p => p[1]).length < 2) return '';
   const open = mathOpen.has(it.id);
   return `<button class="mathbtn" data-act="math" data-id="${esc(it.id)}" aria-expanded="${open}">${open ? 'Hide the math' : 'Show the math'}</button>${open ? `<div class="math">${parts.map(([x, q]) => `<div class="mrow"><b>${q ? fmt(q) : 'Amount not listed'}</b><span class="msrc"><span class="mdot" style="--c:${colOf(x)}"></span>${esc(D(R(x)).short || D(R(x)).title)}</span></div>`).join('')}<div class="mrow tot"><span class="msrc">Total</span><b>${fmt(it.qty)}</b></div></div>` : ''}`;
@@ -699,7 +702,7 @@ function renderShopping(){
     const sub = Q ? list.length + (list.length === 1 ? ' match' : ' matches') : f === 'have' ? list.length + ' on hand' : f === 'cart' ? list.length + ' in cart' : (left ? left + ' to get' : 'all set ✓');
     secs += `<div class="section" data-sec="${esc(sec)}"><h3>${esc(sec)} <small>${sub}</small><span class="secmv"><button class="up" data-act="secmv" data-s="${esc(sec)}" data-d="-1" aria-label="Move ${esc(sec)} up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button class="dn" data-act="secmv" data-s="${esc(sec)}" data-d="1" aria-label="Move ${esc(sec)} down"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></span></h3><div class="card items">` + list.map(it => {
       const st = shop[it.id] || '';
-      const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + (it.recipes || []).map(x => { const rr = R(x); return rr ? `<span class="tag" style="--c:${colOf(x)}">${esc(D(rr).short || D(rr).title)}</span>` : ''; }).join('');
+      const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + ((it.recipes || []).some(onListRid) ? it.recipes.filter(onListRid) : (it.recipes || [])).map(x => { const rr = R(x); return rr ? `<span class="tag" style="--c:${colOf(x)}">${esc(D(rr).short || D(rr).title)}</span>` : ''; }).join('');
       return `<div class="item ${st}"><button class="check" data-act="bought" data-id="${esc(it.id)}" aria-label="In my cart">${CHECK}</button>
       <div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? `<div class="qty">${fmt(it.qty)}</div>` : ''}${mathOf(it, colOf)}<div class="tags">${tags}</div></div>
       <button class="have" data-act="have" data-id="${esc(it.id)}">${st === 'have' ? 'Have it ✓' : 'Have it'}</button><button class="del" data-act="delitem" data-id="${esc(it.id)}" aria-label="Remove ${esc(it.name)}">✕</button></div>`;

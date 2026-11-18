@@ -896,3 +896,4 @@ html:has(.asksheet),body:has(.asksheet){overflow:hidden;overscroll-behavior:none
 .logolink{color:inherit;text-decoration:none;cursor:pointer}.logolink:hover{opacity:.9}
 html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.modal:has(.alist){touch-action:none}.modal .alist{touch-action:pan-y}
 .logolink:hover{opacity:1;color:inherit}
+@media(max-width:719px){html:has(.umenu),body:has(.umenu){overflow:hidden;overscroll-behavior:none}}

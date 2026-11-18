@@ -671,7 +671,9 @@ function render0(){
   else if(!user && r.v === 'terms'){ app.innerHTML = renderTerms(); $('#tabs').innerHTML = ''; }
   else if(!user && r.v === 'feedback'){ app.innerHTML = renderFeedback(); $('#tabs').innerHTML = ''; }
   else if(!user || recovering){ app.innerHTML = landingOn(r) ? renderLanding() : renderAuth(); $('#tabs').innerHTML = ''; }
-  else if(gate !== 'in'){ const g = renderGate(); if(app.dataset.gate !== g){ app.innerHTML = g; app.dataset.gate = g; } $('#tabs').innerHTML = ''; }
+  // The "Enter my kitchen" welcome shows only the very first time someone signs in. Everyone else goes straight to their kitchen.
+  else if(gate !== 'in' && loaded && !firstVisit()){ gate = 'in'; render(); return; }
+  else if(gate !== 'in' && (gate === 'loading' || loaded)){ const g = renderGate(); if(app.dataset.gate !== g){ app.innerHTML = g; app.dataset.gate = g; } $('#tabs').innerHTML = ''; }
   else if(!loaded){ app.innerHTML = `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   else {
     renderTabs(r);
@@ -1334,11 +1336,13 @@ function renderGate(){
   return `<div class="gate"><div class="gatecard">${KITCHEN_ART}
     <button class="btn primary big" data-act="enter">Enter your kitchen</button></div></div>`;
 }
+const firstVisit = () => !P().entered && !recipes.length && !allItems().length && !P().tourDone;
 function enterKitchen(){
   gate = 'loading'; render();
   const t0 = Date.now();
   const go = () => { if(!loaded) return setTimeout(go, 150); setTimeout(() => {
     gate = 'in'; try{ sessionStorage.setItem('mb-in', '1'); }catch(e){}
+    mutate(k => { k.progress.entered = true; }, true);
     render(); app.classList.add('fadein'); setTimeout(() => app.classList.remove('fadein'), 700);
   }, Math.max(0, 1600 - (Date.now() - t0))); };
   go();

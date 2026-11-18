@@ -862,3 +862,5 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .math .tot{border-top:1px solid var(--line);margin-top:4px;padding-top:7px}.math .tot b{font-weight:700}
 .math + .tags{display:none}
 .shop-head > .lbl + .row{padding-right:46px}
+.frinvl{margin:16px 2px 6px;font-size:14px;line-height:1.4;color:var(--muted)}
+.frinv{color:var(--muted);background:#FBFAF7}

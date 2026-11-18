@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=3';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty } from './parse.js?v=4';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -309,7 +309,7 @@ const ingLines = d => (d.ingredients || []).flatMap(g => g.items || []).filter(l
 function qtyFromRecipes(it){
   const rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
   const key = it.key || splitIngredient(it.name).key; let q = '';
-  rs.forEach(x => ingLines(D(R(x))).forEach(l => { const p = splitIngredient(l); if(p.key === key && p.qty) q = addQty(q, p.qty); }));
+  rs.forEach(x => ingLines(D(R(x))).forEach(l => { const p = splitIngredient(l); if(p.key === key && p.qty) q = addQty(q, p.qty, {key}); }));
   return q;
 }
 let mathOpen = new Set();

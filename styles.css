@@ -862,6 +862,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .math .tot{border-top:1px solid var(--line);margin-top:4px;padding-top:7px}.math .tot b{font-weight:700}
 .math + .tags{display:none}
 .shop-head > .lbl + .row{padding-right:46px}
+.frinvl{margin:16px 2px 6px;font-size:14px;line-height:1.4;color:var(--muted)}
+.frinv{color:var(--muted);background:#FBFAF7}
 .lp-ig{display:inline-flex;align-items:center;gap:8px;margin-top:4px;font-weight:600;font-size:15px;color:#141414;text-decoration:none;min-height:44px}
 .lp-ig svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
 .lp-ig:hover{color:var(--accent)}
+.pichint{margin:6px 2px 0;font-size:13px;line-height:1.4;color:var(--muted)}
+.madeit{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:11px 14px;border:1.5px dashed #C9C2BA;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;color:#141414;background:#fff;min-height:44px}
+.madeit svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.madeitw{position:relative;margin-top:12px}.madeitw .madeit{margin-top:0;padding-right:48px}
+.madeitx{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:36px;height:36px}
+.madeitw{display:flex;flex-direction:column;align-items:center;gap:2px}.madeitw .madeit{align-self:stretch;padding-right:14px}
+.madeitw .madeitx{position:static;transform:none;width:auto;height:auto;min-height:36px;border:0;background:none;padding:4px 8px;font:600 13px Inter,sans-serif;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}

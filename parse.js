@@ -109,7 +109,8 @@ export function splitIngredient(line){
   let qty = '', name = s;
   const m = s.match(LEAD);
   if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length); }
-  name = name.replace(/\([^)]*\)/g,' ').split(/,| – | - |;/)[0].replace(/\b(plus more|or more|divided|optional)\b.*$/i,'').replace(/\s+/g,' ').trim();
+  while(/\([^()]*\)/.test(name)) name = name.replace(/\([^()]*\)/g,' ');
+  name = name.replace(/[()]/g,' ').split(/,| – | - |;/)[0].replace(/\b(plus more|or more|divided|optional)\b.*$/i,'').replace(/\s+/g,' ').trim();
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();
@@ -141,8 +142,8 @@ const FV = {'⅙':1/6,'⅚':5/6,'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'�
 const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
 function num(s){
   s = s.trim(); let m;
-  if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞])$/))) return +m[1] + FV[m[2]];
-  if((m = s.match(/^([½¼¾⅓⅔⅛⅜⅝⅞])$/))) return FV[m[1]];
+  if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +m[1] + FV[m[2]];
+  if((m = s.match(/^([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return FV[m[1]];
   if((m = s.match(/^(\d+)\s+(\d+)\/(\d+)$/))) return +m[1] + m[2]/m[3];
   if((m = s.match(/^(\d+)\/(\d+)$/))) return m[1]/m[2];
   if((m = s.match(/^\d+(\.\d+)?$/))) return +s;
@@ -156,21 +157,23 @@ function nice(n){
   if(Math.abs(best[0] - frac) > .03) return String(Math.round(n * 100) / 100);
   return (w ? String(w) : '') + best[1] || '0';
 }
+const QDESC = /\s+((?:extra[- ])?large|medium|small|jumbo|whole)$/i;
 function parsePart(p){
-  const m = String(p).trim().match(/^(\d+\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞])\s*(?:\([^)]*\))?\s*([A-Za-z.]*)\s*(?:\([^)]*\))?$/);
+  let desc = ''; p = String(p).trim().replace(QDESC, (x, d) => { desc = d.toLowerCase(); return ''; });
+  const m = p.match(/^(\d+\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])\s*(?:\([^)]*\))?\s*([A-Za-z.]*)\s*(?:\([^)]*\))?$/);
   if(!m) return null;
   const n = num(m[1]); if(n == null) return null;
   let unit = m[2] || '';
   for(const [re, u] of UNIT_NORM){ if(re.test(unit)){ unit = unit.replace(re, u); break; } }
-  return {n, unit};
+  return {n, unit, desc};
 }
 export function addQty(a, b){
   if(!a) return b || ''; if(!b) return a;
   const parts = String(a).split(' + ').concat(String(b).split(' + '));
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
-    const s = sums.get(x.unit) || {n:0, c:0, orig:p.trim()}; s.n += x.n; s.c++; sums.set(x.unit, s); });
+    const g = x.unit + '|' + x.desc, s = sums.get(g) || {n:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc}; s.n += x.n; s.c++; sums.set(g, s); });
   const plural = (u, n) => n > 1 && /^(cup|clove|can|stick)$/.test(u) ? u + 's' : u;
-  const out = [...sums.entries()].map(([u, s]) => s.c === 1 ? s.orig : nice(s.n) + (u ? ' ' + plural(u, s.n) : ''));
+  const out = [...sums.values()].map(s => s.c === 1 ? s.orig : nice(s.n) + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : ''));
   return out.concat(text).join(' + ');
 }

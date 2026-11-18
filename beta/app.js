@@ -314,7 +314,11 @@ function qtyFromRecipes(it){
 }
 function fixItem(it){ let ch = false; const q = qtyFromRecipes(it); if(q !== null && q !== (it.qty || '')){ it.qty = q; ch = true; }
   const n = String(it.name || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim(); if(n && n !== it.name){ it.name = n; ch = true; } return ch; }
-function repairQtys(){ if(!loaded || !(kitchen.shopping.items || []).some(i => fixItem(JSON.parse(JSON.stringify(i))))) return; mutate(k => { k.shopping.items.forEach(fixItem); }, true); }
+// A recipe that's finished or archived no longer counts toward items it shares with recipes still on the list.
+function pruneDone(k){ const pr = k.progress, on = x => pr.active[x] !== false && !(pr.done || {})[x] && !(pr.archived || {})[x]; let ch = false;
+  k.shopping.items.forEach(i => { const rs = i.recipes || []; if(rs.some(on) && rs.some(x => !on(x))){ i.recipes = rs.filter(on); ch = true; } }); return ch; }
+function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !b) return;
+  mutate(k => { pruneDone(k); k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {
@@ -1192,16 +1196,18 @@ document.addEventListener('pointercancel', e => endDrag(e, true));
 function finishRecipeTrip(id){
   const r = R(id); if(!r) return;
   const name = D(r).short || D(r).title, at = new Date().toISOString();
+  const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress});
   mutate(k => {
     const marks = k.progress.shop = k.progress.shop || {};
     const its = k.shopping.items.filter(i => (i.recipes || []).includes(id));
     const t = k.progress.trips = k.progress.trips || [];
-    if(!(t[0] && t[0].at === at)){ t.unshift({at, rid: id, r: [name], items: its.filter(i => marks[i.id]).map(i => ({id: i.id, n: i.name, q: i.qty || '', s: marks[i.id]}))}); if(t.length > 60) t.length = 60; }
-    its.forEach(i => { if((i.recipes || []).length === 1) delete marks[i.id]; });
+    if(!(t[0] && t[0].at === at)){ t.unshift({at, rid: id, r: [name], items: its.map(i => ({id: i.id, n: i.name, q: qtyFromRecipes(Object.assign({}, i, {recipes: [id]})) || i.qty || '', s: marks[i.id] === 'bought' || marks[i.id] === 'have' ? marks[i.id] : 'skip'}))}); if(t.length > 60) t.length = 60; }
+    its.forEach(i => { if((i.recipes || []).length === 1) delete marks[i.id]; else { i.recipes = i.recipes.filter(x => x !== id); fixItem(i); } });
     k.progress.active[id] = false;
     (k.progress.done = k.progress.done || {})[id] = true;
   });
-  toast(name + ' moved to Past trips');
+  toast(name + ' moved to Past trips', () => {
+    mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. ' + name + ' is back on your list.'); });
 }
 function newTrip(){
   const at = new Date().toISOString(), live = recipes.filter(r => isActive(r.id) && !(P().done || {})[r.id]), liveIds = live.map(r => r.id);
@@ -1454,7 +1460,9 @@ function restoreTrip(at){
     ids.forEach(id => { k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id]; });
     (t[i].items || []).forEach(it => {
       const item = (it.id && k.shopping.items.find(x => x.id === it.id)) || k.shopping.items.find(x => x.name === it.n && (!ids.length || (x.recipes || []).some(r => ids.includes(r))));
-      if(item){ if(it.s === 'bought' || it.s === 'have') marks[item.id] = it.s; }
+      if(item){ if(it.s === 'bought' || it.s === 'have') marks[item.id] = it.s;
+        const key = item.key || splitIngredient(item.name).key; item.recipes = item.recipes || [];
+        ids.forEach(id => { const r = R(id); if(r && !item.recipes.includes(id) && ingLines(D(r)).some(l => splitIngredient(l).key === key)) item.recipes.push(id); }); fixItem(item); }
       else if(it.c){ const nid = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); k.shopping.items.push({id: nid, name: it.n, qty: it.q || '', section: it.sec || 'Other', key: splitIngredient(it.n).key, recipes: [], custom: true}); if(it.s === 'bought' || it.s === 'have') marks[nid] = it.s; }
     });
     t.splice(i, 1);

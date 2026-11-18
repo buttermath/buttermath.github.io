@@ -971,3 +971,4 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .mlane .step{margin-bottom:0;padding:11px 12px;gap:10px}.mlane .step .num{width:28px;height:28px;font-size:13px}.mlane .mlb{display:flex;flex-direction:column;gap:8px}
 .mfor{font-size:12px!important;color:#8A847F!important}
 @media(min-width:900px){.mtabs{display:none}.mlanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));overflow:visible;margin:0;padding:0}.mlane{flex:auto}.mealpg{max-width:none}}
+.btn.primary.mealfab{background:#D7263D;color:#fff;border-color:#141414}.btn.primary.mealfab:hover{background:#B81E33}

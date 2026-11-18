@@ -724,7 +724,7 @@ function renderShopping(){
     list = list.filter(keep);
     if((Q || f !== 'all') && !list.length) return;
     const sub = Q ? list.length + (list.length === 1 ? ' match' : ' matches') : f === 'have' ? list.length + ' on hand' : f === 'cart' ? list.length + ' in cart' : (left ? left + ' to get' : 'all set ✓');
-    secs += `<div class="section" data-sec="${esc(sec)}"><h3>${esc(sec)} <small>${sub}</small><span class="secmv"><button class="up" data-act="secmv" data-s="${esc(sec)}" data-d="-1" aria-label="Move ${esc(sec)} up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button class="dn" data-act="secmv" data-s="${esc(sec)}" data-d="1" aria-label="Move ${esc(sec)} down"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></span></h3><div class="card items">` + list.map(it => {
+    secs += `<div class="section" data-sec="${esc(sec)}"><h3>${esc(sec)} <small>${sub}</small><span class="secmv"><button class="grip" data-act="aisles" data-s="${esc(sec)}" aria-label="Reorder aisles" title="Reorder aisles"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></button></span></h3><div class="card items">` + list.map(it => {
       const st = shop[it.id] || '';
       const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + ((it.recipes || []).some(onListRid) ? it.recipes.filter(onListRid) : (it.recipes || [])).map(x => { const rr = R(x); return rr ? `<span class="tag" style="--c:${colOf(x)}">${esc(D(rr).short || D(rr).title)}</span>` : ''; }).join('');
       return `<div class="item ${st}"><button class="check" data-act="bought" data-id="${esc(it.id)}" aria-label="In my cart">${CHECK}</button>
@@ -1193,11 +1193,38 @@ async function deleteAccount(){
 let menuOpen = false, delOpen = false, photoBusy = null;
 function aisleOrder(){ return [...new Set(kitchen.shopping.sections.concat(allItems().map(i => i.section || 'Other')))]; }
 function drawAisles(focus){
-  const o = aisleOrder();
-  const up = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>', dn = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card aisles" data-stop><h3>Aisle order</h3>
-    <ol class="alist">${o.map((s, i) => `<li class="${i === focus ? 'moved' : ''}"><span>${esc(s)}</span><button class="mv" data-act="aislemove" data-i="${i}" data-d="-1" aria-label="Move ${esc(s)} up" ${i === 0 ? 'disabled' : ''}>${up}</button><button class="mv" data-act="aislemove" data-i="${i}" data-d="1" aria-label="Move ${esc(s)} down" ${i === o.length - 1 ? 'disabled' : ''}>${dn}</button></li>`).join('')}</ol>
+  const o = aisleOrder(), f = typeof focus === 'string' ? o.indexOf(focus) : focus;
+  const grip = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card aisles" data-stop><h3>Aisle order</h3><p class="muted anote">Drag aisles to match the way you walk your store.</p>
+    <ol class="alist">${o.map((s, i) => `<li class="${i === f ? 'moved' : ''}" data-s="${esc(s)}"><button class="agrip" type="button" data-i="${i}" aria-label="Move ${esc(s)}. Use the up and down arrow keys.">${grip}</button><span>${esc(s)}</span></li>`).join('')}</ol>
     <div class="row"><button class="btn primary" data-act="mclose">Done</button></div></div></div>`;
+  const m = f >= 0 && document.querySelectorAll('.alist li')[f]; if(m) m.scrollIntoView({block: 'nearest'});
+}
+/* drag aisles in the Aisle order panel */
+{ let ad = null;
+  const save = (s) => { const o = [...document.querySelectorAll('.alist li')].map(x => x.dataset.s); if(o.join('\n') !== aisleOrder().join('\n')) mutate(k => { k.shopping.sections = o.slice(); }); drawAisles(s); };
+  document.addEventListener('pointerdown', e => {
+    const g = e.target.closest('.agrip'); if(!g || e.button > 0) return;
+    const li = g.closest('li'); e.preventDefault(); try{ g.setPointerCapture(e.pointerId); }catch(_){}
+    ad = {li, list: li.parentElement, g}; li.classList.add('lifting');
+  });
+  document.addEventListener('pointermove', e => {
+    if(!ad) return; e.preventDefault();
+    const {li, list} = ad, sibs = [...list.children].filter(x => x !== li);
+    const after = sibs.find(x => { const r = x.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
+    if(after){ if(li.nextElementSibling !== after) list.insertBefore(li, after); } else if(list.lastElementChild !== li) list.appendChild(li);
+    const r = list.getBoundingClientRect(); if(e.clientY < r.top + 30) list.scrollTop -= 8; else if(e.clientY > r.bottom - 30) list.scrollTop += 8;
+  }, {passive: false});
+  const end = () => { if(!ad) return; const {li} = ad; ad = null; li.classList.remove('lifting'); save(li.dataset.s); };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+  document.addEventListener('keydown', e => {
+    const g = e.target.closest && e.target.closest('.agrip'); if(!g || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    e.preventDefault(); const li = g.closest('li'), list = li.parentElement;
+    if(e.key === 'ArrowUp' && li.previousElementSibling) list.insertBefore(li, li.previousElementSibling);
+    else if(e.key === 'ArrowDown' && li.nextElementSibling) list.insertBefore(li.nextElementSibling, li);
+    else return;
+    const s = li.dataset.s; save(s); const n = [...document.querySelectorAll('.alist li')].find(x => x.dataset.s === s); if(n) n.querySelector('.agrip').focus();
+  });
 }
 /* drag a recipe chip into Past trips */
 let drag = null, ghost = null, dragJustEnded = false;
@@ -1635,7 +1662,7 @@ function renderHelp(){
       <li><b>Add a recipe</b> from a website link, or paste the text and tap <b>Download into form</b>.</li>
       <li>Tap <b>Add ingredients to my list</b> on a recipe when you plan to shop for it. Ingredients will not automatically get added to your shopping list.</li>
       <li>Tap <b>Finish trip</b> when you're back from the store. The trip is saved to <b>Past trips</b>, and you can clear anything left on your list.</li>
-      <li><b>Reorder aisles</b> with the arrows next to each section so the list matches your store.</li>
+      <li><b>Reorder aisles</b> by tapping the dots next to any section, then dragging them to match your store.</li>
       <li><b>Archive</b> recipes you're not making right now, and unarchive them anytime.</li>
       <li>Tap <b>Add friend</b> in the <b>Friends</b> tab and enter their email or share an invite link. Once they accept, you can see each other's recipes.</li>
       <li>Tap <b>+ Save</b> on a friend's recipe to get your own copy. You can edit it without changing theirs.</li>
@@ -1897,7 +1924,7 @@ document.addEventListener('click', async e => {
   if(a === 'parse'){ fillFromPaste(); return; }
   if(a === 'addopen'){ ui.addOpen = true; render(); setTimeout(() => { const n = $('#addName'); if(n) n.focus(); }, 30); return; }
   if(a === 'addclose'){ ui.addOpen = false; render(); return; }
-  if(a === 'aisles'){ drawAisles(); return; }
+  if(a === 'aisles'){ drawAisles(el.dataset.s); return; }
   if(a === 'secmv'){
     const s = el.dataset.s, d = +el.dataset.d, vis = [...document.querySelectorAll('.section[data-sec]')].map(x => x.dataset.sec), nb = vis[vis.indexOf(s) + d];
     if(!nb) return;

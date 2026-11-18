@@ -709,8 +709,8 @@ function renderHeader(r){
 }
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
-  $('#tabs').innerHTML = `<button class="tab ${r.v === 'shopping' ? 'on' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
-  <button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
+  $('#tabs').innerHTML = `<button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
+  <button class="tab ${r.v === 'shopping' ? 'on' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
   <button class="tab ${['friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="friends">Friends${friendsNew() ? '<span class="rdot" aria-label="New"></span>' : ''}</button>`;
 }
 

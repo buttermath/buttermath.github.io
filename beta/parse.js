@@ -186,10 +186,17 @@ const GUESS = [
   ['Oils, sauces & condiments', W('oil|vinegar|soy sauce|mustard|ketchup|mayo|mayonnaise|hot sauce|worcestershire|sriracha|salsa|dressing|pesto')],
   ['Supplies', W('stick|parchment|foil|plastic wrap|liner|skewer|toothpick|pan|dish')],
 ];
-export function guessSection(name){
+// Checked before the aisle list, because the list stops at the first word it knows ("tomato" is Produce, "coconut" is Baking aisle).
+const CANNED = /\b(tomato (?:pur[ée]e|paste|sauce)|passata|fire[- ]roasted tomato|crushed tomato|diced tomato|stewed tomato|whole peeled tomato|coconut (?:milk|cream)|canned)/;
+export function guessSection(name, qty){
   const n = String(name).toLowerCase();
-  for(const [sec, re] of GUESS) if(re.test(n)) return sec;
-  return 'Other';
+  // anything named oil ("avocado or grapeseed oil") is with the oils, unless it's packed in oil ("tuna in oil")
+  if(/\boils?\b/.test(n) && !/\b(?:in|packed in) (?:olive )?oil\b|oil[- ]packed/.test(n)) return 'Oils, sauces & condiments';
+  if(CANNED.test(n)) return 'Pasta, grains & canned';
+  let sec = 'Other'; for(const [s, re] of GUESS) if(re.test(n)){ sec = s; break; }
+  // bought in a can ("1 (14 oz) can black beans"): the canned aisle, unless it's a sauce, or a baking can (condensed or evaporated milk, pumpkin)
+  if(/\bcans?\b/i.test(String(qty || ''))){ if(/\b(condensed|evaporated|pumpkin)\b/.test(n)) return 'Baking aisle'; if(sec !== 'Oils, sauces & condiments') return 'Pasta, grains & canned'; }
+  return sec;
 }
 
 // ---- adding amounts together ("1 large + 2 large" → "3 large") ----

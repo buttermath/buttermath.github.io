@@ -2157,7 +2157,7 @@ document.addEventListener('click', async e => {
   if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty); else saveItemList(iid, name, qty); return; }
   if(a === 'homemode'){ homeMode = true; render(); window.scrollTo({top: 0}); return; }
   if(a === 'homedone'){ homeMode = false; render(); const n = allItems().filter(i => P().shop[i.id] === 'have').length; if(n) toast(`${n} item${n === 1 ? '' : 's'} at home`); return; }
-  if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); return; }
+  if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); if(!v){ const it = allItems().find(i => i.id === id); toast(`Removed ${it ? it.name : '1 item'} from At home`); } return; }
   if(a === 'active'){ const v = !isActive(id); mutate(k => { k.progress.active[id] = v; }); return; }
   if(a === 'chiprm'){ const r = R(id); if(!r) return; const snap = JSON.parse(JSON.stringify({items: kitchen.shopping.items, shop: kitchen.progress.shop || {}, act: kitchen.progress.active[id]}));
     mutate(k => { unlinkRecipe(k, id); delete k.progress.active[id]; });

@@ -1033,3 +1033,31 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .ibtn.editpill{width:auto;height:44px}
 .savebtn,.picbtn,.copyic,.tilex,.herox,.heroedit,.umenu .ic,.sortp{box-shadow:none}
 .totop{box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}
+/* Design system rollout, step 3 (Nov 18): checks, plus, and remove.
+   Circle = done (green). Square = pick (black). Have it = gray check. ✕ is muted with a 44px tap area. */
+.check{width:30px;height:30px;border:2px solid var(--ink);background:#fff}
+.item.bought .check{background:var(--green);border-color:var(--green)}
+.item.have .check{background:var(--sand);border-color:var(--line-dark)}
+.item.have .check svg{opacity:1;stroke:var(--muted)}
+.box{width:24px;height:24px;border-radius:50%;border:2px solid var(--ink);margin-top:-1px}
+.box svg{width:13px;height:13px}
+.ing.on .box{background:var(--green);border-color:var(--green)}
+.step .num{background:#fff;border:2px solid var(--ink);color:var(--ink);font-size:13px}
+.step.cur .num{background:var(--blush);border-color:var(--red-dark);color:var(--red-dark)}
+.step.done .num{background:var(--green);border-color:var(--green);color:#fff}
+.step .num svg{width:14px;height:14px}
+.pickrow .pbox,.fmenu .cb,.pk{width:24px;height:24px;border-radius:6px;border:1.5px solid var(--ink);background:#fff;display:grid;place-items:center;flex:none;font-size:0}
+.pickrow .pbox svg,.fmenu .cb svg,.pk svg{width:14px;height:14px}
+.pickrow.sel .pbox,.pickrow.on .pbox,.fmenu .fck.on .cb,.ing.pick.in .pk{background:var(--ink);border-color:var(--ink)}
+.pk svg{opacity:0}.ing.pick.in .pk svg{opacity:1}
+.ing.pick{cursor:pointer}.ing.pick.in span{color:var(--ink);text-decoration:none}
+.pk.none{border-style:dashed;border-color:var(--line-dark);background:transparent}
+.ing.pick.ro{color:var(--muted)}
+.sendrow input,.cb input{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0;flex:none;border:1.5px solid var(--ink);border-radius:6px;background:#fff center/14px no-repeat;cursor:pointer}
+.sendrow input:checked,.cb input:checked{background-color:var(--ink);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5'/%3E%3C/svg%3E")}
+.del{color:var(--muted)}
+.del,.mchx,.selchip button{position:relative}
+.del::after,.mchx::after,.selchip button::after{content:"";position:absolute;inset:-8px}
+/* Buttons follow-up: 2px edge on the primary; disabled buttons turn sand with gray text */
+.btn.primary,.btn.lp-red,.selbar .btn.primary,.btn.primary.mealfab,a.btn.primary{border-width:2px}
+.btn:disabled,.btn[disabled],.btn.primary:disabled,.btn.primary[disabled]{background:var(--sand);border-color:var(--sand);color:var(--muted);box-shadow:none;opacity:1;transform:none}

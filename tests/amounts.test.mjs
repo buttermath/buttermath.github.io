@@ -150,7 +150,10 @@ for(const [line, f, want] of [
   ['2 cups (about 2 medium) apples', 2, '4 cups (about 4 medium) apples'], ['1 (3-4 lb) whole chicken', 2, '2 (3–4 lb) whole chickens'],
   ['1 lb 8 oz beef', 2, '3 lb beef'], ['⅛ tsp cayenne', 1/12, 'a pinch of cayenne'], ['1 packet active dry yeast', 1.5, '1½ packets active dry yeast'],
   ['1 9-inch pie crust', 2, '2 9-inch pie crusts'], ['2 cups 2% milk', 2, '4 cups 2% milk'], ['1/2 cup half-and-half', 2, '1 cup half-and-half'],
-  ['1 cup (2 sticks; 226g) unsalted butter', 2, '4 sticks (452g) unsalted butter']])
+  ['1 cup (2 sticks; 226g) unsalted butter', 2, '4 sticks (452g) unsalted butter'],
+  ['½ cup Warm Water (about 55 degrees)', .5, '¼ cup Warm Water (about 55 degrees)'], ['½ cup Warm Water (about 110 degrees)', 2, '1 cup Warm Water (about 110 degrees)'],
+  ['½ cup Whole Milk (may substitute with 1 or 2% milk)', .5, '¼ cup Whole Milk (may substitute with 1 or 2% milk)'], ['1 cup milk (1 to 2% fat)', 3, '3 cups milk (1 to 2% fat)'],
+  ['1 cup water, about 110 degrees', 2, '2 cups water, about 110 degrees'], ['1 cup warm water (105–110°F)', 2, '2 cups warm water (105–110°F)'], ['½ cup Whole Milk ((may substitute with 1 or 2% milk))', 2, '1 cup Whole Milk (may substitute with 1 or 2% milk)']])
   check(`stress ${String(f).slice(0, 4)}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
 // never silently unchanged: a number Butter Math can't scale makes the whole line "Not scaled"
 for(const line of ['3 eggs, 1 separated', '1 cup flour, 2 if humid']) check(`not scaled: ${line}`, scaleLine(line, 2), null);

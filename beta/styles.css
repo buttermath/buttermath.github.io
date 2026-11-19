@@ -1188,3 +1188,5 @@ button.item.homerow{width:100%;text-align:left;font:inherit;color:inherit;border
 .stepprog{margin:0 4px 14px}
 .stepprog .prog-line{margin:0}
 .stepprog .bar{margin-top:8px}
+.tundo.tshow{display:inline-flex;align-items:center;gap:4px}.tundo.tshow .xi{width:16px;height:16px}
+.cartline .cl-home .xi{width:20px;height:20px}

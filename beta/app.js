@@ -885,8 +885,9 @@ function renderEditItem(){
   if(editItem.step === 'ask'){ const r = R(editItem.rid);
     return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
-  const n = (it.recipes || []).filter(x => R(x)).length;
-  return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(it.qty || '')}">${n > 1 ? `<p class="frhint">This adds up ${n} recipes, so changes stay on your list.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
+  const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, nm = rs.map(x => esc(D(R(x)).short || D(R(x)).title));
+  const names = nm.length < 3 ? nm.join(' and ') : nm.slice(0, -1).join(', ') + ', and ' + nm[nm.length - 1];
+  return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
 }
 function saveItemList(id, name, qty){
   mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; if(qty !== (x.qty || '')){ x.qty = qty; if((x.recipes || []).length) x.qtyEdit = true; } });

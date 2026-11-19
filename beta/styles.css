@@ -1116,3 +1116,5 @@ textarea.tin{min-height:88px}
 @keyframes findrop-pat{0%{transform:translateY(0);opacity:1}75%{transform:translateY(74px);opacity:1}100%{transform:translateY(78px);opacity:0}}
 @keyframes findrop-out{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.findrop{display:none}}
+/* Lucide everywhere: one 2px line weight with rounded ends for every 24px icon */
+body svg[viewBox="0 0 24 24"]{stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

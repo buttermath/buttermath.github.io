@@ -91,7 +91,7 @@ export function ingTextToGroups(text){
   const groups = []; let cur = {group:'', items:[]};
   String(text||'').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
     if(isHead(l)){ if(cur.items.length || cur.group) groups.push(cur); cur = {group:l.replace(/:$/,''), items:[]}; }
-    else cur.items.push(prettyFractions(l.replace(/^[•\-–*]\s*/,'')));
+    else cur.items.push(prettyFractions(l.replace(BULLET,'')));
   });
   if(cur.items.length || cur.group) groups.push(cur);
   return groups.filter(g => g.items.length);
@@ -129,8 +129,10 @@ const Q = '(?:\\d+\\s*['+FRAC+']|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+
 const LEAD = new RegExp('^((?:about |approx\\.? )?'+Q+'(?:\\s*(?:-|–|to)\\s*'+Q+')?\\s*(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')\\b\\.?\\s*)?(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')\\b\\.?\\s*)?(?:of\\s+)?)','i');
 const DESCRIPTORS = /\b(fresh|freshly|chopped|sliced|diced|minced|softened|chilled|cold|ice[- ]cold|cubed|melted|room temperature|at room temperature|divided|optional|packed|lightly|finely|thinly|roughly|large|small|medium|extra|pure|grated|shredded|whole|to taste|for garnish|for serving|plus more|spooned and leveled|beaten|ground)\b/g;
 
+// Ingredient lines pasted from websites or chats often start with a bullet (•, ◦, ▪, -, *). It isn't part of the item.
+export const BULLET = /^[•◦▪▫●○‣∙·*\-–—]+\s*/;
 export function splitIngredient(line){
-  const s = prettyFractions(String(line||'').trim()).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
+  const s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   const m = s.match(LEAD);
   if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length); }

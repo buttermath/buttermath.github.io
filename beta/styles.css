@@ -1162,3 +1162,6 @@ button.item.homerow{width:100%;text-align:left;font:inherit;color:inherit;border
 .picfit{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-width:420px;font:400 13px/1.4 Inter,sans-serif;color:var(--muted)}
 .picfit label{display:flex;align-items:center;gap:12px;font:700 13px Inter,sans-serif;color:var(--ink)}
 .picfit input[type=range]{flex:1;accent-color:var(--ink)}
+/* At home items stay in the list (All and At home views) with a house where the circle goes */
+.item .check.homeon{background:var(--sand);border-color:var(--line-dark);color:var(--muted)}
+.item .check.homeon .xi{width:16px;height:16px;opacity:1}

@@ -1294,3 +1294,6 @@ button.tag.tago::after{content:"";position:absolute;inset:-12px -4px}
 .ing-col .inghead{padding-left:36px}
 .ing-col .grp{padding-left:36px}
 .ing-col .ing.ro{padding-left:36px}
+/* a recipe tag's bigger tap area only reaches down and to the sides, so it never covers Show the math above it */
+button.tag.tago::after{inset:0 -4px -8px}
+.mathbtn{position:relative;z-index:1}

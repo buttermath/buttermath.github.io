@@ -170,7 +170,7 @@ function renderLanding(member){
       <span class="lp-eyebrow">Attention home cooks and bakers</span>
       <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
       <p class="lp-lede">Save recipes from any website, social media post, or screenshot, and keep them all in one recipe box. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
-      <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="shopping">Go to my shopping list</button><button class="btn" data-act="go" data-h="recipes">My recipes</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
+      <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs, and lemons added up from two recipes">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
@@ -420,7 +420,7 @@ function addFresh(k, id, lines){
   if(k.progress.archived) delete k.progress.archived[id];
 }
 const ingListed = (id, line) => { const key = splitIngredient(line).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]) && isActive(id) && !(P().done || {})[id]; };
-let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null, shopAdd = false;
+let addSheet = null, choosing = null, chooseSnap = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null, shopAdd = false;
 // At home mode: a separate pass for marking what's already in the kitchen, so the list itself has one thing to tap per row.
 let homeMode = false, editItem = null;
 const srcCredit = srcs => srcs.length ? `<div class="srcline">Recipe from <a href="${esc(srcs[0].url)}" target="_blank" rel="noopener">${esc(hostOf(srcs[0].url))}</a></div>` : '';
@@ -812,8 +812,9 @@ function renderTabs(r){
 function renderShopping(){
   const items = visibleItems(), all = allItems(), shop = P().shop, f = homeMode ? 'all' : ui.filter;
   const done = items.filter(it => shop[it.id]).length;
+  const allHome = items.length > 0 && items.every(it => shop[it.id] === 'have');
   const pct = items.length ? Math.round(done / items.length * 100) : 0;
-  const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && (P().active[r.id] === true || all.some(i => (i.recipes || []).includes(r.id))));
+  const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && all.some(i => (i.recipes || []).includes(r.id)));
   const colOf = listColors(chipRecipes.map(r => r.id));
   const chips = chipRecipes.map(r => { const on = isActive(r.id), nm = esc(D(r).short || D(r).title);
     return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${colOf(r.id)}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">${ICON_X}</button></span>`; }).join(' ');
@@ -864,7 +865,7 @@ function renderShopping(){
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Add individual item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to list</b> while you are on any recipe page.</p>` : ''}
   ${!Q && !homeMode && items.length ? `<button class="homelink" data-act="homemode">${ICON_HOME}Check off pantry</button>` : ''}
-  <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “At home” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
+  <div class="f-${f}">${allHome && f === 'all' && !Q && !homeMode ? '<div class="card empty">Everything on your list is at home.</div>' : ''}${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “At home” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : allHome ? 'Everything on your list is at home.' : "All set — time to cook! 🎉"}</div>`)}</div>
   ${!homeMode && (all.length || (P().trips || []).length) ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to move everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn dark" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}${editItem ? renderEditItem() : ''}`;
@@ -1154,7 +1155,7 @@ function renderRecipe(id){
     const inl = ingListed(r.id, t);
     return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${fmt(t)}</span></button>`; }).join('')).join('');
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
-  if(!p.done && !stepHinted.has(r.id) && !stepHintT[r.id]) stepHintT[r.id] = setTimeout(() => stepHinted.add(r.id), 4500);
+  if(!p.done && !stepHinted.has(r.id) && !stepHintT[r.id]) stepHintT[r.id] = setTimeout(() => stepHinted.add(r.id), 7000);
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey && choosing !== r.id;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
@@ -2285,12 +2286,12 @@ document.addEventListener('click', async e => {
     const sel = !!pickSheet.sel[id], n = Object.keys(pickSheet.sel).length; el.classList.toggle('sel', sel); el.setAttribute('aria-pressed', sel); el.querySelector('.pbox').textContent = sel ? '✓' : '';
     const go = $('.pickgo'); if(go){ go.disabled = !n; go.textContent = n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'; } return; }
   if(a === 'pickgo'){ if(!pickSheet) return; const ids = Object.keys(pickSheet.sel).filter(x => R(x)); pickSheet = null; if(!ids.length){ render(); return; }
-    let total = 0; mutate(k => { ids.forEach(rid => { const lines = ingLines(D(R(rid))); total += lines.length; addFresh(k, rid, lines); }); });
-    toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`); return; }
+    const SN = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); let total = 0; mutate(k => { ids.forEach(rid => { const lines = ingLines(D(R(rid))); total += lines.length; addFresh(k, rid, lines); }); });
+    toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`, () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); }); return; }
   if(a === 'sheetclose'){ addSheet = null; render(); return; }
   if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`, () => { mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); }); return; }
-  if(a === 'choose'){ addSheet = null; choosing = id; chosenN = 0; mutate(k => unlinkRecipe(k, id)); setTimeout(() => { const c = $('.ing-col'); if(c) window.scrollTo({top: c.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth'}); }, 30); return; }
-  if(a === 'choosedone'){ choosing = null; render(); if(chosenN) toast(`${chosenN} added to your list`); return; }
+  if(a === 'choose'){ addSheet = null; choosing = id; chosenN = 0; chooseSnap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => unlinkRecipe(k, id)); setTimeout(() => { const c = $('.ing-col'); if(c) window.scrollTo({top: c.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth'}); }, 30); return; }
+  if(a === 'choosedone'){ choosing = null; render(); const SN = chooseSnap; chooseSnap = null; if(chosenN) toast(`${chosenN} added to your list`, SN ? () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); } : null); return; }
   if(a === 'ingadd'){ const r = R(id); if(!r) return; const [gi, ki] = el.dataset.k.split('-').map(Number); const line = ((D(r).ingredients || [])[gi] || {}).items[ki]; if(!line) return;
     if(ingListed(id, line)){ chosenN = Math.max(0, chosenN - 1); const key = splitIngredient(line).key; mutate(k => unlinkRecipe(k, id, new Set([key]))); return; }
     chosenN++; mutate(k => addFresh(k, id, [line])); return; }

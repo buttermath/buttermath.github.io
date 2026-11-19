@@ -2214,7 +2214,7 @@ document.addEventListener('click', async e => {
     toast(`Removed ${D(r).short || D(r).title} from your list`, () => mutate(k => { k.shopping.items = snap.items; k.progress.shop = snap.shop; if(snap.act === undefined) delete k.progress.active[id]; else k.progress.active[id] = snap.act; })); return; }
   if(a === 'relist'){ const r = R(id); mutate(k => { if(r && !k.shopping.items.some(i => (i.recipes || []).includes(id))) addIngredientsTo(k, id, D(r).ingredients || []); k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id]; }); toast('Added to your shopping list'); return; }
   if(a === 'filter'){ ui.filter = el.dataset.tg && ui.filter === el.dataset.f ? 'all' : el.dataset.f; saveUi(); render(); return; }
-  if(a === 'delitem'){ const it = allItems().find(i => i.id === id); mutate(k => { k.shopping.items = k.shopping.items.filter(i => i.id !== id); delete k.progress.shop[id]; }); if(it) toast('Removed ' + it.name); return; }
+  if(a === 'delitem'){ const it = allItems().find(i => i.id === id); mutate(k => { k.shopping.items = k.shopping.items.filter(i => i.id !== id); delete k.progress.shop[id]; ((it && it.recipes) || []).forEach(rid => { if(!k.shopping.items.some(i => (i.recipes || []).includes(rid))) k.progress.active[rid] = false; }); }); if(it) toast('Removed ' + it.name); return; }
   if(a === 'copy'){
     const items = visibleItems().filter(i => !shop[i.id]); const secs = [...new Set(items.map(i => i.section || 'Other'))];
     const txt = secs.map(s => s + ':\n' + items.filter(i => (i.section || 'Other') === s).map(i => '- ' + i.name + (i.qty ? ' (' + i.qty + ')' : '')).join('\n')).join('\n\n');

@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=15';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=16';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -353,7 +353,7 @@ function addIngredientsTo(k, recipeId, groups){
       fixItem(it); touched.add(it.id);
     } else {
       const id = 'i-' + recipeId.slice(0, 8) + '-' + key.replace(/[^a-z0-9]+/g, '-').slice(0, 30);
-      items.push({id, name, qty, key, section: guessSection(name), recipes:[recipeId]});
+      items.push({id, name, qty, key, section: guessSection(name, qty), recipes:[recipeId]});
       touched.add(id);
     }
   }));

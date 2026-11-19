@@ -790,7 +790,8 @@ function renderInviteCard(){
 }
 
 let lastView = '';
-// Going back from a recipe to the recipe box (yours or a friend's) returns you to where you were scrolled, not the top.
+// List pages (Recipes, Shopping list, Friends, a friend's recipes, Past trips) reopen where you left them, however you come back.
+// Other pages start at the top, except a recipe you return to from its edit form. Tap the tab you're on to jump to the top.
 const scrollMem = {};
 window.addEventListener('hashchange', () => { if(lastView) scrollMem[lastView] = window.scrollY; });
 const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
@@ -863,8 +864,8 @@ function render0(){
   if(ae && sameView){ const el = document.getElementById(ae.id); if(el){ el.focus({preventScroll:true}); if(sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
   const key = r.v + (r.id || '');
   if(key !== lastView){
-    const back = (key === 'recipes' && /^(recipe|form)/.test(lastView)) || (r.v === 'fbook' && /^frecipe/.test(lastView));
-    const y = back ? scrollMem[key] || 0 : 0;
+    const keep = ['recipes', 'shopping', 'friends', 'fbook', 'trips'].includes(r.v) || (r.v === 'recipe' && lastView === 'form' + r.id);
+    const y = keep ? scrollMem[key] || 0 : 0;
     window.scrollTo(0, y); if(y) requestAnimationFrame(() => window.scrollTo(0, y));
     lastView = key;
   }
@@ -2281,6 +2282,7 @@ document.addEventListener('click', async e => {
   if(a === 'delopen'){ delOpen = true; render(); setTimeout(() => { const w = $('#del-word'); if(w) w.focus(); }, 50); return; }
   if(a === 'delclose'){ if(e.target.closest('[data-stop]') && el.classList.contains('modal')) return; delOpen = false; render(); return; }
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
+  if(a === 'go' && el.classList.contains('tab') && route().v === el.dataset.h){ window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; adminErr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }

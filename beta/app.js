@@ -120,7 +120,7 @@ async function boot(){
   session = data.session; user = session ? session.user : null;
   if(user) startUser(); else render();
 }
-function stopUser(){ isAdmin = false; adminData = null; if(channel){ try{ sb.removeChannel(channel); }catch(e){} channel = null; } recipes = []; kitchen = blankKitchen(); loaded = false; queue = []; }
+function stopUser(){ autoDone = false; isAdmin = false; adminData = null; if(channel){ try{ sb.removeChannel(channel); }catch(e){} channel = null; } recipes = []; kitchen = blankKitchen(); loaded = false; queue = []; }
 let startRun = 0;
 async function startUser(){
   const run = ++startRun;
@@ -759,7 +759,8 @@ function render0(){
   else if(!user && r.v === 'feedback'){ app.innerHTML = renderFeedback(); $('#tabs').innerHTML = ''; }
   else if(!user || recovering){ app.innerHTML = landingOn(r) ? renderLanding() : renderAuth(); $('#tabs').innerHTML = ''; }
   // The "Enter my kitchen" welcome shows only the very first time someone signs in. Everyone else goes straight to their kitchen.
-  else if(gate !== 'in' && loaded && !firstVisit()){ gate = 'in'; render(); return; }
+  else if(gate === 'gate' && !autoDone){ autoEnter(); return; }
+  else if(gate === 'gate' && loaded && !firstVisit()){ gate = 'in'; render(); return; }
   else if(gate !== 'in' && (gate === 'loading' || loaded)){ const g = renderGate(); if(app.dataset.gate !== g){ app.innerHTML = g; app.dataset.gate = g; } $('#tabs').innerHTML = ''; }
   else if(!loaded){ app.innerHTML = `<div class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`; }
   else {
@@ -1636,6 +1637,19 @@ function renderGate(){
   return `<div class="gate"><div class="gatecard">${KITCHEN_ART}
     <button class="btn primary big" data-act="enter">Enter your kitchen</button></div></div>`;
 }
+// Signing in (or opening the site in a new tab) shows the butter pats loading screen first, for at least 1.6 seconds
+let autoDone = false;
+function autoEnter(){
+  autoDone = true; gate = 'loading'; render();
+  const t0 = Date.now();
+  const go = () => { if(!user) return; if(!loaded) return setTimeout(go, 150); setTimeout(() => {
+    if(!user || gate !== 'loading') return;
+    if(firstVisit()){ gate = 'gate'; render(); return; }
+    gate = 'in'; try{ sessionStorage.setItem('mb-in', '1'); }catch(e){}
+    render(); app.classList.add('fadein'); setTimeout(() => app.classList.remove('fadein'), 700);
+  }, Math.max(0, 1600 - (Date.now() - t0))); };
+  go();
+}
 const firstVisit = () => !P().entered && !recipes.length && !allItems().length && !P().tourDone;
 function enterKitchen(){
   gate = 'loading'; render();
@@ -1902,7 +1916,7 @@ function renderSettings(){
   return `${backBtn()}
   <div class="card panel"><h3>Settings</h3>
     <div class="lbl2">Your name </div>
-    <form data-form="name" class="row"><input class="tin" id="acc-name" data-keep style="flex:1;min-width:160px" value="${esc(firstName())}" maxlength="40" required><button class="btn dark" type="submit">Save name</button></form>
+    <form data-form="name" class="stack"><input class="tin" id="acc-name" data-keep value="${esc(firstName())}" maxlength="40" required><div><button class="btn dark" type="submit">Save name</button></div></form>
   </div>
   <div class="card panel" style="margin-top:16px"><h3>Change password</h3>
     <form data-form="password" class="stack" autocomplete="off">

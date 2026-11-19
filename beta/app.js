@@ -45,7 +45,7 @@ function normalize(row){
 
 let statusNow = {kind:'', text:''};
 function setStatus(kind, text){ statusNow = {kind, text}; const el = $('#status'); if(!el) return; el.className = 'status ' + kind; el.querySelector('span').textContent = text; }
-let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2400); }
+let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2500); }
 
 /* ---------------- error log ---------------- */
 // Problems members run into go to the error_log table and show on the Admin page. Never stores recipe text or passwords.
@@ -469,7 +469,7 @@ function renderAddFriend(){
     <p class="frsent">Send them an invite and they'll receive your friend request when they log in for the first time.</p>
     ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}${frSent.mail ? `<p class="frmore">If this did not open an email, <button class="linkbtn" data-act="frcopy">copy the invite link</button> so you can email or text the sign up link to a friend.</p>` : ''}` : `<div class="pickhead"><div class="askt">Request sent</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">✕</button></div>
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Butter Math.</p>`}</div>`;
-  return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="askt">Add friend</div>
+  return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="pickhead"><div class="askt">Add friend</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">✕</button></div>
     <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
     <p class="frinvl">Not on Butter Math yet? Copy your invite link and text it to them.</p>
     <div class="emrow"><input class="tin frinv" id="fr-inv" readonly value="${esc(myInvite || '')}" placeholder="Making your invite link…" aria-label="Your invite link"><button class="btn" type="button" data-act="frinvcopy">Copy</button></div>
@@ -553,7 +553,7 @@ function renderFrecipe(key){
 }
 function renderSendSheet(r){
   const acc = (friends || []).filter(f => f.status === 'accepted');
-  return `<div class="sheetbg" data-act="sendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Send to a friend"><div class="askt">Send ${esc(D(r).title)}</div>
+  return `<div class="sheetbg" data-act="sendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Send to a friend"><div class="pickhead"><div class="askt">Send ${esc(D(r).title)}</div><button class="ibtn" data-act="sendclose" aria-label="Close">✕</button></div>
     ${acc.length ? `<div class="sendlist">${acc.map(f => `<label class="sendrow">${avatar(f.friend_id, f.name, 'sm')}<span>${esc(f.name)}</span><input type="checkbox" class="sendck" value="${esc(f.friend_id)}" ${acc.length === 1 ? 'checked' : ''}></label>`).join('')}</div>
     <textarea class="tin" id="send-note" data-keep rows="2" maxlength="280" placeholder="Add a note (optional)"></textarea>
     <button class="btn primary bigbtn" id="send-go" data-act="sendgo" data-id="${esc(r.id)}"${acc.length === 1 ? '' : ' disabled'}>${acc.length === 1 ? 'Send' : 'Pick a friend to send'}</button>`
@@ -763,7 +763,7 @@ function renderShopping(){
   ${Q ? `<div class="qnote" aria-live="polite">${pool.length ? `${pool.length} match${pool.length === 1 ? '' : 'es'} across Need, In cart and Have` : `Nothing on your list matches “${esc(shopQ.trim())}”`}</div>` : ''}
   ${!Q && (all.length || (P().trips || []).length) ? `<div class="seg" role="group" aria-label="Show">${fbtn('all','All')}${fbtn('need','Need')}${fbtn('cart','In cart')}${fbtn('have','Have')}</div>` : ''}
   ${Q ? '' : ui.addOpen ? `<form class="card addcard addf" data-form="additem" autocomplete="off">
-      <input id="addName" data-keep placeholder="Item (e.g. blueberries)" maxlength="80" required>
+      <input id="addName" data-keep placeholder="Blueberries" aria-label="Item" maxlength="80" required>
       <input id="addQty" data-keep placeholder="Amount" aria-label="Amount (optional)" maxlength="60">
       <select id="addSec" data-keep aria-label="Section">${secOpts.map(s => `<option ${s === ui.sec ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
       <select id="addFor" data-keep aria-label="Which recipe is it for?"><option value="">No recipe</option>${recipes.map(r => `<option value="${esc(r.id)}">For ${esc(D(r).short || D(r).title)}</option>`).join('')}</select>
@@ -1018,8 +1018,8 @@ function renderRecipe(id){
     ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
 </div>
   </div>
-  ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b><span>Everything starts unchecked</span></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Choose ingredients</b><span>Tap + next to the ones you need</span></button><button class="linkbtn askcancel" data-act="sheetclose">${addSheet.again ? 'Not now' : 'Cancel'}</button></div>` : ''}
-  ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="askt">Tags</div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">✕</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="New tag, e.g. Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
+  ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="pickhead"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="ibtn" data-act="sheetclose" aria-label="Close">✕</button></div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b><span>Everything starts unchecked</span></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Choose ingredients</b><span>Tap the ones you need</span></button></div>` : ''}
+  ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="pickhead"><div class="askt">Tags</div><button class="ibtn" data-act="tagdone" aria-label="Close">✕</button></div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">✕</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
   ${sendSheet === r.id ? renderSendSheet(r) : ''}
   ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap ingredients to add them'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
 }
@@ -1058,7 +1058,7 @@ function renderForm(id){
     <div class="linkrow"><input class="tin" id="f-link" data-keep type="url" inputmode="url" placeholder="Paste a recipe link" value="${v('link', link.url)}"></div>
     ${!r && f.importing ? `<div class="importmsg">Importing…</div>` : !r && f.review ? reviewCard(f.review) : !r && f.importMsg ? `<div class="importmsg ${f.importOk ? 'ok' : ''}">${esc(f.importMsg)}</div>` : ''}
     <div class="lbl2">Recipe title <span class="hint">required</span></div>
-    <input class="tin" id="f-title" data-keep maxlength="90" placeholder="e.g. Grandma's apple crisp" value="${v('title', d.title)}">
+    <input class="tin" id="f-title" data-keep maxlength="90" placeholder="Grandma's apple crisp" value="${v('title', d.title)}">
     ${r ? '' : `
     ${f.importOk ? '' : `<div class="lbl2">Or paste the recipe</div>
     <textarea class="tin" id="f-paste" data-keep rows="5" placeholder="Copy the recipe from the site and paste it here"></textarea>
@@ -1775,7 +1775,7 @@ function renderAccount(){
   ${delOpen ? `<div class="modal" data-act="delclose"><div class="card" data-stop><h3>Delete everything?</h3>
     <div class="muted">Deletes your account and data for good. Type <b>DELETE</b> to confirm.</div>
     <input class="tin" id="del-word" autocomplete="off" style="margin-top:12px" placeholder="DELETE">
-    <div class="row"><button class="btn" data-act="delclose">Cancel</button><button class="btn dangerbtn" data-act="delconfirm">Delete forever</button></div></div></div>` : ''}`;
+    <div class="row"><button class="btn quiet" data-act="delclose">Cancel</button><button class="btn dangerbtn" data-act="delconfirm">Delete forever</button></div></div></div>` : ''}`;
 }
 const FB_EMAIL = 'hello@buttermath.app';
 function renderFeedback(){
@@ -1889,7 +1889,7 @@ function drawTimers(){
 let wakeLock = null, wantWake = false;
 async function reWake(){ if(wantWake && !wakeLock){ try{ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; render(); }); }catch(e){} } }
 function confirmBox(title, body, okText, fn, html){
-  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>${esc(title)}</h3><div class="muted">${html ? body : esc(body)}</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="mok">${esc(okText)}</button></div></div></div>`;
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>${esc(title)}</h3><div class="muted">${html ? body : esc(body)}</div><div class="row"><button class="btn quiet" data-act="mclose">Cancel</button><button class="btn ${/^(Delete|Remove)/.test(okText) ? 'dangerbtn' : 'primary'}" data-act="mok">${esc(okText)}</button></div></div></div>`;
   confirmFn = fn;
 }
 let confirmFn = null;
@@ -1956,7 +1956,7 @@ document.addEventListener('click', async e => {
   if(a === 'frcancel'){ await sb.rpc('remove_friend', {friend: id}); toast('Request canceled'); loadFriends(true); return; }
   if(a === 'frremove'){ const f = friendBy(id); if(!f) return; const n = savedFrom(f).length;
     $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card rmcard" data-stop><h3>Remove ${esc(f.name)} as a friend?</h3><div class="muted">You'll stop seeing each other's recipes.</div>
-      <div class="rmbtns">${n ? `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend but keep saved recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove friend and saved recipes</button>` : `<button class="btn primary" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn ghost" data-act="mclose">Cancel</button></div></div></div>`; return; }
+      <div class="rmbtns">${n ? `<button class="btn dark" data-act="frremoveok" data-id="${esc(id)}">Remove friend but keep saved recipes</button><button class="btn outline danger" data-act="frremoveok" data-id="${esc(id)}" data-del="1">Remove friend and saved recipes</button>` : `<button class="btn dangerbtn" data-act="frremoveok" data-id="${esc(id)}">Remove friend</button>`}<button class="btn quiet" data-act="mclose">Cancel</button></div></div></div>`; return; }
   if(a === 'frremoveok'){ $('#modalRoot').innerHTML = ''; const f = friendBy(id); const {error} = await sb.rpc('remove_friend', {friend: id}); if(error){ toast("Couldn't remove them. Try again."); return; }
     let gone = 0; if(el.dataset.del && f){ for(const r of savedFrom(f)){ const {error: de} = await sb.from('recipes').delete().eq('id', r.id); if(de) continue; if(D(r).photoPath) sb.storage.from('photos').remove([D(r).photoPath]).catch(() => {}); recipes = recipes.filter(x => x.id !== r.id); mutate(k => removeRecipeFrom(k, r.id)); gone++; } }
     delete fbook[id]; toast(f ? `Removed ${f.name}${gone ? ` and ${gone} recipe${gone === 1 ? '' : 's'}` : ''}` : 'Removed'); location.hash = 'friends'; loadFriends(true); return; }
@@ -2036,7 +2036,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if(a === 'resetshop'){
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Everything on your current list moves to Past trips. Your shopping list starts fresh.</div><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Finish this trip?</h3><div class="muted">Everything on your current list moves to Past trips. Your shopping list starts fresh.</div><div class="row"><button class="btn quiet" data-act="mclose">Cancel</button><button class="btn primary" data-act="finishok">Finish</button></div></div></div>`;
     return;
   }
   if(a === 'ing'){ const c = cookOf(id), key = el.dataset.k, v = !c.i[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.i = o.i || {})[key] = v; }); return; }
@@ -2070,7 +2070,7 @@ document.addEventListener('click', async e => {
     mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = ids; delete m.hideShop; if(m.off){ m.off = Object.assign({}, m.off); Object.keys(m.off).forEach(x => { if(!ids.includes(x) || !prev.includes(x)) delete m.off[x]; }); }
       fresh.forEach(x => { bankLegacy(k, x); k.progress.cook[x] = {i:{}, s:{}}; }); }, true); if(location.hash === '#meal') render(); else location.hash = 'meal'; return; }
   if(a === 'mealrm' && allItems().some(i => (i.recipes || []).includes(id))){ const nm = mname(R(id));
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Remove ${nm} from this meal?</h3><div class="muted">Do you also want to take its ingredients off your shopping list? Ingredients other recipes still need stay on your list.</div><div class="row mrmrow"><button class="btn" data-act="mclose">Cancel</button><button class="btn" data-act="mealrmkeep" data-id="${esc(id)}">Keep ingredients</button><button class="btn primary" data-act="mealrmall" data-id="${esc(id)}">Remove ingredients too</button></div></div></div>`; return; }
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>Remove ${nm} from this meal?</h3><div class="muted">Do you also want to take its ingredients off your shopping list? Ingredients other recipes still need stay on your list.</div><div class="row mrmrow"><button class="btn quiet" data-act="mclose">Cancel</button><button class="btn" data-act="mealrmkeep" data-id="${esc(id)}">Keep ingredients</button><button class="btn primary" data-act="mealrmall" data-id="${esc(id)}">Remove ingredients too</button></div></div></div>`; return; }
   if(a === 'mealrmkeep' || a === 'mealrmall'){ $('#modalRoot').innerHTML = ''; const nm = R(id) ? D(R(id)).short || D(R(id)).title : 'Recipe';
     mutate(k => { const m = k.progress.meal = Object.assign({}, k.progress.meal || {}); m.ids = (m.ids || []).filter(x => x !== id); if(m.off) delete m.off[id]; if(m.now) delete m.now[id]; if(a === 'mealrmall') unlinkRecipe(k, id); });
     toast(a === 'mealrmall' ? `Removed ${nm} and its ingredients from your list` : `Removed ${nm} from this meal`); return; }

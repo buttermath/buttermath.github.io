@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET } from './parse.js?v=8';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET } from './parse.js?v=9';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -419,8 +419,18 @@ function fixAnd(k){ let ch = false; const items = k.shopping.items;
     else { it.name = p.name; it.key = p.key; }
     ch = true; }
   return ch; }
-function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
-  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); k.shopping.items.forEach(fixItem); }, true); }
+// Lists saved before "1 cup plus 2 tablespoons flour" was read as one amount have an item named "Plus 2 tablespoons flour".
+// It's renamed to the ingredient ("Flour", merged with any Flour already there) and its amount is added up again from the recipes.
+function fixPlus(k){ let ch = false; const items = k.shopping.items;
+  for(const it of items.slice()){ if(!/^(plus\s+(?:[\d½¼¾⅓⅔⅛⅜⅝⅞]|more\b)|\d.*\bplus more\b)/i.test(it.name || '')) continue;
+    const p = splitIngredient(String(it.name).replace(/^plus\s+/i, '')); if(!p.key || p.key === (it.key || '')) continue;
+    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...(it.recipes || [])])]; items.splice(items.indexOf(it), 1); }
+    else { it.name = p.name; it.key = p.key; }
+    ch = true; }
+  return ch; }
+function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
+  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {
@@ -1286,10 +1296,11 @@ function renderFab(r){
   const old = $('#fab'); if(old) old.remove(); if(fabIO){ fabIO.disconnect(); fabIO = null; }
   if(MEAL_ON && r.v === 'recipes' && !mealPick && recipes.filter(x => !isArch(x.id)).length >= 2){ const n = mealIds().length; const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab mealfab'; b.innerHTML = ICON_MEAL + (n >= 2 ? `Your meal (${n})` : 'Cook a Meal'); b.title = 'Pick a few recipes to cook together'; b.dataset.act = n >= 2 ? 'go' : 'mealopen'; b.dataset.h = 'meal'; document.body.appendChild(b); placeFab(); return; }
   if(r.v !== 'recipe' || choosing) return; const rr = R(r.id); if(!rr) return; const p = progressOf(rr); if(p.cur < 0 || p.done === 0) return;
-  const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn dark fab'; b.textContent = '↓ Current step'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
+  // A round arrow button (same look as Back to top). It points down or up, toward where the current step is.
+  const b = document.createElement('button'); b.id = 'fab'; b.className = 'stepfab'; b.type = 'button'; b.setAttribute('aria-label', 'Go to the current step'); b.title = 'Current step'; b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
   // Only shows while the current step is off screen. Once it's in view (you scrolled to it or tapped the button), the button goes away.
   const st = document.getElementById('s-' + p.all[p.cur].key);
-  if(st && 'IntersectionObserver' in window){ b.classList.add('away'); fabIO = new IntersectionObserver(([en]) => b.classList.toggle('away', en.isIntersecting), {threshold: 0.3}); fabIO.observe(st); }
+  if(st && 'IntersectionObserver' in window){ b.classList.add('away'); fabIO = new IntersectionObserver(([en]) => { b.classList.toggle('away', en.isIntersecting); b.classList.toggle('up', !en.isIntersecting && en.boundingClientRect.top < 0); }, {threshold: 0.3}); fabIO.observe(st); }
 }
 let fabIO = null;
 

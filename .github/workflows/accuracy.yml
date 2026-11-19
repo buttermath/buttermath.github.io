@@ -15,9 +15,5 @@ jobs:
           node-version: 20
       - name: Beta site checks
         run: node beta/tests/run.mjs
-      - name: Live site checks (the same checks, run against the live parse.js)
-        run: |
-          mkdir -p .live-tests
-          cp beta/tests/*.mjs .live-tests/
-          node .live-tests/run.mjs
-          node tests/amounts.test.mjs
+      - name: Live site checks (tests/ holds the checks for the live parse.js; copy beta/tests there on go live)
+        run: node tests/run.mjs

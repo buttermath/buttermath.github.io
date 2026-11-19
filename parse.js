@@ -124,7 +124,7 @@ export function sectionsToStepText(secs){
 }
 
 // ---- shopping ----
-const UNITS = ['cups?','c\\.','c','tablespoons?','tbsps?','tbs','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','pints?','containers?','jars?','bags?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','large','medium','small','whole'];
+const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','pints?','containers?','jars?','bags?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','large','medium','small','whole'];
 const Q = '(?:\\d+\\s*['+FRAC+']|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?|['+FRAC+'])';
 const LEAD = new RegExp('^((?:about |approx\\.? )?'+Q+'(?:\\s*(?:-|–|to)\\s*'+Q+')?\\s*(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:of\\s+)?)','i');
 const DESCRIPTORS = /\b(fresh|freshly|chopped|sliced|diced|minced|softened|chilled|cold|ice[- ]cold|cubed|melted|room temperature|at room temperature|divided|optional|packed|lightly|finely|thinly|roughly|large|small|medium|extra|pure|grated|shredded|whole|to taste|for garnish|for serving|plus more|spooned and leveled|beaten|ground)\b/g;
@@ -135,20 +135,44 @@ export function splitIngredient(line){
   let s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   // Recipe cards often write T. for tablespoon and t. for teaspoon (capital T is the bigger spoon)
+  // "3 garlic cloves" is 3 cloves of garlic, the same item as "2 cloves garlic", so the two add up
+  s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*(?:\s*(?:-|–|to)\s*[\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*)?)\s+((?:large|medium|small)\s+)?garlic\s+(cloves?)(?![A-Za-z])/i, (m, n, z, c) => n + ' ' + (z || '') + c.toLowerCase() + ' garlic');
+  // "1 - 14 oz can of tomatoes" is one 14 oz can, not 1 to 14 cans: a weight or volume right before a container is the container's size
+  s = s.replace(/^(\d+)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(oz|ounces?|fl\.? ?oz|g|grams?|kg|ml|l|lbs?|pounds?)\.?\s+(cans?|jars?|packages?|pkgs?|bags?|box(?:es)?|bottles?|containers?|cartons?|tubs?)(?![A-Za-z])/i, (m, n, z, u, c) => +z > +n ? n + ' (' + z + ' ' + u + ') ' + c : m);
   s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*T\.?(?=\s)/, '$1 Tbsp').replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*t\.?(?=\s)/, '$1 tsp'); name = s;
   const m = s.match(LEAD);
   if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length);
     // "1 cup plus 2 tablespoons flour" is one amount: 1 cup + 2 tablespoons
     const pl = name.match(/^(?:plus|\+)\s+/i), m2 = pl && name.slice(pl[0].length).match(LEAD);
     if(m2 && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m2[1]) && /[a-z]/i.test(m2[1].replace(/^(about|approx\.?)\s*/i, ''))){ qty = qty + ' + ' + m2[1].trim(); name = name.slice(pl[0].length + m2[1].length); } }
+  // "1 teaspoon of cinnamon": the "of" belongs to neither the amount nor the name
+  qty = qty.replace(/\s+of$/i, '');
   name = name.replace(/^\s*(?:plus|\+)\s+more\s+(?:for\s+[a-z]+\s+)?/i, '');
   while(/\([^()]*\)/.test(name)) name = name.replace(/\([^()]*\)/g,' ');
   name = name.replace(/[()]/g,' ').split(/,| – | - |;/)[0].replace(/\b(plus more|or more|divided|optional)\b.*$/i,'').replace(/\s+/g,' ').trim();
+  // "4 roma tomatoes roughly chopped" with no comma: the prep words at the end aren't part of what you buy ("Roma tomatoes")
+  { const PREP = '(?:(?:roughly|finely|coarsely|thinly|lightly)\\s+)?(?:chopped|diced|minced|sliced|grated|shredded|crushed|peeled|halved|quartered|cubed|julienned|torn|smashed|trimmed|rinsed|drained|beaten|melted|softened|sifted|toasted)';
+    const t = name.replace(new RegExp('\\s+' + PREP + '(?:\\s+(?:and|&)\\s+' + PREP + ')*$', 'i'), ''); if(t && t !== name && /[a-z]/i.test(t)) name = t; }
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();
   return {qty, name, key};
 }
+
+// "2 heirloom tomatoes + 4 roma tomatoes" is two things to buy, so it becomes two shopping-list items.
+// A " + " followed by an amount starts a new ingredient only when every piece names its own ingredient:
+// "1 cup + 2 Tbsp flour" stays one amount of flour. The recipe line itself is never changed.
+export function ingParts(line){
+  const s = String(line || ''), cut = []; let d = 0;
+  for(let i = 0; i < s.length; i++){ const ch = s[i]; if(ch === '(') d++; else if(ch === ')') d = Math.max(0, d - 1);
+    else if(!d && ch === '+' && /\s$/.test(s.slice(0, i)) && /^\+\s*[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(s.slice(i))) cut.push(i); }
+  if(!cut.length) return [s];
+  const parts = []; let from = 0; cut.forEach(i => { parts.push(s.slice(from, i).trim()); from = i + 1; }); parts.push(s.slice(from).trim());
+  const named = t => { const x = splitIngredient(t), w = prettyFractions(t.replace(BULLET, '').trim()); return !!x.key && x.qty.length < w.length && /[a-z]/i.test(w.slice(x.qty.length)); };
+  return parts.every(named) ? parts : [s];
+}
+// Puts a changed piece back into its recipe line ("Update the recipe too" on one of two items from the same line).
+export function ingReplacePart(line, i, text){ const parts = ingParts(line); if(parts.length < 2) return text; parts[i] = text; return parts.join(' + '); }
 
 export const SECTIONS = ['Produce','Meat & seafood','Dairy & eggs','Bakery & bread','Baking aisle','Pasta, grains & canned','Oils, sauces & condiments','Spices','Frozen','Supplies','Other'];
 const W = s => new RegExp('\\b(' + s + ')(e?s)?\\b');
@@ -164,15 +188,23 @@ const GUESS = [
   ['Oils, sauces & condiments', W('oil|vinegar|soy sauce|mustard|ketchup|mayo|mayonnaise|hot sauce|worcestershire|sriracha|salsa|dressing|pesto')],
   ['Supplies', W('stick|parchment|foil|plastic wrap|liner|skewer|toothpick|pan|dish')],
 ];
-export function guessSection(name){
+// Checked before the aisle list, because the list stops at the first word it knows ("tomato" is Produce, "coconut" is Baking aisle).
+const CANNED = /\b(tomato (?:pur[ée]e|paste|sauce)|passata|fire[- ]roasted tomato|crushed tomato|diced tomato|stewed tomato|whole peeled tomato|coconut (?:milk|cream)|canned)/;
+export function guessSection(name, qty){
   const n = String(name).toLowerCase();
-  for(const [sec, re] of GUESS) if(re.test(n)) return sec;
-  return 'Other';
+  // anything named oil ("avocado or grapeseed oil") is with the oils, unless it's packed in oil ("tuna in oil")
+  if(/\boils?\b/.test(n) && !/\b(?:in|packed in) (?:olive )?oil\b|oil[- ]packed/.test(n)) return 'Oils, sauces & condiments';
+  if(CANNED.test(n)) return 'Pasta, grains & canned';
+  if(/\bgarlic\b/.test(n) && !/\bgarlic (?:powder|salt|granules|flakes)\b|\bgranulated garlic\b/.test(n)) return 'Produce';
+  let sec = 'Other'; for(const [s, re] of GUESS) if(re.test(n)){ sec = s; break; }
+  // bought in a can ("1 (14 oz) can black beans"): the canned aisle, unless it's a sauce, or a baking can (condensed or evaporated milk, pumpkin)
+  if(/\bcans?\b/i.test(String(qty || ''))){ if(/\b(condensed|evaporated|pumpkin)\b/.test(n)) return 'Baking aisle'; if(sec !== 'Oils, sauces & condiments') return 'Pasta, grains & canned'; }
+  return sec;
 }
 
 // ---- adding amounts together ("1 large + 2 large" → "3 large") ----
 const FV = {'⅙':1/6,'⅚':5/6,'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
-const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
+const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(heads?)$/i,'head'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
 function num(s){
   s = s.trim(); let m;
   if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +m[1] + FV[m[2]];
@@ -190,7 +222,7 @@ function nice(n){
   if(Math.abs(best[0] - frac) > .03) return String(Math.round(n * 100) / 100);
   return (w ? String(w) : '') + best[1] || '0';
 }
-const QDESC = /\s+((?:extra[- ])?large|medium|small|jumbo|whole)$/i;
+const QDESC = /\s+((?:extra[- ])?large|medium|small|jumbo|whole|(?:small|medium|large)-(?:small|medium|large))$/i;
 const QN = '(\\d+\\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])';
 const PART = new RegExp('^' + QN + '(?:\\s*(?:-|–|to)\\s*' + QN + ')?\\s*(\\([^)]*\\))?\\s*([A-Za-z.]*)\\s*(\\([^)]*\\))?$');
 // A weight or volume written in parentheses, like "(200g)" or "(240 ml)". Totals keep it when every part has one.
@@ -200,6 +232,8 @@ function parsePart(p){
   let desc = '', pre = ''; p = String(p).trim().replace(QDESC, (x, d) => { desc = d.toLowerCase(); return ''; })
     // "8 fl oz" is a volume (1 fl oz = 2 Tbsp); "1 small box" keeps its size with the container
     .replace(/\b(?:fl\.?\s*oz\.?|fluid\s+ounces?)(?![A-Za-z])/i, 'floz')
+    // "1 whole head" of garlic is 1 head
+    .replace(/^(\S+)\s+whole\s+(?=[A-Za-z])/i, '$1 ')
     .replace(/^(\S+)\s+((?:extra[- ])?large|medium|small|jumbo)\s+(?=[A-Za-z])/i, (x, q, d) => { pre = d.toLowerCase(); return q + ' '; });
   const m = p.match(PART);
   if(!m) return null;
@@ -222,10 +256,15 @@ export function addQty(a, b, o = {}){
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
     // a size in parentheses ("1 (15 oz) can") is part of what you buy, so 15 oz and 28 oz cans are counted separately
-    const g = (x.unit ? x.unit + '|' + x.desc : '|') + (x.size ? '|' + x.size : ''), s = sums.get(g) || {n:0, hi:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc, size:x.size, pv:0, pu:null, pok:true};
+    const g = (x.unit ? x.unit + '|' + x.desc : '|' + x.desc) + (x.size ? '|' + x.size : ''), s = sums.get(g) || {n:0, hi:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc, size:x.size, pv:0, pu:null, pok:true};
     s.n += x.n; s.hi += x.n2 != null ? x.n2 : x.n; if(x.n2 != null) s.ranged = true; s.c++; if(!s.desc) s.desc = x.desc;
     if(x.pm && (!s.pu || s.pu === x.pm.u)){ s.pu = x.pm.u; s.pv += x.pm.v; } else s.pok = false; sums.set(g, s); });
-  const plural = (u, n) => n > 1 && /(^| )(cup|clove|can|stick|jar|bag|package|bottle|container|envelope|carton|tub)$/.test(u) ? u + 's' : n > 1 && /(^| )box$/.test(u) ? u + 'es' : u;
+  // Different sizes stay apart ("1 large + 1 small", never "2 large"). An amount with no size joins the sized one when there's only one size ("2 large" + "3" = "5 large").
+  { const bySize = new Map(); for(const [g, s] of sums) if(!s.unit){ const b = s.size || ''; if(!bySize.has(b)) bySize.set(b, []); bySize.get(b).push(g); }
+    for(const gs of bySize.values()){ const bare = gs.find(g => !sums.get(g).desc), sized = gs.filter(g => sums.get(g).desc); if(!bare || sized.length !== 1) continue;
+      const s = sums.get(sized[0]), e = sums.get(bare); s.n += e.n; s.hi += e.hi; s.c += e.c; if(e.ranged) s.ranged = true;
+      if(s.pok && e.pok && (!s.pu || !e.pu || s.pu === e.pu)){ s.pu = s.pu || e.pu; s.pv += e.pv; } else s.pok = false; sums.delete(bare); } }
+  const plural = (u, n) => n > 1 && /(^| )(cup|clove|head|can|stick|jar|bag|package|bottle|container|envelope|carton|tub)$/.test(u) ? u + 's' : n > 1 && /(^| )box$/.test(u) ? u + 'es' : u;
   // Spoons, sticks and cups are one family, and so are pounds and ounces. When amounts are added up they're
   // written the way you'd measure them: "4⅓ cups + 1 Tbsp + 1 tsp", never "4.42 cups". Butter goes in
   // sticks + Tbsp ("2 sticks + 2 Tbsp").

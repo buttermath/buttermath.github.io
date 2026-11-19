@@ -135,7 +135,11 @@ export function splitIngredient(line){
   const s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   const m = s.match(LEAD);
-  if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length); }
+  if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length);
+    // "1 cup plus 2 tablespoons flour" is one amount: 1 cup + 2 tablespoons
+    const pl = name.match(/^(?:plus|\+)\s+/i), m2 = pl && name.slice(pl[0].length).match(LEAD);
+    if(m2 && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m2[1]) && /[a-z]/i.test(m2[1].replace(/^(about|approx\.?)\s*/i, ''))){ qty = qty + ' + ' + m2[1].trim(); name = name.slice(pl[0].length + m2[1].length); } }
+  name = name.replace(/^\s*(?:plus|\+)\s+more\s+(?:for\s+[a-z]+\s+)?/i, '');
   while(/\([^()]*\)/.test(name)) name = name.replace(/\([^()]*\)/g,' ');
   name = name.replace(/[()]/g,' ').split(/,| – | - |;/)[0].replace(/\b(plus more|or more|divided|optional)\b.*$/i,'').replace(/\s+/g,' ').trim();
   if(!name) name = s;
@@ -166,7 +170,7 @@ export function guessSection(name){
 
 // ---- adding amounts together ("1 large + 2 large" → "3 large") ----
 const FV = {'⅙':1/6,'⅚':5/6,'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
-const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
+const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
 function num(s){
   s = s.trim(); let m;
   if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +m[1] + FV[m[2]];
@@ -185,26 +189,39 @@ function nice(n){
   return (w ? String(w) : '') + best[1] || '0';
 }
 const QDESC = /\s+((?:extra[- ])?large|medium|small|jumbo|whole)$/i;
+const QN = '(\\d+\\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])';
+const PART = new RegExp('^' + QN + '(?:\\s*(?:-|–|to)\\s*' + QN + ')?\\s*(\\([^)]*\\))?\\s*([A-Za-z.]*)\\s*(\\([^)]*\\))?$');
+// A weight or volume written in parentheses, like "(200g)" or "(240 ml)". Totals keep it when every part has one.
+function parenMetric(t){ const m = String(t || '').match(/^\(\s*(?:about |~)?(\d+(?:\.\d+)?)\s*(g|grams?|kg|ml|milliliters?|l|liters?)\s*\)$/i); if(!m) return null;
+  const u = m[2].toLowerCase(), n = +m[1]; return /^k/.test(u) ? {u:'g', v:n * 1000} : /^g/.test(u) ? {u:'g', v:n} : /^(ml|mil)/.test(u) ? {u:'ml', v:n} : {u:'ml', v:n * 1000}; }
 function parsePart(p){
   let desc = ''; p = String(p).trim().replace(QDESC, (x, d) => { desc = d.toLowerCase(); return ''; });
-  const m = p.match(/^(\d+\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])\s*(?:\([^)]*\))?\s*([A-Za-z.]*)\s*(?:\([^)]*\))?$/);
+  const m = p.match(PART);
   if(!m) return null;
   const n = num(m[1]); if(n == null) return null;
-  let unit = m[2] || '';
+  const n2 = m[2] != null ? num(m[2]) : null; if(m[2] != null && (n2 == null || n2 < n)) return null;
+  let unit = m[4] || '';
   for(const [re, u] of UNIT_NORM){ if(re.test(unit)){ unit = unit.replace(re, u); break; } }
-  return {n, unit, desc};
+  const pr = m[3] || m[5] || '', pm = parenMetric(pr);
+  return {n, n2, unit, desc, pm, size: !pm && pr ? pr.replace(/\s+/g, ' ').trim() : ''};
 }
 export function addQty(a, b, o = {}){
   if(!a) return b || ''; if(!b) return a;
   const parts = String(a).split(' + ').concat(String(b).split(' + '));
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
-    const g = x.unit ? x.unit + '|' + x.desc : '|', s = sums.get(g) || {n:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc}; s.n += x.n; s.c++; if(!s.desc) s.desc = x.desc; sums.set(g, s); });
+    // a size in parentheses ("1 (15 oz) can") is part of what you buy, so 15 oz and 28 oz cans are counted separately
+    const g = (x.unit ? x.unit + '|' + x.desc : '|') + (x.size ? '|' + x.size : ''), s = sums.get(g) || {n:0, hi:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc, size:x.size, pv:0, pu:null, pok:true};
+    s.n += x.n; s.hi += x.n2 != null ? x.n2 : x.n; if(x.n2 != null) s.ranged = true; s.c++; if(!s.desc) s.desc = x.desc;
+    if(x.pm && (!s.pu || s.pu === x.pm.u)){ s.pu = x.pm.u; s.pv += x.pm.v; } else s.pok = false; sums.set(g, s); });
   const plural = (u, n) => n > 1 && /^(cup|clove|can|stick)$/.test(u) ? u + 's' : u;
   // Spoons, sticks and cups are one family, and so are pounds and ounces. When amounts are added up they're
   // written the way you'd measure them: "4⅓ cups + 1 Tbsp + 1 tsp", never "4.42 cups". Butter goes in
   // sticks + Tbsp ("2 sticks + 2 Tbsp").
-  const FAM = {tsp:['v',1], Tbsp:['v',3], stick:['v',24], cup:['v',48], oz:['w',1], lb:['w',16]};
+  const FAM = {tsp:['v',1], Tbsp:['v',3], stick:['v',24], cup:['v',48], oz:['w',1], lb:['w',16], g:['m',1], kg:['m',1000], ml:['l',1], l:['l',1000]};
+  const trim = v => String(Math.round(v * 100) / 100);
+  const metric = (t, k) => k === 'm' ? (t >= 1000 ? trim(t / 1000) + ' kg' : (t >= 10 ? Math.round(t) : trim(t)) + 'g') : (t >= 1000 ? trim(t / 1000) + ' L' : (t >= 10 ? Math.round(t) : trim(t)) + ' ml');
+  const pmTail = arr => { const u = arr[0].pu; if(!u || arr.some(s => !s.pok || s.pu !== u)) return ''; const v = arr.reduce((n, s) => n + s.pv, 0); return ` (${v >= 10 ? Math.round(v) : trim(v)}${u === 'g' ? 'g' : ' ml'})`; };
   const isButter = /(^| )butter$/.test(o.key || '') && !/(peanut|almond|cashew|apple|sunflower|cocoa|seed|nut) butter$/.test(o.key || '');
   const spoons = t => { const tb = Math.floor(t / 3 + 1e-9), ts = t - tb * 3; return [tb ? tb + ' Tbsp' : '', ts > 1e-6 ? nice(ts) + ' tsp' : ''].filter(Boolean).join(' + ') || '0 tsp'; };
   const cups = t => {
@@ -219,14 +236,19 @@ export function addQty(a, b, o = {}){
   const pounds = (t, top) => { if(top < 16) return nice(t) + ' oz'; const l = Math.floor(t / 16 + 1e-9), r = t - l * 16;
     if([0, 4, 8, 12].some(x => Math.abs(r - x) < 1e-6)) return nice(t / 16) + ' lb'; return (l ? l + ' lb + ' : '') + nice(r) + ' oz'; };
   const groups = [...sums.values()], byFam = new Map(), merged = new Map();
-  groups.forEach(s => { const f = FAM[s.unit]; if(f){ const a = byFam.get(f[0]) || []; a.push(s); byFam.set(f[0], a); } });
+  groups.forEach(s => { const f = FAM[s.unit]; if(f && !s.ranged && !s.size){ const a = byFam.get(f[0]) || []; a.push(s); byFam.set(f[0], a); } });
+  // US and metric amounts of the same kind (1 cup + 250 ml, 8 oz + 100g) are added up exactly in metric, with the US amount after it
+  [['v', 'l', 4.92892, 'ml'], ['w', 'm', 28.3495, 'g']].forEach(([us, me, f, mu]) => { const A = byFam.get(us), B = byFam.get(me); if(!A || !B) return;
+    const tu = A.reduce((n, s) => n + s.n * FAM[s.unit][1], 0), tm = B.reduce((n, s) => n + s.n * FAM[s.unit][1], 0), all = tm + tu * f, back = all / f;
+    const usStr = us === 'w' ? pounds(Math.round(back * 8) / 8, back) : cups(Math.round(back * 4) / 4);
+    merged.set(A[0], `${metric(all, me)} (about ${usStr})`); A.slice(1).concat(B).forEach(s => merged.set(s, null)); byFam.delete(us); byFam.delete(me); });
   byFam.forEach(arr => {
     if(arr.reduce((n, s) => n + s.c, 0) < 2) return;
     const kind = FAM[arr[0].unit][0], used = arr.map(s => s.unit), dd = (arr.find(s => s.desc) || {}).desc, d = dd ? ' ' + dd : '';
     const t = arr.reduce((n, s) => n + s.n * FAM[s.unit][1], 0), top = Math.max(...used.map(u => FAM[u][1]));
-    const str = kind === 'w' ? pounds(t, top) : used.includes('stick') || (isButter && t >= 24) ? sticks(t) : top >= 48 ? cups(t) : spoons(t);
-    merged.set(arr[0], str.replace(/^([^+]*?)( \+ |$)/, (m, a, b) => a + d + b)); arr.slice(1).forEach(s => merged.set(s, null));
+    const str = kind === 'm' || kind === 'l' ? metric(t, kind) : kind === 'w' ? pounds(t, top) : used.includes('stick') || (isButter && t >= 24) ? sticks(t) : top >= 48 ? cups(t) : spoons(t);
+    merged.set(arr[0], (str + (kind === 'm' || kind === 'l' ? '' : pmTail(arr))).replace(/^([^+]*?)( \+ |$)/, (m, a, b) => a + d + b)); arr.slice(1).forEach(s => merged.set(s, null));
   });
-  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 ? s.orig : nice(s.n) + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '')).filter(x => x !== null);
+  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 ? s.orig : s.ranged ? nice(s.n) + '–' + nice(s.hi) + (s.unit ? ' ' + plural(s.unit, s.hi) : '') + (s.desc ? ' ' + s.desc : '') : nice(s.n) + (s.size ? ' ' + s.size : '') + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '') + pmTail([s])).filter(x => x !== null);
   return out.concat(text).join(' + ');
 }

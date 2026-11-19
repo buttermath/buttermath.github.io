@@ -2,7 +2,7 @@
 // Each line is written the way real recipe sites, cookbooks and family cards write it.
 // The expected name and amount were written by hand, not copied from the program's output.
 // A change ships only if every line still reads exactly as expected.
-import { splitIngredient } from '../parse.js';
+import { splitIngredient, ingParts } from '../parse.js';
 
 export const LINES = [
   ['2 c flour', 'Flour', '2 c'],
@@ -242,6 +242,7 @@ export const LINES = [
   ['1–2 cans chickpeas', 'Chickpeas', '1–2 cans'],
   ['1 medium-small sweet potato (about 8 ounces), peeled, cut into 1-inch pieces', 'Sweet potato', '1 medium-small'],
   ['2 small-medium onions', 'Onions', '2 small-medium'],
+  ['1 whole head of garlic', 'Garlic', '1 whole head'],
   // ---- no amount
   ['Salt and pepper, to taste', 'Salt and pepper', ''],
   ['Fresh parsley, for garnish', 'Fresh parsley', ''],
@@ -249,6 +250,19 @@ export const LINES = [
   ['Powdered sugar for dusting', 'Powdered sugar for dusting', ''],
 ];
 
+// One line that names two things to buy becomes two shopping-list items; an amount with a "+" stays one item.
+export const SPLITS = [
+  ['2 heirloom tomatoes + 4 roma tomatoes roughly chopped', ['Heirloom tomatoes | 2', 'Roma tomatoes roughly chopped | 4']],
+  ['1 tsp salt + 1/2 tsp pepper', ['Salt | 1 tsp', 'Pepper | ½ tsp']],
+  ['1 cup + 2 Tbsp flour', ['Flour | 1 cup + 2 Tbsp']],
+  ['1 cup plus 2 tablespoons flour', ['Flour | 1 cup + 2 tablespoons']],
+  ['2 large + 1 small onions', ['Onions | 2 large + 1 small']],
+  ['1 (14 oz) can + 1 (28 oz) can tomatoes', ['Tomatoes | 1 (14 oz) can + 1 (28 oz) can']],
+  ['3 eggs (+ 1 yolk)', ['Eggs | 3']],
+  ['Salt + pepper', ['Salt + pepper | ']],
+];
+
 export function run(check){
   for(const [s, name, qty] of LINES){ const p = splitIngredient(s); check(`line: ${s.slice(0, 46)}`, `${p.name} | ${p.qty}`, `${name} | ${qty}`); }
+  for(const [s, want] of SPLITS){ check(`split: ${s.slice(0, 45)}`, ingParts(s).map(x => { const p = splitIngredient(x); return `${p.name} | ${p.qty}`; }).join(' · '), want.join(' · ')); }
 }

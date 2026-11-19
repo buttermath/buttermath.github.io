@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame } from './parse.js?v=18';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=19';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -297,6 +297,11 @@ const D = r => (r && r.data) || {};
 const P = () => kitchen.progress;
 const isArch = id => !!(P().archived || {})[id];
 const isActive = id => P().active[id] !== false && !isArch(id);
+// Recipe size (½×, 2×, a new serving size). scaleDef is the size a recipe opens at ("Save as default"); scale is "just this time"
+// and goes back to the default when the recipe is finished. Both are kept with the kitchen, never in the recipe, so the recipe's own amounts never change.
+const scaleDef = id => +((P().scaleDef || {})[id]) || 1;
+const scaleOf = id => { const s = (P().scale || {})[id]; return s ? +s : scaleDef(id); };
+const near1 = (a, b) => Math.abs(a - b) < 1e-9;
 // Steps show the amount from the ingredient list ("add butter" -> "add 3 Tbsp butter"). Display only: the recipe text is never changed.
 // To stay accurate it only fills in an amount when the match is clear: the ingredient is listed once, it's named in exactly one step,
 // once, right after a plain word like "add", "the", or "with", and not inside another ingredient's name ("sugar" in "brown sugar").
@@ -315,13 +320,13 @@ function stepAmounts(d){
     found.push(...kept); });
   ings.forEach(ing => { const hs = found.filter(h => h.ing === ing); if(hs.length !== 1) return; const h = hs[0];
     const before = h.t.slice(0, h.s); if(!AMT_BEFORE.test(before) || /[\d½¼¾⅓⅔⅛⅜⅝⅞]\s*\S*\s*$/.test(before)) return;
-    if(!out.has(h.sk)) out.set(h.sk, []); out.get(h.sk).push({s: h.s, q: ing.q}); });
+    if(!out.has(h.sk)) out.set(h.sk, []); out.get(h.sk).push({s: h.s, q: ing.q, k: ing.key}); });
   amtCache.set(d, out); return out;
 }
-function fmtStep(d, sk, text){
+function fmtStep(d, sk, text, f = 1){
   const ins = (stepAmounts(d).get(sk) || []).slice().sort((a, b) => a.s - b.s); if(!ins.length) return fmt(text);
   let html = '', at = 0; const t = String(text || '');
-  ins.forEach(x => { html += fmt(t.slice(at, x.s)) + `<b class="amt">${fmt(x.q)}</b> `; at = x.s; });
+  ins.forEach(x => { const q = near1(f, 1) ? x.q : scaleQty(x.q, f, {key: x.k}); if(q == null) return; html += fmt(t.slice(at, x.s)) + `<b class="amt">${fmt(q)}</b> `; at = x.s; });
   return html + fmt(t.slice(at));
 }
 function stepList(d){ const out = []; (d.steps || []).forEach((sec, si) => (sec.items || []).forEach((st, k) => out.push({key: si + '-' + k, st}))); return out; }
@@ -357,7 +362,7 @@ function addIngredientsTo(k, recipeId, groups){
     } else {
       const id = 'i-' + recipeId.slice(0, 8) + '-' + key.replace(/[^a-z0-9]+/g, '-').slice(0, 30);
       items.push({id, name, qty, key, section: guessSection(name, qty), recipes:[recipeId]});
-      touched.add(id);
+      fixItem(items[items.length - 1]); touched.add(id);
     }
   }));
 }
@@ -374,7 +379,7 @@ function syncMade(k, id){
   const r = R(id); if(!r) return; const all = stepList(D(r)); const o = k.progress.cook[id] = k.progress.cook[id] || {};
   const full = all.length > 0 && all.every(x => (o.s || {})[x.key]);
   const m = k.progress.made = k.progress.made || {};
-  if(full && !o.counted){ o.counted = true; const c = m[id] || {n:0}; m[id] = {n: (c.n || 0) + 1, last: new Date().toISOString().slice(0, 10)}; }
+  if(full && !o.counted){ o.counted = true; if(k.progress.scale) delete k.progress.scale[id]; const c = m[id] || {n:0}; m[id] = {n: (c.n || 0) + 1, last: new Date().toISOString().slice(0, 10)}; }
   else if(!full && o.counted){ o.counted = false; const c = m[id] || {n:0}; m[id] = Object.assign({}, c, {n: Math.max(0, (c.n || 0) - 1)}); }
 }
 const ingLines = d => (d.ingredients || []).flatMap(g => g.items || []).flatMap(ingParts).filter(l => splitIngredient(l).key);
@@ -389,7 +394,7 @@ function qtyFromRecipes(it){
   const live = rs.filter(onListRid); if(live.length) rs = live;
   const key = it.key || splitIngredient(it.name).key, ks = ikeys(it); let q = '';
   rs.forEach(x => eachPart(D(R(x)), (l, gi, li, pi) => { const p = splitIngredient(l); if(!p.key || !ks.includes(p.key)) return;
-    const o = (it.pq || {})[pqKey(x, gi, li, pi)], v = o && o.base === l ? o.q : p.qty; if(v) q = addQty(q, v, {key}); }));
+    const o = (it.pq || {})[pqKey(x, gi, li, pi)], sq = p.qty ? scaleQty(p.qty, scaleOf(x), {key: p.key}) : '', v = o && o.base === l ? o.q : sq == null ? p.qty : sq; if(v) q = addQty(q, v, {key}); }));
   return q;
 }
 // A list-only change to one recipe's amount ("Just this list"). It's kept with the recipe line it replaced, and dropped if that line changes.
@@ -1023,6 +1028,8 @@ function checkAmt(oldQ, newQ){
     if(k >= 8 || k <= 1 / 8){ return {msg: k >= 8 ? `That's ${Math.round(k)} times more than before (${String(oldQ).trim()}). Check that it's right.` : `That's ${Math.round(1 / k)} times less than before (${String(oldQ).trim()}). Check that it's right.`}; } }
   return null;
 }
+// A recipe shown at another size: an amount changed on the list can't go back into the recipe as-is, so it's a list-only change.
+const itemScaled = it => (it.recipes || []).some(x => R(x) && !near1(scaleOf(x), 1));
 function itemRecipeLine(it){
   const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || rs.length !== 1) return null;
   const r = R(rs[0]), key = it.key || splitIngredient(it.name).key;
@@ -1062,7 +1069,7 @@ function renderEditItem(){
   if(editItem.step === 'ask'){ const r = R(editItem.rid);
     return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
-  const parts = itemRecipeParts(it);
+  const parts = itemScaled(it) ? null : itemRecipeParts(it);
   if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(editItem.draft ? editItem.draft.qs[i] : partQ(it, x))}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button><a class="mreport" href="${reportHref(it)}">Report a wrong amount</a></form></div>`;
   const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
   return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(editItem.draft ? editItem.draft.qty : it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button><a class="mreport" href="${reportHref(it)}">Report a wrong amount</a></form></div>`;
@@ -1078,7 +1085,7 @@ function itemEditGo(it, name, qty, ps){
     if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
     editItem = {id: it.id, name, parts: ps}; saveItemParts(false); return; }
   if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
-  const hit = itemRecipeLine(it);
+  const hit = itemScaled(it) ? null : itemRecipeLine(it);
   if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }
   saveItemList(it.id, name, qty);
 }
@@ -1318,21 +1325,31 @@ function renderRecipes(){
   }).join('') + `</div><div class="card empty" id="rnone" ${filtered && !shown.length ? '' : 'hidden'}>${sortK === 'progress' && !shown.length && !catOn && !recFav ? 'Nothing in progress right now. Open a recipe and check off a step to start.' : recTags.length > 1 ? `No recipes have ${recTags.length === 2 ? 'both' : 'all'} of these tags. Remove one to see more.` : 'No recipes match.'}</div>` + archBox;
 }
 
+const ICON_MINUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>';
+// Recipe size: ½× to 3×, and − / + for one serving at a time when the recipe says how many it serves.
+function scaleRow(r, d, f){
+  const def = scaleDef(r.id), opts = [[.5, '½×'], [1, '1×'], [1.5, '1½×'], [2, '2×'], [3, '3×']], id = esc(r.id);
+  const N = /serv|people|person|portion/i.test(d.yield || '') ? yieldCount(d.yield) : 0, now = Math.round(N * f);
+  return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div>` +
+    (N ? `<div class="servstep"><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now - 1) / N}" aria-label="Fewer servings" ${now <= 1 ? 'disabled' : ''}>${ICON_MINUS}</button><span>${esc(scaleYield(d.yield, f))}</span><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now + 1) / N}" aria-label="More servings" ${now >= N * 10 ? 'disabled' : ''}>${ICON_PLUS}</button></div>` : '') +
+    (!near1(f, def) ? `<button class="linkbtn scaledef" data-act="scaledef" data-id="${id}">Save as default</button>` : !near1(def, 1) ? `<span class="scalenote">Your default size</span>` : '') + `</div>`;
+}
 function renderRecipe(id){
   const r = R(id);
   if(!r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
-  const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
-  const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${fmt(t)}</span></button>`;
+  const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0, f = scaleOf(r.id);
+  const ingTx = t => { if(near1(f, 1)) return fmt(t); const sl = scaleLine(t, f); return sl == null ? fmt(t) + '<small class="noscale">Not scaled</small>' : fmt(sl); };
+  const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${ingTx(t)}</span></button>`;
     if(choosing !== r.id) return row + ingWarn(r.id, key, t);
-    if(!splitIngredient(t).key) return `<div class="ing pick ro"><i class="pk none"></i><span>${fmt(t)}</span></div>`;
+    if(!splitIngredient(t).key) return `<div class="ing pick ro"><i class="pk none"></i><span>${ingTx(t)}</span></div>`;
     const inl = ingListed(r.id, t);
-    return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${fmt(t)}</span></button>`; }).join('')).join('');
+    return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${ingTx(t)}</span></button>`; }).join('')).join('');
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
   if(!p.done && !stepHinted.has(r.id) && !stepHintT[r.id]) stepHintT[r.id] = setTimeout(() => stepHinted.add(r.id), 7000);
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey && choosing !== r.id;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
-    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
+    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
@@ -1342,13 +1359,13 @@ function renderRecipe(id){
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe" aria-label="Edit recipe">${ICON_PEN}</button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu">${isArch(r.id) || !MEAL_ON ? '' : `<button role="menuitem" class="privrow mealrow" data-act="mealfrom" data-id="${esc(r.id)}">${ICON_MEAL.replace('class="bi"', '')}<span class="pl"><b>Cook with other recipes…</b><small>Start a Meal with this recipe</small></span></button>`}<button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Remove recipe</button></div>` : ''}</div></div>
     ${srcCredit(srcs)}${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
-    <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
+    <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(scaleYield(d.yield, f))}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
     <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">${ICON_X}</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
     ${p.total && p.done === p.total && (P().photoAsked || {})[r.id] !== madeOf(r.id).n ? `<div class="madeitw"><label class="madeit"${d.photo ? ` data-act="madeitswap" data-id="${esc(r.id)}"` : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></svg>Add a photo of your finished recipe!<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}" data-asked="1"></label><button class="madeitx" data-act="madeitx" data-id="${esc(r.id)}" aria-label="Close" title="Close">${ICON_X}</button></div>` : ''}
     <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18"/><path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25"/><circle cx="18" cy="20" r="2"/><circle cx="8" cy="20" r="2"/></svg>Shop for ingredients</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" aria-label="Keep screen on" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="${wakeLock ? 'currentColor' : 'none'}"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg><span class="wl">Screen on</span></button><button class="btn wake sendbtn" data-act="sendopen" data-id="${esc(r.id)}" aria-label="Send to a friend" title="Send to a friend">${ICON_SEND}</button></div>
   </div></div>
   <div class="layout">
-    <div class="card panel ing-col${choosing === r.id ? ' choosing' : ''}"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${ings || '<div class="muted">No ingredients yet.</div>'}</div>
+    <div class="card panel ing-col${choosing === r.id ? ' choosing' : ''}"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${(d.ingredients || []).length ? scaleRow(r, d, f) : ''}${ings || '<div class="muted">No ingredients yet.</div>'}</div>
     <div><h3 style="font-size:20px;margin:0 4px 10px">Steps</h3>${p.total ? `<div class="stepprog"><div class="prog-line"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div><div class="bar"><i style="width:${pct}%"></i></div></div>` : ''}${steps || '<div class="card empty">No steps yet.</div>'}
     ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
 </div>
@@ -2517,6 +2534,12 @@ document.addEventListener('click', async e => {
   if(a === 'ingadd'){ const r = R(id); if(!r) return; const [gi, ki] = el.dataset.k.split('-').map(Number); const line = ((D(r).ingredients || [])[gi] || {}).items[ki]; if(!line) return;
     if(ingListed(id, line)){ chosenN = Math.max(0, chosenN - 1); const keys = new Set(ingParts(line).map(x => splitIngredient(x).key)); mutate(k => unlinkRecipe(k, id, keys)); return; }
     chosenN++; mutate(k => addFresh(k, id, [line])); return; }
+  if(a === 'scale'){ const f = +el.dataset.f, r = R(id); if(!r || !(f > 0) || near1(f, scaleOf(id))) return;
+    mutate(k => { const s = k.progress.scale = k.progress.scale || {}; if(near1(f, +((k.progress.scaleDef || {})[id]) || 1)) delete s[id]; else s[id] = f; k.shopping.items.forEach(i => { if((i.recipes || []).includes(id)) fixItem(i); }); });
+    if(onList(id)) toast('Shopping list updated to match'); return; }
+  if(a === 'scaledef'){ const f = scaleOf(id); if(!R(id)) return;
+    mutate(k => { const d = k.progress.scaleDef = k.progress.scaleDef || {}; if(near1(f, 1)) delete d[id]; else d[id] = f; if(k.progress.scale) delete k.progress.scale[id]; });
+    toast(near1(f, 1) ? 'This recipe now opens at its original size' : 'This recipe now opens at this size'); return; }
   if(a === 'markall'){ const r = R(id); if(!r) return; const prev = JSON.parse(JSON.stringify(cookOf(id).s)); const keys = stepList(D(r)).map(x => x.key);
     mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; o.s = o.s || {}; o.before = Object.assign({}, prev); keys.forEach(x => { o.s[x] = true; }); syncMade(k, id); });
     toast('Marked complete'); return; }
@@ -2648,7 +2671,7 @@ document.addEventListener('submit', async e => {
   if(kind === 'itemedit'){
     const it = editItem && allItems().find(i => i.id === editItem.id); if(!it) return;
     const name = $('#ed-name').value.trim().replace(/\s+/g, ' '); let qty = (($('#ed-qty') || {}).value || '').trim().replace(/\s+/g, ' '); if(!name) return;
-    const parts = itemRecipeParts(it), warns = [];
+    const parts = itemScaled(it) ? null : itemRecipeParts(it), warns = [];
     if(parts){ const typed = parts.map((x, i) => (($('#ed-q' + i) || {}).value || '').trim().replace(/\s+/g, ' '));
       const ps = parts.map((x, i) => { const oq = partQ(it, x); return Object.assign({}, x, {oq, nq: scaleParen(oq, typed[i])}); });
       ps.forEach((x, i) => { const w = checkAmt(x.oq, x.nq); if(w) warns.push(Object.assign({i, label: partLabel(x)}, w)); });

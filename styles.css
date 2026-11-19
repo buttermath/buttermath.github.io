@@ -1307,3 +1307,7 @@ button.tag.tago::after{inset:0 -4px -8px}
 .ing-col .ingrow .ing{border-bottom:0}
 /* an aisle's count ("1 to get", "all set ✓") stays on one line; a long aisle name wraps instead */
 .section h3 small{white-space:nowrap;flex:none}
+/* "Same thing?" ask on the shopping list: a butter notice with two small buttons */
+.mergeask{background:var(--butter);color:var(--note);border-radius:12px;padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;font:500 14px/1.45 Inter,sans-serif}
+.mergeask p{margin:0;flex:1 1 220px}.mergeask b{color:var(--ink)}
+.mergebtns{display:flex;gap:8px;flex:none}

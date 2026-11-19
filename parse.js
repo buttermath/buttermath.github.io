@@ -4,7 +4,8 @@ const FRAC = '½¼¾⅓⅔⅛⅜⅝⅞';
 const ASCII_FR = {'1/2':'½','1/4':'¼','3/4':'¾','1/3':'⅓','2/3':'⅔','1/8':'⅛','3/8':'⅜','5/8':'⅝','7/8':'⅞'};
 export function prettyFractions(s){
   return String(s||'').replace(/(^|[^\d\/])(\d)\/(\d)(?![\d\/])/g,(m,p,a,b)=>ASCII_FR[a+'/'+b]?p+ASCII_FR[a+'/'+b]:m)
-    .replace(/(\d) ([½¼¾⅓⅔⅛⅜⅝⅞])/g,'$1$2');
+    .replace(/(\d) ([½¼¾⅓⅔⅛⅜⅝⅞])/g,'$1$2')
+    .replace(/\(\(([^()]*)\)\)/g,'($1)'); // some recipe sites wrap notes in two sets of parentheses
 }
 
 const JUNK = /^(print( recipe)?|pin( recipe)?|save( recipe)?|rate( this)?( recipe)?|jump to (recipe|video)|share|email|yum|cook mode|prevent (your )?screen from going dark|us customary|metric|\d(\.\d)?x|\d+x \d+x( \d+x)?|★+☆*|☆+|watch( the)?( video)?|video|equipment|ingredients? ?(list)?$ |course|cuisine|keyword|author|calories|servings? ?:?$|click on the times.*|did you make this.*|leave a (comment|review).*|tap or hover.*|\d+ (reviews?|comments?|ratings?)|.*\bstars? from \d+.*|\(?\d+(\.\d+)? from \d+ (votes|reviews)\)?)$/i;
@@ -358,6 +359,7 @@ export function scaleLine(line, f){
     let pq = p.qty, extra = '';
     if(!/\)\s*(?:cans?|jars?|packages?|pkgs?|bags?|tins?|packets?|blocks?|bricks?|box(?:es)?|bottles?|containers?|cartons?|tubs?)\b/i.test(pq)) pq = pq.replace(/\s*\(([^()]*)\)/g, (m, c) => { if(/(?:^|[;,]\s*)(?:about |~)?[\d.]+\s*(?:g|grams?|kg|ml|l)$/i.test(c.trim())) return m; extra += ' (' + c + ')'; return ''; });
     let q = scaleQty(pq, f, {key: p.key}), rest = String(p.rest || '').trimStart(); if(q == null) return null;
+    q = q.replace(/\b((?:extra[- ])?large|medium|small|jumbo|whole)\b/gi, w => (pq.match(new RegExp('\\b' + w + '\\b', 'i')) || [w])[0]); // keep "Whole Milk" capitalized as written
     // after a plain count, a size in parentheses is the size of each one ("1 (3–4 lb) whole chicken"), so it stays as is
     if(extra && /^[\d½¼¾⅓⅔⅛⅜⅝⅞.\/\s–-]+(?:(?:extra[- ])?(?:large|medium|small|jumbo|whole))?$/i.test(pq.trim())){ q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+)/, '$1' + extra.replace(/-/g, '–')); extra = ''; }
     else if(extra){ const x = scaleRest(extra.trim(), f); if(x == null) return null; extra = ' ' + x; }
@@ -367,7 +369,7 @@ export function scaleLine(line, f){
     // the same for a counted unit: "4 slices" at ¼× is "1 slice", "1 bunch" at 2× is "2 bunches"
     else q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+ (?:[a-z]+ )?)([a-z]+)(?=$| \+)/i, (m, a, u) => CUNIT.test(u) ? a + plWord(u, leadNum(q) > 1) : m);
     // "1 cup whole + 2 Tbsp" reads better in a recipe as "1 cup + 2 Tbsp whole milk"
-    const dm = q.match(/^(.*?) ((?:extra[- ])?large|medium|small|jumbo|whole)( \+ .*)$/i); if(dm){ q = dm[1] + dm[3]; rest = dm[2] + ' ' + rest; }
+    const dm = q.match(/^(.*?) ((?:extra[- ])?large|medium|small|jumbo|whole)( \+ .*)$/i); if(dm){ q = dm[1] + dm[3]; const w = (part.match(new RegExp('\\b' + dm[2] + '\\b', 'i')) || [dm[2]])[0]; rest = w + ' ' + rest; }
     rest = scaleRest(rest, f); if(rest == null) return null;
     // less than ⅛ tsp: "a pinch of cayenne", never "0 tsp"
     if(/^a pinch$/.test(q)) rest = 'of ' + rest.replace(/^of\s+/i, '');
@@ -379,6 +381,8 @@ export function scaleLine(line, f){
 const RU = '(?:cups?|tablespoons?|tbsps?|Tbsp|teaspoons?|tsps?|tsp|ounces?|oz|pounds?|lbs?|lb|grams?|g|kg|ml|l|liters?|cloves?|cans?|packets?|packages?|sticks?|pinch(?:es)?|slices?|sprigs?|bunch(?:es)?|heads?|tins?|jars?|bags?)';
 const RNUM = t => { t = String(t).trim(); let m; if((m = t.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞])$/))) return +m[1] + FV[m[2]]; if((m = t.match(/^([½¼¾⅓⅔⅛⅜⅝⅞])$/))) return FV[m[1]];
   if((m = t.match(/^(\d+)\s+(\d+)\/(\d+)$/))) return +m[1] + m[2] / m[3]; if((m = t.match(/^(\d+)\/(\d+)$/))) return m[1] / m[2]; return /^\d+(\.\d+)?$/.test(t) ? +t : null; };
+// a temperature, a percent or a time is never part of the amount: "about 55 degrees" stays 55 at any size
+const NOSCALEW = /^(?:degrees?|percent|inch(?:es)?|cm|minutes?|mins?|hours?|hrs?|seconds?|secs?)$/i;
 function scaleRest(rest, f){
   let t = String(rest || ''), bad = false;
   const N = '(\\d+(?:\\.\\d+)?\\s*[½¼¾⅓⅔⅛⅜⅝⅞]?|[½¼¾⅓⅔⅛⅜⅝⅞]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+)';
@@ -388,11 +392,11 @@ function scaleRest(rest, f){
   t = t.replace(new RegExp('(^|[\\s(])' + N + '(?:\\s*[-–]\\s*' + N + ')?\\s*' + ADJ + '(' + RU + ')(?![A-Za-z-])', 'gi'), (m, pre, n, n2, adj, u) => { const v = num(n), v2 = n2 ? num(n2) : null; if(v == null || (n2 && v2 == null)) return m;
     return pre + nice(v) + (n2 ? '–' + nice(v2) : '') + ' ' + (adj || '') + (CUNIT.test(u) ? plWord(u, (v2 || v) > 1) : u); });
   // "juice of 1 lemon", "plus 1 yolk", "about 2 medium"
-  t = t.replace(new RegExp('\\b(of|from|plus|and|about)\\s+' + N + '\\s+((?:large|medium|small)\\b|[A-Za-z]+)', 'gi'), (m, w, n, word) => { if(new RegExp('^' + RU + '$', 'i').test(word)) return m; const v = num(n); if(v == null) return m; return w + ' ' + nice(v) + ' ' + (/^(large|medium|small)$/i.test(word) ? word : plWord(word, v > 1)); });
+  t = t.replace(new RegExp('\\b(of|from|plus|and|about)\\s+' + N + '\\s+((?:large|medium|small)\\b|[A-Za-z]+)', 'gi'), (m, w, n, word) => { if(new RegExp('^' + RU + '$', 'i').test(word) || NOSCALEW.test(word)) return m; const v = num(n); if(v == null) return m; return w + ' ' + nice(v) + ' ' + (/^(large|medium|small)$/i.test(word) ? word : plWord(word, v > 1)); });
   if(bad) return null;
   // anything left that's a number but not a size or a temperature: the line can't be scaled safely
   const left = t.replace(new RegExp('(^|[\\s(])' + N + '(?:\\s*[-–]\\s*' + N + ')?\\s*' + ADJ + '(' + RU + ')(?![A-Za-z-])', 'gi'), ' ').replace(/\b(of|from|plus|and|about)\s+[\d.½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+\s+[A-Za-z]+/gi, ' ')
-    .replace(/[\d.½¼¾⅓⅔⅛⅜⅝⅞]+\s*(?:x|×)\s*[\d.]+\s*-?\s*(?:inch|in\.?|cm)\b/gi, ' ').replace(/[\d.\/½¼¾⅓⅔⅛⅜⅝⅞]+\s*-\s*[A-Za-z]+/g, ' ').replace(/[\d.]+\s*(?:°|degrees|%|inch(?:es)?\b|in\.|cm\b|")/gi, ' ');
+    .replace(/[\d.½¼¾⅓⅔⅛⅜⅝⅞]+\s*(?:x|×)\s*[\d.]+\s*-?\s*(?:inch|in\.?|cm)\b/gi, ' ').replace(/[\d.\/½¼¾⅓⅔⅛⅜⅝⅞]+\s*-\s*[A-Za-z]+/g, ' ').replace(/[\d.]+\s*(?:-|–|to|or|and)\s*(?=[\d.]+\s*(?:°|degrees|%))/gi, ' ').replace(/[\d.]+\s*(?:°|degrees|%|inch(?:es)?\b|in\.|cm\b|")/gi, ' ');
   if(/[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(left) || /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|half|quarter)\b/i.test(left.replace(/\b[a-z]+(?:-[a-z]+)+\b/gi, ' '))) return null;
   return t;
 }

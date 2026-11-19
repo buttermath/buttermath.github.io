@@ -908,3 +908,7 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .tourdone{flex:none}
 .pickrow.picknew{background:#FFF4F5}.pickrow.picknew b{color:#B81E33}.pplus{width:28px;height:28px;flex:none;border-radius:8px;border:1.5px dashed #D7263D;color:#D7263D;display:grid;place-items:center;font-weight:700;font-size:18px;line-height:1}
 .actrow{gap:8px}@media(max-width:599px){.actrow .grow{padding:11px 18px}}
+/* Copy buttons: a press you can feel, and a clear "Copied!" */
+.btn.bigbtn:active,.btn.outline:active{transform:scale(.98)}
+.btn.copied,.btn.copied:hover{background:var(--green);border-color:var(--green);color:#fff}.btn.copied .bi{stroke:#fff}
+.sendlist{max-height:min(40vh,320px);overflow-y:auto;overscroll-behavior:contain;margin-right:-4px;padding-right:4px}

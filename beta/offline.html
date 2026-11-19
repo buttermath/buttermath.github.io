@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>You're offline · Butter Math</title>
+<meta name="theme-color" content="#D7263D">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/beta/icons/icon-192.png" type="image/png">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:#141414 repeating-conic-gradient(#141414 0 25%,#fff 0 50%) 0 0/36px 36px;font:400 16px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#141414;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.card{background:#FBFAF7;border:3px solid #141414;border-radius:20px;box-shadow:0 7px 0 #141414;max-width:420px;width:100%;padding:28px 24px 26px;text-align:center}
+.logo{font:400 28px Pacifico,"Brush Script MT",cursive;margin:0 0 6px}.logo span{color:#D7263D}
+.pot{width:170px;height:auto;display:block;margin:4px auto 10px;overflow:visible}
+h1{font:400 24px/1.2 "Archivo Black",Impact,"Arial Black",sans-serif;margin:6px 0 8px}
+p{margin:0 0 18px;color:#5E5A57}
+button{font:500 16px Inter,system-ui,sans-serif;background:#D7263D;color:#fff;border:2px solid #141414;border-radius:999px;padding:12px 26px;box-shadow:0 4px 0 #141414;cursor:pointer}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 #141414}
+.small{margin:16px 0 0;font-size:13px}
+.pat{animation:drop 2.4s ease-in infinite;opacity:0}
+.p2{animation-delay:1.2s}
+@keyframes drop{0%{transform:translateY(0);opacity:0}10%{opacity:1}55%{transform:translateY(78px);opacity:1}65%,100%{transform:translateY(82px);opacity:0}}
+.pot .spoon{transform-origin:80px 66px;animation:stir 2.2s ease-in-out infinite}
+@keyframes stir{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@media(prefers-reduced-motion:reduce){.pat,.pot .spoon{animation:none}.pat{opacity:0}}
+</style>
+</head>
+<body>
+<main class="card">
+<div class="logo">Butter <span>Math</span></div>
+<svg class="pot" role="img" aria-label="A red mixing bowl" viewBox="0 -40 160 180">
+  <g class="spoon"><path d="M80 66 L112 8" stroke="#141414" stroke-width="9" stroke-linecap="round"/><path d="M80 66 L112 8" stroke="#C98B4E" stroke-width="5" stroke-linecap="round"/><ellipse cx="78" cy="72" rx="7" ry="11" fill="#C98B4E" stroke="#141414" stroke-width="3" transform="rotate(29 78 72)"/></g>
+  <path class="batter" d="M22 60 C34 44 52 40 66 46 C78 51 86 41 100 42 C116 43 128 50 138 60 Z" fill="#F4C9A6" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M18 62h124c0 34-27 58-62 58S18 96 18 62z" fill="#D7263D" stroke="#141414" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="12" y="56" width="136" height="12" rx="6" fill="#fff" stroke="#141414" stroke-width="4"/>
+  <rect x="58" y="118" width="44" height="10" rx="5" fill="#D7263D" stroke="#141414" stroke-width="4"/>
+  <path d="M34 78c2 10 8 19 16 25" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+<g class="pat p1"><rect x="46" y="-34" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="48" y="-32" width="22" height="5" rx="2" fill="#FFF1B8"/></g><g class="pat p2"><rect x="86" y="-34" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="88" y="-32" width="22" height="5" rx="2" fill="#FFF1B8"/></g></svg>
+<h1>You're offline</h1>
+<p>The butter's waiting, but we need a signal to bring in your recipes, lists, and friends. Check your Wi-Fi or data, then try again.</p>
+<button type="button" onclick="location.reload()">Try again</button>
+<p class="small">Everything you've saved is safe. It'll all be here when you're back online.</p>
+</main>
+</body>
+</html>

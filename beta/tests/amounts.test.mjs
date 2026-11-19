@@ -122,6 +122,10 @@ for(const [line, f, want] of [['1 heaping cup flour', 2, '2 heaping cups flour']
 check('heaping cup is read as a cup', JSON.stringify(splitIngredient('1 heaping cup flour')), '{"qty":"1 cup","name":"Flour","key":"flour"}');
 check('serves 4 at 2×', scaleYield('Serves 4', 2), 'Serves 8');
 check('4–6 servings at ½×', scaleYield('4–6 servings', .5), '2–3 servings');
+// A bigger batch is more pans of the same size, not one giant one (Nov 19)
+for(const [y, f, want] of [['one 9-inch pie', 3, '3 pies (9-inch)'], ['1 loaf', 2, '2 loaves'], ['Makes 24 cookies', .5, 'Makes 12 cookies'], ['4 servings', .25, '1 serving'],
+  ['2 (9-inch) cakes', .5, '1 (9-inch) cake'], ['one 9x13-inch pan', 2, '2 pans (9x13-inch)'], ['About 2 dozen', 1.5, 'About 3 dozen']])
+  check(`yield ${f}×: ${y}`, scaleYield(y, f), want);
 // Every scaled spoon/cup amount, read back by a separate counter, is exactly the original times the size
 { const F = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875,'⅙':1/6,'⅚':5/6}, U = {tsp:1, Tbsp:3, cup:48, cups:48};
   const n = t => { const m = t.match(/^(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)$/); return (m[1] ? +m[1] : 0) + (m[2] ? F[m[2]] : 0); };

@@ -1214,3 +1214,8 @@ html,body{overscroll-behavior-x:none}
 
 /* Toast above the selection bar (Nov 18): while "Tap ingredients to add them" is showing, messages pop up just above it instead of on top of it */
 body:has(.selbar) #toast{bottom:calc(88px + env(safe-area-inset-bottom))}
+
+/* At home pill (Nov 19): after Done, the pill at the top gets a red outline that fades away, so you can see where At home items went */
+.cl-home.flash{animation:homeflash 2.4s ease-out}
+@keyframes homeflash{0%,60%{box-shadow:0 0 0 3px var(--red)}100%{box-shadow:0 0 0 3px rgba(215,38,61,0)}}
+@media(prefers-reduced-motion:reduce){.cl-home.flash{animation:none;box-shadow:0 0 0 3px var(--red)}}

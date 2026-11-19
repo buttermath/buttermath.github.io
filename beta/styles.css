@@ -1229,3 +1229,14 @@ body:has(.asksheet) #toast.show{transform:translate(-50%,0)}
 .item .edit .xi,.item .del .xi{width:21px;height:21px}
 .item .edit::after{content:none}
 .item .edit+.del{margin-left:0}
+
+/* Recipe tin loader (Nov 19): after saving a friend's recipe, a card drops into the red recipe tin on the way back to your recipe box */
+.loader svg.tin{width:150px}
+.tinc{animation:tindrop 1.8s ease-in-out infinite}
+.tincw{animation:tinhide 1.8s linear infinite}
+@keyframes tindrop{0%{transform:translateY(-70px);opacity:0}15%{opacity:1}55%{transform:translateY(-6px)}70%,100%{transform:translateY(22px)}}
+@keyframes tinhide{0%,72%{opacity:1}90%,100%{opacity:0}}
+
+/* No flash when a sheet opens (Nov 19): a hidden message stays hidden while it moves between the bottom and the top of the screen */
+#toast:not(.show){visibility:hidden;transition:transform .25s,visibility 0s .25s}
+#toast.show{visibility:visible}

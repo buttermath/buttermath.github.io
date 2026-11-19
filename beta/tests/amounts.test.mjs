@@ -1,7 +1,7 @@
 // Butter Math: shopping-list math checks.
 // Run before every change goes to beta or live:  node tests/amounts.test.mjs
 // Every line must pass. If one fails, the change does not ship.
-import { addQty, splitIngredient } from '../parse.js';
+import { addQty, splitIngredient, scaleQty, scaleLine, scaleYield } from '../parse.js';
 
 const sum = (...q) => q.reduce((a, b) => addQty(a, b), '');
 const butter = (...q) => q.reduce((a, b) => addQty(a, b, {key: 'unsalted butter'}), '');
@@ -100,6 +100,32 @@ for(const [a, b] of [['2 tbsp rice wine vinegar', '1 tbsp rice vinegar'], ['3 sc
 for(const [a, b] of [['1 tsp kosher salt', '1 tsp salt'], ['2 tbsp unsalted butter', '2 tbsp butter'], ['1 cup brown sugar', '1 cup sugar'],
   ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro']])
   check('kept apart: ' + a.replace(/^[^a-z]+/i, '') + ' / ' + b.replace(/^[^a-z]+/i, ''), key(a) === key(b), false);
+
+// Scaling a recipe (½×, 1½×, 2×, 3×, or a serving size). Checked by hand, Nov 19.
+console.log('\nScaling a recipe');
+for(const [line, f, want] of [
+  ['2 cups all-purpose flour', .5, '1 cup all-purpose flour'], ['1 Tbsp olive oil', .5, '1½ tsp olive oil'], ['⅓ cup sugar', .5, '2 Tbsp + 2 tsp sugar'],
+  ['1 teaspoon of cinnamon', 3, '1 Tbsp cinnamon'], ['⅓ cup sugar', 1.5, '½ cup sugar'], ['1 Tbsp olive oil', 1.5, '1 Tbsp + 1½ tsp olive oil'],
+  ['3 large eggs', 1.5, '4½ large eggs'], ['1 (14 oz) can diced tomatoes', 2, '2 (14 oz) cans diced tomatoes'], ['8 oz cream cheese, softened', 2, '1 lb cream cheese, softened'],
+  ['12 oz pasta', 1.5, '1 lb + 2 oz pasta'], ['1 stick butter, melted', .5, '4 Tbsp butter, melted'], ['1 stick butter, melted', 2, '2 sticks butter, melted'],
+  ['1 cup (200g) sugar', 1.5, '1½ cups (300g) sugar'], ['1–2 tsp salt', 2, '2–4 tsp salt'], ['about 2 cups broth', 1.5, 'about 3 cups broth'],
+  ['1 cup plus 2 tablespoons flour', 2, '2¼ cups flour'], ['1 cup plus 2 tablespoons flour', 3, '3¼ cups + 2 Tbsp flour'], ['200g spinach', 1.5, '300g spinach'],
+  ['8 fl oz milk', 1.5, '12 fl oz milk'], ['2 heirloom tomatoes + 4 roma tomatoes', 3, '6 heirloom tomatoes + 12 roma tomatoes'],
+  ['1 cup of avocado or grapeseed oil', 2, '2 cups avocado or grapeseed oil'], ['Salt and pepper to taste', 2, 'Salt and pepper to taste'], ['a pinch of salt', 2, 'a pinch of salt'],
+  ['2 cups flour', 1, '2 cups flour']])
+  check(`scale ${f}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
+check('scale: unreadable amount is never shown scaled', scaleQty('1 heaping cup', 2), null);
+check('serves 4 at 2×', scaleYield('Serves 4', 2), 'Serves 8');
+check('4–6 servings at ½×', scaleYield('4–6 servings', .5), '2–3 servings');
+// Every scaled spoon/cup amount, read back by a separate counter, is exactly the original times the size
+{ const F = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875,'⅙':1/6,'⅚':5/6}, U = {tsp:1, Tbsp:3, cup:48, cups:48};
+  const n = t => { const m = t.match(/^(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)$/); return (m[1] ? +m[1] : 0) + (m[2] ? F[m[2]] : 0); };
+  const tsp = q => q.split(' + ').reduce((a, p) => { const [x, u] = p.trim().split(' '); return a + n(x) * U[u]; }, 0);
+  let bad = 0, seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for(let i = 0; i < 500; i++){ const u = ['tsp', 'Tbsp', 'cup'][Math.floor(rnd() * 3)], w = Math.floor(rnd() * 3), fr = ['', '¼', '⅓', '½', '⅔', '¾'][Math.floor(rnd() * 6)];
+    const q = (w ? String(w) : '') + fr || '1', f = [.5, 1.5, 2, 3, 1.25, .75][Math.floor(rnd() * 6)], out = scaleQty(q + ' ' + u, f);
+    if(!/^(\d*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]? (tsp|Tbsp|cups?)( \+ |$))+$/.test(out) || Math.abs(tsp(out) - n(q) * U[u] * f) > 1/16 + 1e-9) bad++; }
+  check('500 random spoon and cup sizes, within 1/16 tsp', bad, 0); }
 
 console.log(failed ? `\n${failed} FAILED. Do not ship.\n` : '\nAll checks passed.\n');
 process.exit(failed ? 1 : 0);

@@ -228,6 +228,12 @@ export const LINES = [
   ['1 container Cool Whip', 'Cool Whip', '1 container'],
   ['Pinch of salt', 'Pinch of salt', ''],
   ['A few sprigs of mint', 'A few sprigs of mint', ''],
+  // ---- "of" after the unit (reported from the live site, Nov 19, 2026)
+  ['1 teaspoon of cinnamon', 'Cinnamon', '1 teaspoon'],
+  ['1 cup of flour', 'Flour', '1 cup'],
+  ['2 tsp of salt', 'Salt', '2 tsp'],
+  ['1/2 cup of sugar', 'Sugar', '½ cup'],
+  ['1 cup (240ml) of milk', 'Milk', '1 cup (240ml)'],
   // ---- no amount
   ['Salt and pepper, to taste', 'Salt and pepper', ''],
   ['Fresh parsley, for garnish', 'Fresh parsley', ''],

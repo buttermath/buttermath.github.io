@@ -1302,3 +1302,6 @@ button.tag.tago::after{inset:0 -4px -8px}
 .stephead:first-child{margin-top:0}
 /* group labels inside a recipe are a little bigger so they're easy to read on a phone */
 .stephead,.ing-col .grp{font-size:14px}
+/* faint ruled lines between ingredients are back on the notebook paper (Nov 19) */
+.ing-col .ing{border-bottom:1px solid var(--line)}
+.ing-col .ingrow .ing{border-bottom:0}

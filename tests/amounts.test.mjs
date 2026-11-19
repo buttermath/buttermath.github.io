@@ -21,8 +21,8 @@ check('1 tsp + 1 tsp', sum('1 teaspoon', '1 tsp'), '2 tsp');
 check('2 cups + 1 cup', sum('2 cups', '1 cup'), '3 cups');
 check('18 large + 36 large', sum('18 large', '36 large'), '54 large');
 check('6 large + 5 (eggs)', sum('6 large', '5'), '11 large');
-check('½ cup whole + ½ cup whole', sum('½ cup (120ml) whole', '½ cup (120ml) whole'), '1 cup whole');
-check('3 cups (375g) + 1 cup (125g)', sum('3 cups (375g)', '1 cup (125g)'), '4 cups');
+check('½ cup whole + ½ cup whole', sum('½ cup (120ml) whole', '½ cup (120ml) whole'), '1 cup (240 ml) whole');
+check('3 cups (375g) + 1 cup (125g)', sum('3 cups (375g)', '1 cup (125g)'), '4 cups (500g)');
 
 console.log('\nButter in sticks + Tbsp');
 check('10 Tbsp + 1 stick', butter('10 Tbsp', '1 stick'), '2 sticks + 2 Tbsp');
@@ -71,6 +71,23 @@ console.log('\nMatching the same ingredient across recipes');
 const same = (a, b) => check(`"${a}" = "${b}"`, String(splitIngredient(a).key === splitIngredient(b).key), 'true');
 same('2 large eggs', '1 egg');
 same('1 cup whole milk', '½ cup milk');
+
+
+// Nov 19: the four gaps
+check('plus line', JSON.stringify(splitIngredient('1 cup plus 2 tablespoons flour')), JSON.stringify({qty:'1 cup + 2 tablespoons', name:'Flour', key:'flour'}));
+check('plus line summed', sum('1 cup + 2 tablespoons', '1 cup'), '2 cups + 2 Tbsp');
+check('kg + g', sum('1 kg', '500 g'), '1.5 kg');
+check('g + g', sum('100g', '250g'), '350g');
+check('ml + L', sum('500 ml', '1 l'), '1.5 L');
+check('cup + ml', sum('1 cup', '250 ml'), '487 ml (about 2 cups + 2¾ tsp)');
+check('oz + g', sum('8 oz', '100g'), '327g (about 11½ oz)');
+check('grams kept', sum('1 cup (200g)', '⅔ cup (135g)'), '1⅔ cups (335g)');
+check('grams dropped when one is missing', sum('1 cup (200g)', '2 Tbsp'), '1 cup + 2 Tbsp');
+check('ranges', sum('2-3 cloves', '1 clove'), '3–4 cloves');
+check('two ranges', sum('2-3 cloves', '1-2 cloves'), '3–5 cloves');
+check('can sizes kept apart', sum('1 (15 oz) can', '1 (28 oz) can'), '1 (15 oz) can + 1 (28 oz) can');
+check('same can size', sum('1 (15 oz) can', '1 (15 oz) can'), '2 (15 oz) cans');
+check('weight and volume never mixed', sum('100g', '1 cup'), '100g + 1 cup');
 
 console.log(failed ? `\n${failed} FAILED. Do not ship.\n` : '\nAll checks passed.\n');
 process.exit(failed ? 1 : 0);

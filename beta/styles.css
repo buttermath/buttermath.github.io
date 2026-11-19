@@ -995,3 +995,5 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .btn.bigbtn:active,.btn.outline:active{transform:scale(.98)}
 .btn.copied,.btn.copied:hover{background:var(--green);border-color:var(--green);color:#fff}.btn.copied .bi{stroke:#fff}
 .sendlist{max-height:min(40vh,320px);overflow-y:auto;overscroll-behavior:contain;margin-right:-4px;padding-right:4px}
+/* Recipe page: edit and ⋯ buttons sit on their own line above the title, so the title can use the full width */
+.hero .ttlrow{flex-direction:column-reverse;align-items:stretch;gap:2px}.hero .ttlrow h2{flex:none;width:100%}.hero .ttlbtns{align-self:flex-end;margin:-4px -4px 0 0}

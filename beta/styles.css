@@ -1277,10 +1277,18 @@ body:has(#fab.stepfab:not(.away)) .totop{left:calc(50% + 6px)}
 body:has(.totop.show) #fab.stepfab{left:calc(50% - 52px)}
 .totop,#fab.stepfab{transition:opacity .3s,transform .2s,left .2s}
 }
-/* recipe names on the shopping list open the recipe: the tag under each item, and a small arrow on each "Shopping for" chip */
+/* recipe tags under each shopping list item open the recipe */
 button.tag.tago{border:0;font-family:inherit;line-height:inherit;cursor:pointer;position:relative}
 button.tag.tago::after{content:"";position:absolute;inset:-12px -4px}
-.chipw .chip{padding-right:62px}
-.chipgo{position:absolute;right:31px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-.chipgo:hover{background:rgba(0,0,0,.06)}
-.chipgo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* long recipe names wrap instead of running off the screen: chips, item tags, and the message at the bottom (Undo always stays visible) */
+.chipw{max-width:100%}
+.chipw .chip{white-space:normal;text-align:left;line-height:1.3;max-width:100%}
+.chip .sw{flex:none}
+.tag{white-space:normal;text-align:left}
+#toast{white-space:normal;width:max-content;max-width:calc(100vw - 32px);line-height:1.35}
+#toast .tundo{flex:none}
+.chipw .chip{border-radius:20px}.tag{border-radius:10px}#toast{border-radius:22px}
+/* the Ingredients heading and section labels line up with the ingredient text, to the right of the red margin line */
+.ing-col .inghead{padding-left:36px}
+.ing-col .grp{padding-left:36px}
+.ing-col .ing.ro{padding-left:36px}

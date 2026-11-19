@@ -1329,3 +1329,15 @@ button.tag.tago::after{inset:0 -4px -8px}
 .ing-col .scalenotes{margin-left:36px;margin-right:8px}
 .scalenotes p{margin:0}
 .step .noscale{margin-top:4px}
+
+/* Nov 19: the Shopping list tab pulses twice after ingredients are added from a recipe or meal */
+.tab.tabhint{animation:tabhintc 2.6s ease-in-out .3s 2}
+.tab.tabhint::after{content:'';position:absolute;left:0;right:0;bottom:9px;height:3px;border-radius:3px;background:var(--red);opacity:0;transform-origin:left;animation:tabhint 2.6s ease-in-out .3s 2}
+@keyframes tabhint{0%{opacity:0;transform:scaleX(.2)}35%,65%{opacity:.9;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+@keyframes tabhintc{35%,65%{color:#fff}}
+@media(prefers-reduced-motion:reduce){.tab.tabhint,.tab.tabhint::after{animation:none}}
+/* the size picked on a recipe, after its name on the list ("Pumpkin Pie (3)") */
+.sz{font-weight:500;white-space:nowrap}
+/* Nov 19: recipe tags on the list open their recipe; they darken while pressed (no edge, no movement) */
+button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
+@media(hover:hover){button.tag.tago:hover{background:color-mix(in srgb,var(--c) 20%,white)}}

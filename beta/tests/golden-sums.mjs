@@ -17,6 +17,7 @@ export const HAND = [
   ['no size joins the one size', 'egg', '2 large', '3', '5 large'],
   ['whole head of garlic + head', 'garlic', '1 whole head', '1 head', '2 heads'],
   ['heads of garlic', 'garlic', '1 head', '2 heads', '3 heads'],
+  ['"3 garlic cloves" + "2 cloves garlic"', 'garlic', '3 cloves', '2 cloves', '5 cloves'],
   ['cinnamon with "of" (reported line)', 'cinnamon', '1 teaspoon', '1 teaspoon', '2 tsp'],
   ['flour with "of" plus cups', 'flour', '1 cup', '1½ cups', '2½ cups'],
   ['two pies of butter', 'unsalted butter', '1 cup (2 sticks; 226g)', '1 cup (2 sticks; 226g)', '4 sticks (452g)'],

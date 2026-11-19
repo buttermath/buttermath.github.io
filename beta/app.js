@@ -443,10 +443,10 @@ function renderFriends(){
   const isEmpty = !acc.length && !n && !out.length && !saves.length;
   const head = `<div class="fr-h"><h2>Friends</h2>${isEmpty ? '' : `<button class="btn primary sm" data-act="addfriend">${ICON_ADDF}Add friend</button>`}</div>`;
   const reqs = inc.map(f => `<div class="fcard"><div class="frow">${avatar(f.friend_id, f.name)}<div class="ftx"><b>${esc(f.name)} wants to share recipes</b><span>You'll be able to see each other's recipes</span></div></div>
-    <div class="fbtns"><button class="btn primary" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
+    <div class="fbtns"><button class="btn dark" data-act="fraccept" data-id="${esc(f.friend_id)}">Accept</button><button class="btn outline" data-act="frdecline" data-id="${esc(f.friend_id)}">Decline</button></div></div>`).join('');
   const shares = inbox.map(s => `<div class="fcard"><div class="frow"><span class="thumb" style="--c:${esc(s.data.color || '#888')}">${pic(s.data)}</span><div class="ftx"><span>${esc(s.sender_name)} sent you a recipe</span><b>${esc(s.data.title || 'A recipe')}</b></div></div>
     ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ''}
-    <div class="fbtns"><button class="btn primary" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
+    <div class="fbtns"><button class="btn dark" data-act="shsave" data-id="${esc(s.id)}">${ICON_PLUS2}Save recipe</button><button class="btn outline" data-act="shdismiss" data-id="${esc(s.id)}">Dismiss</button></div></div>`).join('');
   const saved = saves.map(s => `<div class="savebar" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.500C19 15.600 12 20 12 20z"/></svg><span><b>${esc(s.saver_name)}</b> saved your recipe <b>${esc(s.title)}</b>!</span><button data-act="svdismiss" data-id="${esc(s.id)}" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('');
   const books = acc.map(f => `<div class="cbk crow" role="link" tabindex="0" data-act="go" data-h="f-${esc(f.friend_id)}" aria-label="Open ${esc(kitchenOf(f.name))}">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${f.recipes} recipe${f.recipes == 1 ? '' : 's'}</span></span><button class="rmfr2" data-act="frremove" data-id="${esc(f.friend_id)}" aria-label="Remove ${esc(f.name)} as a friend" title="Remove friend"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 11h6"/></svg></button></div>`).join('');
   const waiting = out.map(f => `<div class="cbk wait">${avatar(f.friend_id, f.name)}<span class="ftx"><b>${esc(f.name)}</b><span>Waiting for them to accept</span></span><button class="linkbtn" data-act="frcancel" data-id="${esc(f.friend_id)}">Cancel</button></div>`).join('');
@@ -767,7 +767,7 @@ function renderShopping(){
       <input id="addQty" data-keep placeholder="Amount" aria-label="Amount (optional)" maxlength="60">
       <select id="addSec" data-keep aria-label="Section">${secOpts.map(s => `<option ${s === ui.sec ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
       <select id="addFor" data-keep aria-label="Which recipe is it for?"><option value="">No recipe</option>${recipes.map(r => `<option value="${esc(r.id)}">For ${esc(D(r).short || D(r).title)}</option>`).join('')}</select>
-      <button class="btn primary" type="submit">+ Add</button>
+      <button class="btn dark" type="submit">+ Add</button>
       <button class="btn" type="button" data-act="addclose">Done</button>
     </form>` : items.length || chipRecipes.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from a recipe</button><button class="btn" data-act="addopen">+ Add individual item</button></div>` : ''}
   ${!items.length && !chipRecipes.length && !Q && f !== 'have' ? `<section class="shopstart"><h3>Your list is currently empty</h3><p class="muted">Add ingredients from your recipe(s) or add individual ingredients.</p>
@@ -775,7 +775,7 @@ function renderShopping(){
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Add individual item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Add ingredients to list</b> while you are on any recipe page.</p>` : ''}
   <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “Have it” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
-  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to move everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn primary" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div>`}` : ''}
+  ${all.length || (P().trips || []).length ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to move everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn dark" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}`;
 }
@@ -941,7 +941,7 @@ const ICON_SERV = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path 
 const ICON_TIME = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 const ICON_AGAIN = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg>';
 const ICON_EXT = '<svg class="ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
-function finCard(r){ return `<button class="btn primary again" data-act="again" data-id="${esc(r.id)}">${ICON_AGAIN}Make it again</button>`; }
+function finCard(r){ return `<button class="btn dark again" data-act="again" data-id="${esc(r.id)}">${ICON_AGAIN}Make it again</button>`; }
 const ICON_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
 const ICON_SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>';
 const ICON_CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -1738,14 +1738,14 @@ function renderSettings(){
   return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
   <div class="card panel"><h3>Settings</h3>
     <div class="lbl2">Your name </div>
-    <form data-form="name" class="row"><input class="tin" id="acc-name" data-keep style="flex:1;min-width:160px" value="${esc(firstName())}" maxlength="40" required><button class="btn primary" type="submit">Save name</button></form>
+    <form data-form="name" class="row"><input class="tin" id="acc-name" data-keep style="flex:1;min-width:160px" value="${esc(firstName())}" maxlength="40" required><button class="btn dark" type="submit">Save name</button></form>
   </div>
   <div class="card panel" style="margin-top:16px"><h3>Change password</h3>
     <form data-form="password" class="stack" autocomplete="off">
       <input class="tin" id="pw-cur" type="password" placeholder="Current password" required autocomplete="current-password">
       <input class="tin" id="pw-new" type="password" placeholder="New password (6+ characters)" minlength="6" required autocomplete="new-password">
       <input class="tin" id="pw-new2" type="password" placeholder="Type the new password again" minlength="6" required autocomplete="new-password">
-      <div><button class="btn primary" type="submit">Update password</button></div>
+      <div><button class="btn dark" type="submit">Update password</button></div>
     </form>
   </div>
   <div class="card panel" style="margin-top:16px"><h3>Add Butter Math to your Home Screen</h3>
@@ -1782,7 +1782,7 @@ function renderFeedback(){
   return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose fb"><h3>Send feedback</h3>
     <p>Ideas, bugs, or questions? Email us at <b>${FB_EMAIL}</b>.</p>
-    <div class="fbbtns"><button class="btn primary sm" data-act="copyemail">Copy email address</button></div>
+    <div class="fbbtns"><button class="btn dark sm" data-act="copyemail">Copy email address</button></div>
   </div>`;
 }
 const TOUR = [

@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET } from './parse.js?v=10';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET } from './parse.js?v=11';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -52,7 +52,8 @@ let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('
 window.addEventListener('scroll', () => { const el = document.getElementById('toast'); if(!el || !el.classList.contains('show')) return; const left = +el.dataset.until - Date.now(); if(left <= 0) return; clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), Math.min(1800, left)); }, {passive: true});
 
 /* ---------------- error log ---------------- */
-// Problems members run into go to the error_log table and show on the Admin page. Never stores recipe text or passwords.
+// Problems members run into go to the error_log table and show on the Admin page. Never stores passwords.
+// Recipe text is never stored, except a single ingredient line whose amount couldn't be added up (logAmt, when LOG_AMT is on).
 let errN = 0, errLast = '', errPend = [];
 function logErr(kind, msg, detail){
   try{
@@ -64,6 +65,19 @@ function logErr(kind, msg, detail){
     flushErr();
   }catch(_){}
 }
+// Ingredient lines whose amount Butter Math couldn't read, so the math can be fixed. Off until the privacy notice says so.
+const LOG_AMT = false;
+const amtSeen = new Set(), amtPend = [];
+function amtUnread(line){ try{ const {qty, name, key} = splitIngredient(line); if(!key) return false;
+  // a total that can't be added up, a number left in the name ("13.5 oz can coconut milk"), or a name starting with a stray unit ("-inch piece", "x 400g tins")
+  if(qty) return addQty(qty, qty) === qty + ' + ' + qty || /\d/.test(name) || /^(?:[-–x×]|[a-z]\b|heaping|scant|level|rounded)/i.test(name); return /^\s*[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(String(line).replace(BULLET, '')); }catch(_){ return false; } }
+function logAmt(line){
+  try{ line = String(line || '').trim().slice(0, 250); if(!LOG_AMT || !line || amtSeen.has(line) || amtSeen.size >= 15 || !amtUnread(line)) return; amtSeen.add(line);
+    const sv = document.querySelector('script[src*="app.js"]'), ver = sv ? ((sv.getAttribute('src').match(/v=(\w+)/) || [])[1] || '') : '';
+    amtPend.push({kind:'amount', msg:'Amount not understood: ' + line, detail:'', page:(location.pathname + location.hash).slice(0, 200), ua:navigator.userAgent.slice(0, 300), ver:ver.slice(0, 20)}); flushAmt(); }catch(_){}
+}
+// sent on their own so a refused row can't take real errors down with it; if the table doesn't take kind 'amount', it's sent as an error
+function flushAmt(){ if(!sb || !amtPend.length) return; const rows = amtPend.splice(0); try{ sb.from('error_log').insert(rows).then(r => { if(r && r.error) sb.from('error_log').insert(rows.map(x => Object.assign({}, x, {kind:'error'}))).then(() => {}, () => {}); }, () => {}); }catch(_){} }
 function flushErr(){ if(!sb || !errPend.length) return; const rows = errPend.splice(0); try{ sb.from('error_log').insert(rows).then(() => {}, () => {}); }catch(_){} }
 window.addEventListener('error', e => logErr('crash', e.message, (e.error && e.error.stack) || ((e.filename || '') + ':' + (e.lineno || ''))));
 window.addEventListener('unhandledrejection', e => { const r = e.reason || {}; logErr('crash', r.message || String(r), r.stack || ''); });
@@ -108,7 +122,7 @@ async function boot(){
   }
   const mod = window.__mockSupabase || await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
   sb = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  flushErr();
+  flushErr(); flushAmt();
   sb.auth.onAuthStateChange((event, s) => {
     if(event === 'PASSWORD_RECOVERY'){ recovering = true; session = s; user = s && s.user; render(); return; }
     const was = user && user.id;
@@ -326,7 +340,7 @@ const pic = d => d.photo ? `<img src="${esc(d.photo)}" alt="" loading="lazy"${po
 function addIngredientsTo(k, recipeId, groups){
   const items = k.shopping.items; const touched = new Set();
   (groups || []).forEach(g => (g.items || []).forEach(line => {
-    const {qty, name, key} = splitIngredient(line); if(!key) return;
+    const {qty, name, key} = splitIngredient(line); if(!key) return; logAmt(line);
     let it = items.find(i => (i.key || splitIngredient(i.name).key) === key);
     if(it){
       const linked = (it.recipes || []).includes(recipeId);
@@ -1309,8 +1323,12 @@ function renderFab(r){
   // Only shows while the current step is off screen. Once it's in view (you scrolled to it or tapped the button), the button goes away.
   const st = document.getElementById('s-' + p.all[p.cur].key);
   if(st && 'IntersectionObserver' in window){ b.classList.add('away'); fabIO = new IntersectionObserver(([en]) => { b.classList.toggle('away', en.isIntersecting); b.classList.toggle('up', !en.isIntersecting && en.boundingClientRect.top < 0); }, {threshold: 0.3}); fabIO.observe(st); }
+  fabWake();
 }
-let fabIO = null;
+let fabIO = null, fabIdleT;
+// The current-step arrow fades out after 1.5 seconds without scrolling and comes back when you scroll
+function fabWake(){ const b = document.getElementById('fab'); if(!b || !b.classList.contains('stepfab')) return; b.classList.remove('idle'); clearTimeout(fabIdleT); fabIdleT = setTimeout(() => b.classList.add('idle'), 1500); }
+window.addEventListener('scroll', fabWake, {passive: true});
 
 /* ---------------- add / edit form ---------------- */
 let form = null; // {forId, photoBlob, photoUrl, removePhoto, busy, err}
@@ -1549,6 +1567,7 @@ async function saveForm(id){
   if(!val('#f-ing')){ f.err = 'Add the ingredients (paste the recipe and tap Download into form).'; render(); return; }
   const ingredients = ingTextToGroups(val('#f-ing'));
   if(f.amtFix){ const fx = f.amtFix; ingredients.forEach(g => { g.items = (g.items || []).map(l => fx[l] || l); }); }
+  ingredients.forEach(g => (g.items || []).forEach(logAmt));
   if(!f.amtChecked){ const ws = recipeAmtWarns(old, ingredients); if(ws.length){ showAmtWarns(ws, id); return; } }
   const steps = stepTextToSections(val('#f-steps'), old.steps);
   const link = val('#f-link');
@@ -1808,7 +1827,7 @@ function renderErrors(){
   if(!e.length) return head(0) + `<div class="muted">No errors logged yet.</div></div>`;
   const dev = ua => { ua = ua || ''; const d = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other'; const b = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : ''; return d + (b ? ' · ' + b : ''); };
   const when = t => new Date(t).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
-  const lbl = {shown:'Shown to member', error:'Error', crash:'Crash'};
+  const lbl = {shown:'Shown to member', error:'Error', crash:'Crash', amount:'Amount not understood'};
   return head(e.length) + `<p class="muted errnote">The last 50 problems members ran into, newest first. Tap one for details.</p><div class="errlist">${e.map(x => `<details class="errrow"><summary><b>${esc(x.msg)}</b><small>${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div>`;
 }
 function renderAdmin(){
@@ -2131,6 +2150,7 @@ function renderHelp(){
   <div class="card panel prose help"><h3>How Butter Math works</h3>
     <p class="muted">Plan, shop, and cook from one place.</p>
     ${TOUR.map((t, i) => step(i + 1, t)).join('')}
+    ${step(TOUR.length + 1, {title:'How the math works', text:'Butter Math adds up amounts using the official U.S. measurement standards: 3 teaspoons in a tablespoon, 16 tablespoons in a cup, and 16 ounces in a pound. It never turns cups into grams on its own, because a cup of flour and a cup of sugar weigh different amounts. When a recipe gives both, like 1 cup (200g), it uses that recipe\'s numbers. Tap <b>Show the math</b> on any item to see how its total was added up.'})}
     <h4 class="htips">Good to know</h4>
     <ul>
       <li><b>Add a recipe</b> from a website link, or paste the text and tap <b>Download into form</b>.</li>

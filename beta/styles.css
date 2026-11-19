@@ -999,7 +999,7 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 .hero .ttlrow{flex-direction:column-reverse;align-items:stretch;gap:2px}.hero .ttlrow h2{flex:none;width:100%}.hero .ttlbtns{align-self:flex-end;margin:-4px -4px 0 0}
 
 /* Design system rollout, step 1 (Nov 18): active tab underline is logo pink; progress bars are solid red */
-.tab.on{border-bottom-color:var(--logo-coral)}.tab.on::after{background:var(--logo-coral)}
+.tab.on{border-bottom-color:var(--red)}.tab.on::after{background:var(--red)}
 .bar i,.tile .bar i{background:var(--red)}
 /* Design system rollout, step 1 (Nov 18): type scale. Card titles 17px, aisle names in Archivo Black, reading text 16px */
 .tile h2,.umhead b{font-family:'Archivo Black',Inter,sans-serif;font-weight:400;font-size:17px}

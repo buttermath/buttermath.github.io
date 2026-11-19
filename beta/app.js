@@ -428,6 +428,33 @@ const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14
 /* ---------------- render ---------------- */
 // Cook a Meal is switched off for now (Hayley, Nov 18). Set to true to bring it back; nothing about it was deleted.
 const MEAL_ON = false;
+// Add to home screen: an "Add to home screen" item in the account menu, plus one quiet tip from the third visit on.
+// Android and computer Chrome get a real Install button; iPhone gets the Share steps (Apple doesn't allow an install button).
+// Never shown inside the installed app. The tip's "seen" state lives on this device only.
+let installEvt = null;
+const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const lsGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const lsSet = (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} };
+const bmVisits = (() => { let n = +(lsGet('bm_visits') || 0); try{ if(!sessionStorage.getItem('bm_v')){ sessionStorage.setItem('bm_v', '1'); n++; lsSet('bm_visits', String(n)); } }catch(e){} return n; })();
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+window.addEventListener('appinstalled', () => { installEvt = null; lsSet('bm_a2hs', 'done'); render(); });
+const ICON_SHARE = '<svg class="xi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg>';
+const ICON_PHONE = '<svg viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>';
+function installTip(){
+  if(isStandalone() || bmVisits < 3 || lsGet('bm_a2hs')) return '';
+  return `<div class="a2hs" role="status"><span class="a2hs-i">${ICON_PHONE}</span><div><b>Get Butter Math on your home screen</b><span>It opens like an app, with one tap.</span></div><button class="btn dark sm" data-act="installopen">Show me how</button><button class="a2hsx" data-act="installtipx" aria-label="Close">${ICON_X}</button></div>`;
+}
+function showInstall(){
+  let body;
+  if(isStandalone()) body = `<p class="muted">You're already using the Butter Math app. Nice!</p><div class="row"><button class="btn primary" data-act="mclose">Done</button></div>`;
+  else if(installEvt) body = `<p class="muted">Install Butter Math, and it opens like an app from your home screen, with no browser bar.</p><div class="row"><button class="btn quiet" data-act="mclose">Not now</button><button class="btn primary" data-act="installgo">Install</button></div>`;
+  else if(isIOS()) body = `<p class="muted">Butter Math isn't in the App Store yet, but you can add it to your home screen. It opens like an app.</p>
+    <ol class="a2hs-steps"><li><i>1</i><span>Open <b>buttermath.app</b> in <b>Safari</b>.</span></li><li><i>2</i><span>Tap the <b>Share</b> button ${ICON_SHARE} at the bottom of the screen.</span></li><li><i>3</i><span>Scroll down and tap <b>Add to Home Screen</b>, then tap <b>Add</b>.</span></li></ol><div class="row"><button class="btn primary" data-act="mclose">Got it</button></div>`;
+  else body = `<p class="muted">Butter Math isn't in the app stores yet, but you can add it to your home screen. It opens like an app.</p>
+    <ol class="a2hs-steps"><li><i>1</i><span>Open <b>buttermath.app</b> in <b>Chrome</b>.</span></li><li><i>2</i><span>Tap the <b>⋮</b> menu at the top right.</span></li><li><i>3</i><span>Tap <b>Install app</b> or <b>Add to Home screen</b>, then tap <b>Install</b>.</span></li></ol><div class="row"><button class="btn primary" data-act="mclose">Got it</button></div>`;
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card a2hs-card" data-stop><div class="mhead"><h3>Add to home screen</h3><button class="ibtn mx" data-act="mclose" aria-label="Close">${ICON_X}</button></div>${body}</div></div>`;
+}
 // Back links return to the main tab you were last on (Recipes, Shopping list, or Friends) and name it.
 let lastTab = 'recipes';
 const TAB_NAMES = {recipes: 'Recipes', shopping: 'Shopping list', friends: 'Friends'};
@@ -787,8 +814,8 @@ function renderShopping(){
     return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${colOf(r.id)}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">${ICON_X}</button></span>`; }).join(' ');
   const Q = shopQ.trim().toLowerCase();
   const pool = Q ? all.filter(i => i.name.toLowerCase().includes(Q) && (items.includes(i) || shop[i.id])) : f === 'have' ? all : items;
-  const keep = i => { const st = shop[i.id] || ''; return Q || f === 'all' || (f === 'need' && !st) || (f === 'cart' && st === 'bought') || (f === 'have' && st === 'have'); };
-  const cnt = {all: items.length, need: items.filter(i => !shop[i.id]).length, cart: items.filter(i => shop[i.id] === 'bought').length, have: all.filter(i => shop[i.id] === 'have').length};
+  const keep = i => { const st = shop[i.id] || ''; return Q || (f === 'all' && (homeMode || st !== 'have')) || (f === 'need' && !st) || (f === 'cart' && st === 'bought') || (f === 'have' && st === 'have'); };
+  const cnt = {all: items.filter(i => shop[i.id] !== 'have').length, need: items.filter(i => !shop[i.id]).length, cart: items.filter(i => shop[i.id] === 'bought').length, have: all.filter(i => shop[i.id] === 'have').length};
   const fbtn = (k, l) => `<button class="${f === k ? 'on' : ''}" aria-pressed="${f === k}" data-act="filter" data-f="${k}">${l} <span class="fc">${cnt[k]}</span></button>`;
   const order = [...new Set(kitchen.shopping.sections.concat(all.map(i => i.section || 'Other')))];
   let secs = '';
@@ -810,7 +837,7 @@ function renderShopping(){
     }).join('') + `</div></div>`;
   });
   const secOpts = kitchen.shopping.sections;
-  return `${shopBack && mealIds().length ? `<button class="back" data-act="go" data-h="meal">${ICON_BACK}Back to your meal</button>` : ''}${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+  return `${installTip()}${shopBack && mealIds().length ? `<button class="back" data-act="go" data-h="meal">${ICON_BACK}Back to your meal</button>` : ''}${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
     ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap a recipe to hide or show its ingredients. Done shopping? Drag it to Past trips.</div>` : ''}
     ${items.length ? `<div class="cartline"><button class="cl-cart ${f === 'cart' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="cart" aria-pressed="${f === 'cart'}" aria-label="Show the ${cnt.cart} item${cnt.cart === 1 ? '' : 's'} in your cart"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18"/><path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25"/><circle cx="18" cy="20" r="2"/><circle cx="8" cy="20" r="2"/></svg><span><b>${cnt.cart}</b> in your cart</span></button><button class="cl-need ${f === 'need' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="need" aria-pressed="${f === 'need'}" aria-label="Show the ${cnt.need} item${cnt.need === 1 ? '' : 's'} you still need"><span><b>${cnt.need}</b> still needed</span></button></div>
     <div class="bar"><i style="width:${pct}%"></i></div>` : ''}
@@ -833,6 +860,7 @@ function renderShopping(){
     <p class="muted shophint">You can also tap <b>Add ingredients to list</b> while you are on any recipe page.</p>` : ''}
   ${!Q && !homeMode && items.length ? `<button class="homelink" data-act="homemode">${ICON_HOME}Check what you have at home</button>` : ''}
   <div class="f-${f}">${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “At home” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : "All set — time to cook! 🎉"}</div>`)}</div>
+  ${!Q && !homeMode && f === 'all' && items.some(i => shop[i.id] === 'have') ? `<details class="card homebox"><summary>${ICON_HOME}<b>At home</b><span class="fc">${items.filter(i => shop[i.id] === 'have').length}</span>${ICON_CHEV}</summary>${items.filter(i => shop[i.id] === 'have').map(it => `<div class="homeitem"><span><b>${esc(it.name)}</b>${it.qty ? ` <small>${fmt(it.qty)}</small>` : ''}</span><button class="linkbtn" data-act="have" data-id="${esc(it.id)}">Put back on list</button></div>`).join('')}</details>` : ''}
   ${!homeMode && (all.length || (P().trips || []).length) ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to move everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn dark" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}${editItem ? renderEditItem() : ''}`;
@@ -1074,7 +1102,7 @@ function renderRecipes(){
   const q = recQ.trim().toLowerCase();
   const filtered = catOn || recFav || sortK === 'progress';
   const fnote = catOn ? `<div class="selchips">${recTags.map(t => `<span class="selchip">${esc(t)}<button data-act="catpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">${ICON_X}</button></span>`).join('')}${recTags.length > 1 ? `<button class="clearall" data-act="catclear">Clear all</button>` : ''}</div>${recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : ''}` : '';
-  return starters + search + fbar + fnote + `<div class="grid" id="rgrid">` + (filtered ? '' : q ? addTile.replace('<button class="tile addtile"', '<button hidden class="tile addtile"') : addTile) + shown.map(r => {
+  return installTip() + starters + search + fbar + fnote + `<div class="grid" id="rgrid">` + (filtered ? '' : q ? addTile.replace('<button class="tile addtile"', '<button hidden class="tile addtile"') : addTile) + shown.map(r => {
     const d = D(r), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
     const st = p.done === 0 ? 'Not started' : p.done === p.total ? 'Finished ✓' : `Step ${p.cur + 1} of ${p.total}`;
     const tq = (d.title + ' ' + (d.short || '') + ' ' + tagsOf(r).join(' ')).toLowerCase(), tt = tagsOf(r).slice(0, 3);
@@ -1832,6 +1860,7 @@ function renderMenu(){
   return `<div class="umenu" role="menu">
     <div class="umhead"><b>${esc(firstName() || 'Your kitchen')}</b><span>${esc(user.email)}</span></div>
     <button role="menuitem" data-act="go" data-h="help"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 9.5a3 2.5 0 016 0c0 2-2 2-3 3.5"/><path d="M12 17h.01"/></svg></span>How it works</button>
+    ${isStandalone() ? '' : `<button role="menuitem" data-act="installopen"><span class="ic">${ICON_PHONE}</span>Add to home screen</button>`}
     <button role="menuitem" data-act="go" data-h="settings"><span class="ic"><svg viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></span>Settings</button>
     <button role="menuitem" data-act="go" data-h="account"><span class="ic"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Account</button>
     ${isAdmin ? `<button role="menuitem" data-act="go" data-h="admin"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>Admin</button>` : ''}
@@ -1853,11 +1882,6 @@ function renderSettings(){
       <input class="tin" id="pw-new2" type="password" placeholder="Type the new password again" minlength="6" required autocomplete="new-password">
       <div><button class="btn dark" type="submit">Update password</button></div>
     </form>
-  </div>
-  <div class="card panel" style="margin-top:16px"><h3>Add Butter Math to your Home Screen</h3>
-    <p class="muted" style="margin:6px 0 10px">This site is not yet available in the App Store. Follow the steps below to add it to your phone's Home Screen.</p>
-    <p style="margin:6px 0"><b>iPhone:</b> open this site in Safari, tap Share, then <b>Add to Home Screen</b>.</p>
-    <p style="margin:6px 0"><b>Android:</b> open it in Chrome, tap ⋮, then <b>Add to Home screen</b>.</p>
   </div>`;
 }
 function renderAccount(){
@@ -1936,7 +1960,7 @@ function renderHelp(){
       <li>Tap <b>+ Save</b> on a friend's recipe to get your own copy. You can edit it without changing theirs.</li>
       <li><b>Send a recipe</b> to a friend from its <b>⋯</b> menu, with a note if you like.</li>
       <li>Turn on <b>Private</b> in a recipe's <b>⋯</b> menu to keep it out of your friends' view. Your shopping list and progress are always private.</li>
-      <li><b>Add to your Home Screen</b> from Settings so it opens like an app.</li>
+      <li><b>Add to home screen:</b> tap your initial at the top right, then <b>Add to home screen</b>, so Butter Math opens like an app.</li>
     </ul>
     <div class="row" style="margin-top:14px"><button class="btn" data-act="tourgo" data-i="0">Replay the quick tour</button></div>
   </div>`;
@@ -2033,6 +2057,9 @@ document.addEventListener('click', async e => {
   if(!el) return;
   const a = el.dataset.act, id = el.dataset.id, shop = user ? P().shop : {};
   if(a === 'menu'){ menuOpen = !menuOpen; render(); return; }
+  if(a === 'installopen'){ menuOpen = false; render(); showInstall(); return; }
+  if(a === 'installtipx'){ lsSet('bm_a2hs', 'x'); render(); return; }
+  if(a === 'installgo'){ $('#modalRoot').innerHTML = ''; const ev = installEvt; if(!ev) return; installEvt = null; ev.prompt(); try{ const c = await ev.userChoice; if(c && c.outcome === 'accepted') lsSet('bm_a2hs', 'done'); }catch(e){} render(); return; }
   if(a === 'heroart'){ const row = R(id); if(!row) return; const old = row.data.photoPath; const data = Object.assign({}, row.data); delete data.photo; delete data.photoPath;
     const {error} = await sb.from('recipes').update({data}).eq('id', id); if(error){ toast("Couldn't change it. Try again."); return; }
     row.data = data; if(old) sb.storage.from('photos').remove([old]).catch(() => {}); render(); toast('Switched back to the drawing'); return; }

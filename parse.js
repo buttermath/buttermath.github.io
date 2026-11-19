@@ -124,7 +124,7 @@ export function sectionsToStepText(secs){
 }
 
 // ---- shopping ----
-const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','pints?','containers?','jars?','bags?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','large','medium','small','whole'];
+const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','pints?','containers?','jars?','bags?','tins?','packets?','blocks?','bricks?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','large','medium','small','whole'];
 const Q = '(?:\\d+\\s*['+FRAC+']|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?|['+FRAC+'])';
 const LEAD = new RegExp('^((?:about |approx\\.? )?'+Q+'(?:\\s*(?:-|–|to)\\s*'+Q+')?\\s*(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:of\\s+)?)','i');
 const DESCRIPTORS = /\b(fresh|freshly|chopped|sliced|diced|minced|softened|chilled|cold|ice[- ]cold|cubed|melted|room temperature|at room temperature|divided|optional|packed|lightly|finely|thinly|roughly|large|small|medium|extra|pure|grated|shredded|whole|to taste|for garnish|for serving|plus more|spooned and leveled|beaten|ground)\b/g;
@@ -144,6 +144,8 @@ export const MAYBE_SAME = [['olive oil','virgin olive oil'], ['vegetable oil','n
   ['flour','all purpose flour'], ['sugar','granulated sugar'], ['parmesan','parmigiano reggiano','parmigiano'], ['onion','yellow onion','white onion'],
   ['soy sauce','tamari'], ['pepper','black pepper']];
 export const maybeSame = (a, b) => a !== b && MAYBE_SAME.some(g => g.includes(a) && g.includes(b));
+const MODW = '(?:heaping|heaped|scant|level|rounded|generous|(?:lightly |firmly )?packed)';
+const MODQ = new RegExp('^([\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?)\\s+' + MODW + '\\s+(?=(?:cups?|c\\.|tablespoons?|tbsps?|tbs|teaspoons?|tsps?|T\\.?|t\\.?)(?![A-Za-z]))', 'i');
 export function splitIngredient(line){
   let s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
@@ -152,12 +154,27 @@ export function splitIngredient(line){
   s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*(?:\s*(?:-|–|to)\s*[\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*)?)\s+((?:large|medium|small)\s+)?garlic\s+(cloves?)(?![A-Za-z])/i, (m, n, z, c) => n + ' ' + (z || '') + c.toLowerCase() + ' garlic');
   // "1 - 14 oz can of tomatoes" is one 14 oz can, not 1 to 14 cans: a weight or volume right before a container is the container's size
   s = s.replace(/^(\d+)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(oz|ounces?|fl\.? ?oz|g|grams?|kg|ml|l|lbs?|pounds?)\.?\s+(cans?|jars?|packages?|pkgs?|bags?|box(?:es)?|bottles?|containers?|cartons?|tubs?)(?![A-Za-z])/i, (m, n, z, u, c) => +z > +n ? n + ' (' + z + ' ' + u + ') ' + c : m);
+  // "1 13.5 oz can coconut milk", "2 15-ounce cans", "2 x 400g tins": a weight or volume right before a container is the container's size,
+  // so it's 1 can (13.5 oz), not 1 of something called "13.5 oz can". "10 oz bag frozen peas" with no count is 1 bag.
+  { const SZ = '(\\d+(?:\\.\\d+)?[½¼¾⅓⅔⅛⅜⅝⅞]?|[½¼¾⅓⅔⅛⅜⅝⅞]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+)\\s*-?\\s*(oz|ounces?|fl\\.?\\s?oz|g|grams?|kg|ml|l|lbs?|pounds?)\\.?', BX = '(cans?|jars?|packages?|pkgs?|bags?|tins?|packets?|blocks?|bricks?|box(?:es)?|bottles?|containers?|cartons?|tubs?)(?![A-Za-z])';
+    const U = u => { u = u.toLowerCase().replace(/\s/g, ''); return /^(oz|ounces?)$/.test(u) ? ' oz' : /^fl\.?oz$/.test(u) ? ' fl oz' : /^(lbs?|pounds?)$/.test(u) ? ' lb' : /^(g|grams?)$/.test(u) ? 'g' : /^kg$/.test(u) ? ' kg' : /^ml$/.test(u) ? ' ml' : ' l'; };
+    const one = t => t.replace(new RegExp('^(\\d+)(?:\\s*(?:x|×)\\s*|\\s+)' + SZ + '\\s*-?\\s+' + BX, 'i'), (m, n, z, u, c) => /^\d+\/\d+$/.test(z) && !/x|×/i.test(m.slice(n.length, m.indexOf(z))) ? '1 (' + n + ' ' + z + U(u) + ') ' + c : n + ' (' + z + U(u) + ') ' + c)
+      .replace(new RegExp('^' + SZ + '\\s*-?\\s+' + BX, 'i'), (m, z, u, c) => '1 (' + z + U(u) + ') ' + c);
+    s = s.split(/(\s\+\s)/).map(one).join(''); }
+  // "one egg" is 1 egg; "1 lb 8 oz" is 1 lb + 8 oz
+  s = s.replace(/^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?=\s+[A-Za-z(])/i, w => NUMW[w.toLowerCase()])
+    .replace(/^(?:a\s+)?half\s+(?:an?\s+)?(?=[A-Za-z])/i, '½ ').replace(/^(?:a|one)\s+dozen\s+(?=[A-Za-z])/i, '12 ').replace(/^(\d+)\s+dozen\s+(?=[A-Za-z])/i, (m, n) => (+n * 12) + ' ')
+    .replace(/^(\d+\s*(?:lbs?|pounds?)\.?)\s+(\d+(?:\.\d+)?\s*(?:oz|ounces?)\.?)(?![A-Za-z])/i, '$1 + $2')
+    .replace(/^(\d+\s*(?:cups?)\.?)\s+(\d+\s*(?:tablespoons?|tbsps?|Tbsp|T)\.?)(?![A-Za-z])/, '$1 + $2');
+  // "1 heaping cup flour" is 1 cup of flour; the heaping is how to fill the cup, so it stays on the recipe but not in the amount
+  s = s.replace(MODQ, '$1 ');
   s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*T\.?(?=\s)/, '$1 Tbsp').replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*t\.?(?=\s)/, '$1 tsp'); name = s;
   const m = s.match(LEAD);
   if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length);
     // "1 cup plus 2 tablespoons flour" is one amount: 1 cup + 2 tablespoons
     const pl = name.match(/^(?:plus|\+)\s+/i), m2 = pl && name.slice(pl[0].length).match(LEAD);
     if(m2 && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m2[1]) && /[a-z]/i.test(m2[1].replace(/^(about|approx\.?)\s*/i, ''))){ qty = qty + ' + ' + m2[1].trim(); name = name.slice(pl[0].length + m2[1].length); } }
+  const rest = name;
   // "1 teaspoon of cinnamon": the "of" belongs to neither the amount nor the name
   qty = qty.replace(/\s+of$/i, '');
   name = name.replace(/^\s*(?:plus|\+)\s+more\s+(?:for\s+[a-z]+\s+)?/i, '');
@@ -169,7 +186,8 @@ export function splitIngredient(line){
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();
-  return {qty, name, key: SAME_KEY[key] || key};
+  // rest: the line after its amount, used to show the line at another recipe size. Not enumerable, so the result's shape is unchanged.
+  return Object.defineProperty({qty, name, key: SAME_KEY[key] || key}, 'rest', {value: rest});
 }
 
 // "2 heirloom tomatoes + 4 roma tomatoes" is two things to buy, so it becomes two shopping-list items.
@@ -217,7 +235,7 @@ export function guessSection(name, qty){
 
 // ---- adding amounts together ("1 large + 2 large" → "3 large") ----
 const FV = {'⅙':1/6,'⅚':5/6,'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
-const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(heads?)$/i,'head'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
+const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(heads?)$/i,'head'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub|tin|packet|block|brick)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
 function num(s){
   s = s.trim(); let m;
   if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +m[1] + FV[m[2]];
@@ -256,18 +274,22 @@ function parsePart(p){
   if(unit.length > 2) unit = unit.toLowerCase();
   for(const [re, u] of UNIT_NORM){ if(re.test(unit)){ unit = unit.replace(re, u); break; } }
   if(pre) unit = unit ? pre + ' ' + unit : pre;
-  const pr = m[3] || m[5] || '', pm = parenMetric(pr);
-  const box = !unit || /^(?:(?:extra[- ])?large |medium |small |jumbo )?(can|cans|packages?|pkgs?|jars?|bags?|box(es)?|bottles?|containers?|envelopes?|cartons?|tubs?)$/i.test(unit);
+  const pr = m[3] || m[5] || '';
+  const box = !unit || /^(?:(?:extra[- ])?large |medium |small |jumbo )?(can|cans|packages?|pkgs?|jars?|bags?|tins?|packets?|blocks?|bricks?|box(es)?|bottles?|containers?|envelopes?|cartons?|tubs?)$/i.test(unit);
+  // "2 (400g) tins" is the size of each tin, not a total weight, so it stays with the tin (only a container gets this; "1 cup (200g)" is still a weight)
+  const pm = unit && box ? null : parenMetric(pr);
   return {n, n2, unit, desc, pm, size: !pm && pr && box ? pr.replace(/\s+/g, ' ').trim() : ''};
 }
 export function addQty(a, b, o = {}){
-  if(!a) return b || ''; if(!b) return a;
+  const mul = o.mul && Math.abs(o.mul - 1) > 1e-9 ? o.mul : 0;
+  if(!a) return b || ''; if(!b && !mul) return a;
   const split = t => { const out = []; let d = 0, cur = ''; const s = String(t).replace(/\s*\(about [^()]*\)/g, '');
     for(let i = 0; i < s.length; i++){ const ch = s[i]; if(ch === '(') d++; else if(ch === ')') d = Math.max(0, d - 1);
       if(!d && s.startsWith(' + ', i)){ out.push(cur); cur = ''; i += 2; continue; } cur += ch; } out.push(cur); return out; };
-  const parts = split(a).concat(split(b));
+  const parts = b ? split(a).concat(split(b)) : split(a);
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
+    if(mul){ x.n *= mul; if(x.n2 != null) x.n2 *= mul; if(x.pm) x.pm = {u: x.pm.u, v: x.pm.v * mul}; }
     // a size in parentheses ("1 (15 oz) can") is part of what you buy, so 15 oz and 28 oz cans are counted separately
     const g = (x.unit ? x.unit + '|' + x.desc : '|' + x.desc) + (x.size ? '|' + x.size : ''), s = sums.get(g) || {n:0, hi:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc, size:x.size, pv:0, pu:null, pok:true};
     s.n += x.n; s.hi += x.n2 != null ? x.n2 : x.n; if(x.n2 != null) s.ranged = true; s.c++; if(!s.desc) s.desc = x.desc;
@@ -277,7 +299,7 @@ export function addQty(a, b, o = {}){
     for(const gs of bySize.values()){ const bare = gs.find(g => !sums.get(g).desc), sized = gs.filter(g => sums.get(g).desc); if(!bare || sized.length !== 1) continue;
       const s = sums.get(sized[0]), e = sums.get(bare); s.n += e.n; s.hi += e.hi; s.c += e.c; if(e.ranged) s.ranged = true;
       if(s.pok && e.pok && (!s.pu || !e.pu || s.pu === e.pu)){ s.pu = s.pu || e.pu; s.pv += e.pv; } else s.pok = false; sums.delete(bare); } }
-  const plural = (u, n) => n > 1 && /(^| )(cup|clove|head|can|stick|jar|bag|package|bottle|container|envelope|carton|tub)$/.test(u) ? u + 's' : n > 1 && /(^| )box$/.test(u) ? u + 'es' : u;
+  const plural = (u, n) => n > 1 && /(^| )(cup|clove|head|can|stick|jar|bag|package|bottle|container|envelope|carton|tub|tin|packet|block|brick)$/.test(u) ? u + 's' : n > 1 && /(^| )box$/.test(u) ? u + 'es' : u;
   // Spoons, sticks and cups are one family, and so are pounds and ounces. When amounts are added up they're
   // written the way you'd measure them: "4⅓ cups + 1 Tbsp + 1 tsp", never "4.42 cups". Butter goes in
   // sticks + Tbsp ("2 sticks + 2 Tbsp").
@@ -286,7 +308,8 @@ export function addQty(a, b, o = {}){
   const metric = (t, k) => k === 'm' ? (t >= 1000 ? trim(t / 1000) + ' kg' : (t >= 10 ? Math.round(t) : trim(t)) + 'g') : (t >= 1000 ? trim(t / 1000) + ' L' : (t >= 10 ? Math.round(t) : trim(t)) + ' ml');
   const pmTail = arr => { const u = arr[0].pu; if(!u || arr.some(s => !s.pok || s.pu !== u)) return ''; const v = arr.reduce((n, s) => n + s.pv, 0); return ` (${v >= 10 ? Math.round(v) : trim(v)}${u === 'g' ? 'g' : ' ml'})`; };
   const isButter = /(^| )butter$/.test(o.key || '') && !/(peanut|almond|cashew|apple|sunflower|cocoa|seed|nut) butter$/.test(o.key || '');
-  const spoons = t => { const tb = Math.floor(t / 3 + 1e-9), ts = t - tb * 3; return [tb ? tb + ' Tbsp' : '', ts > 1e-6 ? nice(ts) + ' tsp' : ''].filter(Boolean).join(' + ') || '0 tsp'; };
+  // At a new recipe size, spoon amounts go to the nearest ⅛ tsp, the smallest measuring spoon (off by 1/16 tsp at most)
+  const spoons = t => { if(mul && t > 0 && Math.round(t * 8) === 0) return 'a pinch'; if(mul) t = Math.round(t * 8) / 8; const tb = Math.floor(t / 3 + 1e-9), ts = t - tb * 3; return [tb ? tb + ' Tbsp' : '', ts > 1e-6 ? nice(ts) + ' tsp' : ''].filter(Boolean).join(' + ') || '0 tsp'; };
   const cups = t => {
     const w = Math.floor(t / 48 + 1e-9), rem = t - w * 48;
     let best = null; for(const f of [0, 1/4, 1/3, 1/2, 2/3, 3/4]){ const r = rem - f * 48; if(r < -1e-6) continue;
@@ -308,12 +331,108 @@ export function addQty(a, b, o = {}){
     const usStr = us === 'w' ? pounds(Math.round(back * 8) / 8, back) : cups(Math.round(back * 4) / 4);
     merged.set(A[0], `${metric(all, me)} (about ${usStr})`); A.slice(1).concat(B).forEach(s => merged.set(s, null)); byFam.delete(us); byFam.delete(me); });
   byFam.forEach(arr => {
-    if(arr.reduce((n, s) => n + s.c, 0) < 2) return;
+    if(!mul && arr.reduce((n, s) => n + s.c, 0) < 2) return;
     const kind = FAM[arr[0].unit][0], used = arr.map(s => s.unit), dd = (arr.find(s => s.desc) || {}).desc, d = dd ? ' ' + dd : '';
     const t = arr.reduce((n, s) => n + s.n * FAM[s.unit][1], 0), top = Math.max(...used.map(u => FAM[u][1]));
     const str = kind === 'm' || kind === 'l' ? metric(t, kind) : kind === 'w' ? pounds(t, top) : used.includes('stick') || (isButter && t >= 24) ? sticks(t) : top >= 48 ? cups(t) : used.includes('fl oz') ? floz(t) : spoons(t);
     merged.set(arr[0], (str + (kind === 'm' || kind === 'l' ? '' : pmTail(arr))).replace(/^([^+]*?)( \+ |$)/, (m, a, b) => a + d + b)); arr.slice(1).forEach(s => merged.set(s, null));
   });
-  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 ? s.orig : s.ranged ? nice(s.n) + '–' + nice(s.hi) + (s.unit ? ' ' + plural(s.unit, s.hi) : '') + (s.desc ? ' ' + s.desc : '') : nice(s.n) + (s.size ? ' ' + s.size : '') + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '') + pmTail([s])).filter(x => x !== null);
+  if(mul && text.length) return null;
+  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 && !mul ? s.orig : s.ranged ? nice(s.n) + '–' + nice(s.hi) + (s.unit ? ' ' + plural(s.unit, s.hi) : '') + (s.desc ? ' ' + s.desc : '') : nice(s.n) + (s.size ? ' ' + s.size : '') + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '') + pmTail([s])).filter(x => x !== null);
   return out.concat(text).join(' + ');
+}
+
+// Scaling a recipe (½×, 2×, or a new serving size). Amounts are multiplied exactly and written the way you'd measure them,
+// within the same kind of unit only (6 tsp is 2 Tbsp, 4 Tbsp is ¼ cup). Cups never turn into grams.
+// Returns null when an amount can't be read, so nothing is ever shown scaled when it isn't.
+export function scaleQty(q, f, o = {}){
+  if(!q || !f || Math.abs(f - 1) < 1e-9) return q;
+  const m = String(q).match(/^((?:about|approx\.?)\s+)(.+)$/i); if(m){ const x = scaleQty(m[2], f, o); return x == null ? null : m[1] + x; }
+  return addQty(q, '', Object.assign({}, o, {mul: f}));
+}
+export function scaleLine(line, f){
+  if(!f || Math.abs(f - 1) < 1e-9) return line;
+  const out = []; for(const raw of ingParts(line)){ const part = prettyFractions(raw.replace(BULLET, '').trim()), p = splitIngredient(part);
+    if(!p.qty){ const x = scaleRest(part, f); if(x == null) return null; out.push(x); continue; }
+    const mod = (part.match(new RegExp('^[\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?\\s+(' + MODW + ')\\s+(?=[A-Za-z])', 'i')) || [])[1];
+    let pq = p.qty, extra = '';
+    if(!/\)\s*(?:cans?|jars?|packages?|pkgs?|bags?|tins?|packets?|blocks?|bricks?|box(?:es)?|bottles?|containers?|cartons?|tubs?)\b/i.test(pq)) pq = pq.replace(/\s*\(([^()]*)\)/g, (m, c) => { if(/(?:^|[;,]\s*)(?:about |~)?[\d.]+\s*(?:g|grams?|kg|ml|l)$/i.test(c.trim())) return m; extra += ' (' + c + ')'; return ''; });
+    let q = scaleQty(pq, f, {key: p.key}), rest = String(p.rest || '').trimStart(); if(q == null) return null;
+    // after a plain count, a size in parentheses is the size of each one ("1 (3–4 lb) whole chicken"), so it stays as is
+    if(extra && /^[\d½¼¾⅓⅔⅛⅜⅝⅞.\/\s–-]+(?:(?:extra[- ])?(?:large|medium|small|jumbo|whole))?$/i.test(pq.trim())){ q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+)/, '$1' + extra.replace(/-/g, '–')); extra = ''; }
+    else if(extra){ const x = scaleRest(extra.trim(), f); if(x == null) return null; extra = ' ' + x; }
+    if(mod && MODQ.test(part)) q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+(?:–[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+)?)/, '$1 ' + mod.toLowerCase());
+    // a counted thing changes between one and many: "2 lemons" at ½× is "1 lemon", "1 red bell pepper" at 2× is "2 red bell peppers"
+    if(/^[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+(?: \([^)]*\))?(?: (?:extra[- ])?(?:large|medium|small|jumbo|whole))?(?: \([^)]*\))?$/i.test(q)) rest = countWord(rest, leadNum(q) > 1);
+    // the same for a counted unit: "4 slices" at ¼× is "1 slice", "1 bunch" at 2× is "2 bunches"
+    else q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+ (?:[a-z]+ )?)([a-z]+)(?=$| \+)/i, (m, a, u) => CUNIT.test(u) ? a + plWord(u, leadNum(q) > 1) : m);
+    // "1 cup whole + 2 Tbsp" reads better in a recipe as "1 cup + 2 Tbsp whole milk"
+    const dm = q.match(/^(.*?) ((?:extra[- ])?large|medium|small|jumbo|whole)( \+ .*)$/i); if(dm){ q = dm[1] + dm[3]; rest = dm[2] + ' ' + rest; }
+    rest = scaleRest(rest, f); if(rest == null) return null;
+    // less than ⅛ tsp: "a pinch of cayenne", never "0 tsp"
+    if(/^a pinch$/.test(q)) rest = 'of ' + rest.replace(/^of\s+/i, '');
+    out.push((q + extra + ' ' + rest).trim()); }
+  return out.join(' + ');
+}
+// Numbers in the rest of a line. Amounts in it are scaled too ("(plus 2 Tbsp for brushing)", "(1 packet)", "juice of 1 lemon").
+// Sizes stay ("9-inch", "6-oz fillets", "350°F"). Any other number means the line can't be scaled safely, so it returns null and shows "Not scaled".
+const RU = '(?:cups?|tablespoons?|tbsps?|Tbsp|teaspoons?|tsps?|tsp|ounces?|oz|pounds?|lbs?|lb|grams?|g|kg|ml|l|liters?|cloves?|cans?|packets?|packages?|sticks?|pinch(?:es)?|slices?|sprigs?|bunch(?:es)?|heads?|tins?|jars?|bags?)';
+const RNUM = t => { t = String(t).trim(); let m; if((m = t.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞])$/))) return +m[1] + FV[m[2]]; if((m = t.match(/^([½¼¾⅓⅔⅛⅜⅝⅞])$/))) return FV[m[1]];
+  if((m = t.match(/^(\d+)\s+(\d+)\/(\d+)$/))) return +m[1] + m[2] / m[3]; if((m = t.match(/^(\d+)\/(\d+)$/))) return m[1] / m[2]; return /^\d+(\.\d+)?$/.test(t) ? +t : null; };
+function scaleRest(rest, f){
+  let t = String(rest || ''), bad = false;
+  const N = '(\\d+(?:\\.\\d+)?\\s*[½¼¾⅓⅔⅛⅜⅝⅞]?|[½¼¾⅓⅔⅛⅜⅝⅞]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+)';
+  const num = n => { const v = RNUM(n); if(v == null){ bad = true; return null; } return v * f; };
+  // an amount with its unit, number only, so "(16 oz)" stays in ounces: "(plus 2 Tbsp for brushing)", "(1 packet)"
+  const ADJ = '((?:standard|large|small|medium|heaping|level|scant|full)\\s+)?';
+  t = t.replace(new RegExp('(^|[\\s(])' + N + '(?:\\s*[-–]\\s*' + N + ')?\\s*' + ADJ + '(' + RU + ')(?![A-Za-z-])', 'gi'), (m, pre, n, n2, adj, u) => { const v = num(n), v2 = n2 ? num(n2) : null; if(v == null || (n2 && v2 == null)) return m;
+    return pre + nice(v) + (n2 ? '–' + nice(v2) : '') + ' ' + (adj || '') + (CUNIT.test(u) ? plWord(u, (v2 || v) > 1) : u); });
+  // "juice of 1 lemon", "plus 1 yolk", "about 2 medium"
+  t = t.replace(new RegExp('\\b(of|from|plus|and|about)\\s+' + N + '\\s+((?:large|medium|small)\\b|[A-Za-z]+)', 'gi'), (m, w, n, word) => { if(new RegExp('^' + RU + '$', 'i').test(word)) return m; const v = num(n); if(v == null) return m; return w + ' ' + nice(v) + ' ' + (/^(large|medium|small)$/i.test(word) ? word : plWord(word, v > 1)); });
+  if(bad) return null;
+  // anything left that's a number but not a size or a temperature: the line can't be scaled safely
+  const left = t.replace(new RegExp('(^|[\\s(])' + N + '(?:\\s*[-–]\\s*' + N + ')?\\s*' + ADJ + '(' + RU + ')(?![A-Za-z-])', 'gi'), ' ').replace(/\b(of|from|plus|and|about)\s+[\d.½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+\s+[A-Za-z]+/gi, ' ')
+    .replace(/[\d.½¼¾⅓⅔⅛⅜⅝⅞]+\s*(?:x|×)\s*[\d.]+\s*-?\s*(?:inch|in\.?|cm)\b/gi, ' ').replace(/[\d.\/½¼¾⅓⅔⅛⅜⅝⅞]+\s*-\s*[A-Za-z]+/g, ' ').replace(/[\d.]+\s*(?:°|degrees|%|inch(?:es)?\b|in\.|cm\b|")/gi, ' ');
+  if(/[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(left) || /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|half|quarter)\b/i.test(left.replace(/\b[a-z]+(?:-[a-z]+)+\b/gi, ' '))) return null;
+  return t;
+}
+// "Serves 4" at 2× is "Serves 8"; "4–6 servings" at ½× is "2–3 servings".
+// A bigger batch is more pans of the same size, not one giant one, so "one 9-inch pie" at 3× is "3 pies (9-inch)".
+const NUMW = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12};
+export function scaleYield(y, f){
+  if(!y || !f || Math.abs(f - 1) < 1e-9) return y;
+  const w = String(y).replace(/^(\D*?)\b(an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?=\s+\S)/i, (x, pre, n) => pre + NUMW[n.toLowerCase()]);
+  const m = w.match(/^(\D*?)(\d+(?:\.\d+)?)(?:(\s*(?:-|–|to)\s*)(\d+(?:\.\d+)?))?(.*)$/); if(!m) return y;
+  const hi = (m[4] ? +m[4] : +m[2]) * f; let rest = m[5];
+  // two separate counts ("Serves 4 as a main or 6 as a side"): scale each number and change no words
+  if(/\d/.test(rest.replace(/\d+(?:\s*[x×]\s*\d+)?\s*(?:-?\s?inch|"|-in\.?|\s?cm)/gi, ''))) return w.replace(/(\d+(?:\.\d+)?)(?!\s*(?:[x×]\s*\d|-?\s?inch|"|-in|\s?cm|\.\d))/gi, n => nice(+n * f));
+  const sz = rest.match(/^\s+(\d+(?:\s*[x×]\s*\d+)?(?:[- ]inch|"|-in\.?| ?cm)(?![a-z]))\s+(.+)$/i);
+  if(sz) rest = ' ' + countWord(sz[2], hi > 1).replace(/^(\S+)/, '$1 (' + sz[1].replace(/\s+/g, ' ') + ')');
+  else if(/^\s+\([^)]*\)\s+[a-z]/i.test(rest)){ const pm = rest.match(/^\s+(\([^)]*\))\s+(.+)$/); rest = ' ' + pm[1] + ' ' + countWord(pm[2], hi > 1); }
+  else if(/^\s+[a-z]/i.test(rest) && !/^\s+(dozen|to|or|and|people|persons?)\b/i.test(rest)) rest = ' ' + countWord(rest.trim(), hi > 1);
+  return m[1] + nice(+m[2] * f) + (m[4] ? m[3] + nice(+m[4] * f) : '') + rest;
+}
+export function yieldCount(y){ const m = String(y || '').match(/^\D*?(\d+)(?!\s*(?:-|–|to)\s*\d)(?![\d.\/])/); return m ? +m[1] : 0; }
+
+const leadNum = q => { const m = String(q).match(/(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)(?=\s|$)(?!.*–)/) || String(q).match(/–(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)/); return m ? (m[1] ? +m[1] : 0) + (m[2] ? FV[m[2]] : 0) : 0; };
+// The word that's counted: the first word when it's a bunch, sprig, slice and so on ("2 bunches cilantro"), otherwise the last word of the name
+// before a comma or note ("2 red bell peppers, sliced"). Words that are the same either way are left alone.
+const CUNIT = /^(cups?|cloves?|cans?|packages?|sticks?|pinch|pinches|dash|dashes|bunch|bunches|heads?|slices?|sprigs?|quarts?|pints?|containers?|jars?|bags?|box|boxes|bars?|envelopes?|bottles?|cartons?|tubs?|tins?|packets?|blocks?|bricks?)$/i;
+const COUNTED = /^(bunch|bunches|sprigs?|slices?|pieces?|pinch|pinches|handfuls?|stalks?|ribs?|leaf|leaves|sheets?|fillets?|filets?|strips?|cubes?|heads?|cloves?|ears?|links?|loaf|loaves|wedges?|knobs?|dashes|dash|drops?)$/i;
+const SAME = /^(zucchini|fish|deer|sheep|asparagus|hummus|couscous|molasses|swiss|grits|oats|greens|series|species|chives|lettuce|garlic|ginger|celery|parsley|cilantro|basil|rice|flour|sugar|salt|butter|cheese|bread|broccoli|spinach|kale|corn|tofu|feta|ricotta|zest|juice|oil|water|milk|cream)$/i;
+const IRR = [['leaf', 'leaves'], ['loaf', 'loaves'], ['knife', 'knives'], ['half', 'halves'], ['potato', 'potatoes'], ['tomato', 'tomatoes'], ['mango', 'mangoes']];
+function plWord(w, many){
+  const lo = w.toLowerCase(), keep = x => w[0] === w[0].toUpperCase() ? x.charAt(0).toUpperCase() + x.slice(1) : x;
+  if(SAME.test(lo)) return w;
+  for(const [one, more] of IRR){ if(lo === one) return many ? keep(more) : w; if(lo === more) return many ? w : keep(one); }
+  if(many){ if(/s$/.test(lo)) return w; if(/[^aeiou]y$/.test(lo)) return w.slice(0, -1) + 'ies'; if(/(ch|sh|x|z)$/.test(lo)) return w + 'es'; return w + 's'; }
+  if(!/s$/.test(lo) || /(ss|us|is)$/.test(lo)) return w;
+  if(/ies$/.test(lo)) return w.slice(0, -3) + 'y'; if(/(ches|shes|xes|zes)$/.test(lo)) return w.slice(0, -2); return w.slice(0, -1);
+}
+function countWord(rest, many){
+  const m = String(rest).match(/^(\S+)(\s.*)?$/); if(!m) return rest;
+  if(COUNTED.test(m[1])) return plWord(m[1], many) + (m[2] || '');
+  const cut = rest.search(/\s*(?:[,(;]|\s[-–]\s|\s(?:for|or|to|plus|about)\s)/), head = cut < 0 ? rest : rest.slice(0, cut), tail = cut < 0 ? '' : rest.slice(cut);
+  const w = head.match(/^(.*?)([A-Za-z]+)$/); if(!w) return rest;
+  return w[1] + plWord(w[2], many) + tail;
 }

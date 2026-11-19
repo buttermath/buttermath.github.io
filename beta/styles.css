@@ -1300,3 +1300,5 @@ button.tag.tago::after{inset:0 -4px -8px}
 /* step group names ("Roast") use the same small red label as ingredient groups ("LAYERS & GARNISH"), so both sit below their section heading */
 .stephead{font-family:'Inter',system-ui,sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red-dark);line-height:1.3;margin:18px 4px 8px}
 .stephead:first-child{margin-top:0}
+/* group labels inside a recipe are a little bigger so they're easy to read on a phone */
+.stephead,.ing-col .grp{font-size:14px}

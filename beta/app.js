@@ -7,6 +7,7 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 // Phantom check on the first step: shows twice per recipe per visit to the site, then stops
 const stepHinted = new Set(), stepHintT = {};
+let tabHintAt = 0, tabHintT = null, tabsHtml = ''; // the Shopping list tab pulses after ingredients are added somewhere else
 const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = s => esc(prettyFractions(String(s == null ? '' : s).replace(/^\s*[•◦▪▫●‣∙]\s*/, ''))).replace(/([½¼¾⅓⅔⅛⅜⅝⅞])/g, '<span class="fr">$1</span>');
@@ -344,6 +345,10 @@ const pic = d => d.photo ? `<img src="${esc(d.photo)}" alt="" loading="lazy"${po
 
 // On the shopping list, a long recipe name is written out in full and wraps, instead of the automatic short name that was cut off with "…"
 const listName = d => d.short && !/…$/.test(d.short) ? d.short : (d.title || d.short || '');
+// the size picked on a recipe, shown after its name on the shopping list ("Pumpkin Pie 3×"); nothing at 1×
+function sizeTag(id){ const f = scaleOf(id); if(near1(f, 1)) return '';
+  const w = Math.floor(f + 1e-9), fr = ({0: '', .25: '¼', .5: '½', .75: '¾'})[Math.round((f - w) * 4) / 4], x = Math.abs(f * 4 - Math.round(f * 4)) < .02 && fr !== undefined ? (w || fr ? (w ? w : '') + fr : '0') : String(+f.toFixed(1));
+  return ` <span class="sz">${x}×</span>`; }
 // An item's keys: its own, plus any it was combined with ("Combine" on the shopping list), so all of them add up on that one line.
 const ikeys = it => [it.key || splitIngredient(it.name).key, ...(it.also || [])];
 const ihas = (it, key) => ikeys(it).includes(key);
@@ -515,6 +520,7 @@ function unlinkRecipe(k, id, keys){
   });
 }
 function addFresh(k, id, lines, keepCart){
+  tabHintAt = Date.now();
   if(!(k.progress.active[id] !== false && !(k.progress.archived || {})[id] && !(k.progress.done || {})[id])) unlinkRecipe(k, id);
   addIngredientsTo(k, id, [{items: lines}]);
   const keys = new Set(lines.flatMap(ingParts).map(l => splitIngredient(l).key));
@@ -930,9 +936,12 @@ function renderHeader(r){
 }
 function renderTabs(r){
   const left = visibleItems().filter(it => !P().shop[it.id]).length;
-  $('#tabs').innerHTML = `<button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
-  <button class="tab ${r.v === 'shopping' ? 'on' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
+  const hint = r.v !== 'shopping' && Date.now() - tabHintAt < 6200;
+  if(hint && !tabHintT) tabHintT = setTimeout(() => { tabHintT = null; renderTabs(route()); }, 6300 - (Date.now() - tabHintAt));
+  const h = `<button class="tab ${!['shopping','account','friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="recipes">Recipes${recipes.filter(r => !isArch(r.id)).length ? `<span class="n">(${recipes.filter(r => !isArch(r.id)).length})</span>` : ''}</button>
+  <button class="tab ${r.v === 'shopping' ? 'on' : ''} ${hint ? 'tabhint' : ''}" data-act="go" data-h="shopping">Shopping list${left ? `<span class="n">(${left})</span>` : ''}</button>
   <button class="tab ${['friends','fbook','frecipe'].includes(r.v) ? 'on' : ''}" data-act="go" data-h="friends">Friends${friendsNew() ? '<span class="rdot" aria-label="New"></span>' : ''}</button>`;
+  if(h !== tabsHtml || !$('#tabs').innerHTML){ tabsHtml = h; $('#tabs').innerHTML = h; }
 }
 
 function renderShopping(){
@@ -947,7 +956,7 @@ function renderShopping(){
   const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && all.some(i => (i.recipes || []).includes(r.id)));
   const colOf = listColors(chipRecipes.map(r => r.id));
   const chips = chipRecipes.map(r => { const on = isActive(r.id), nm = esc(listName(D(r)));
-    return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${colOf(r.id)}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">${ICON_X}</button></span>`; }).join(' ');
+    return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${colOf(r.id)}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}${sizeTag(r.id)}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">${ICON_X}</button></span>`; }).join(' ');
   const Q = shopQ.trim().toLowerCase();
   const pool = Q ? all.filter(i => i.name.toLowerCase().includes(Q) && (items.includes(i) || shop[i.id])) : f === 'have' ? all : items;
   const keep = i => { const st = shop[i.id] || ''; return Q || f === 'all' || (f === 'need' && !st) || (f === 'cart' && st === 'bought') || (f === 'have' && st === 'have'); };
@@ -963,7 +972,7 @@ function renderShopping(){
     const sub = Q ? list.length + (list.length === 1 ? ' match' : ' matches') : f === 'have' ? list.length + ' at home' : f === 'cart' ? list.length + ' in cart' : (left ? left + ' to get' : 'all set ✓');
     secs += `<div class="section" data-sec="${esc(sec)}"><h3>${esc(sec)} <small>${sub}</small><span class="secmv"><button class="grip" data-act="aisles" data-s="${esc(sec)}" aria-label="Reorder aisles" title="Reorder aisles"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></button></span></h3><div class="card items">` + list.map(it => {
       const st = shop[it.id] || '';
-      const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + ((it.recipes || []).some(onListRid) ? it.recipes.filter(onListRid) : (it.recipes || [])).map(x => { const rr = R(x); return !rr ? '' : homeMode ? `<span class="tag" style="--c:${colOf(x)}">${esc(listName(D(rr)))}</span>` : `<button class="tag tago" style="--c:${colOf(x)}" data-act="go" data-h="r-${esc(x)}" aria-label="Open ${esc(D(rr).title)}">${esc(listName(D(rr)))}</button>`; }).join('');
+      const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + ((it.recipes || []).some(onListRid) ? it.recipes.filter(onListRid) : (it.recipes || [])).map(x => { const rr = R(x); return !rr ? '' : homeMode ? `<span class="tag" style="--c:${colOf(x)}">${esc(listName(D(rr)))}${sizeTag(x)}</span>` : `<button class="tag tago" style="--c:${colOf(x)}" data-act="go" data-h="r-${esc(x)}" aria-label="Open ${esc(D(rr).title)}">${esc(listName(D(rr)))}${sizeTag(x)}</button>`; }).join('');
       // (While checking off the pantry, each whole row is one button, so the tags there are plain labels: a button can't sit inside a button.)
       const info = `<div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? qtyLine(it) : ''}${homeMode ? '' : mathOf(it, colOf)}<div class="tags">${tags}</div></div>`;
       if(homeMode) return `<button class="item homerow ${st === 'have' ? 'have' : ''}" data-act="have" data-id="${esc(it.id)}" aria-pressed="${st === 'have'}"><span class="homeck">${ICON_HOME}</span>${info}<span class="homelbl">${st === 'have' ? 'At home' : ''}</span></button>`;

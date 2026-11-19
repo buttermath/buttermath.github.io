@@ -42,6 +42,12 @@ export const HAND = [
   ['three recipes', 'sugar', '1 cup', '½ cup', '¼ cup', '1¾ cups'],
   ['three recipes with Tbsp', 'oil', '¼ cup', '2 Tbsp', '1 Tbsp', '¼ cup + 3 Tbsp'],
   ['big batch', 'flour', '4 cups', '4 cups', '4 cups', '12 cups'],
+  ['fluid ounces', 'coconut milk', '8 fl oz', '8 fl oz', '16 fl oz'],
+  ['fluid ounces and cups', 'milk', '8 fl oz', '1 cup', '2 cups'],
+  ['fluid ounces and a spoon', 'cream', '2 fl. oz', '1 Tbsp', '2½ fl oz'],
+  ['small boxes', 'instant vanilla pudding', '1 small box', '1 small box', '2 small boxes'],
+  ['small and large boxes kept apart', 'instant vanilla pudding', '1 small box', '1 large box', '1 small box + 1 large box'],
+  ['jars', 'salsa', '2 jars', '1 jar', '3 jars'],
 ];
 
 export function runHand(check){
@@ -50,7 +56,7 @@ export function runHand(check){
 
 // ---------------- the separate calculator ----------------
 const F = {'½':1/2,'¼':1/4,'¾':3/4,'⅓':1/3,'⅔':2/3,'⅛':1/8,'⅜':3/8,'⅝':5/8,'⅞':7/8,'⅙':1/6,'⅚':5/6};
-const VOL = {tsp:1, teaspoon:1, teaspoons:1, tbsp:3, tablespoon:3, tablespoons:3, cup:48, cups:48, stick:24, sticks:24, ml:1/4.92892, l:1000/4.92892};
+const VOL = {floz:6, tsp:1, teaspoon:1, teaspoons:1, tbsp:3, tablespoon:3, tablespoons:3, cup:48, cups:48, stick:24, sticks:24, ml:1/4.92892, l:1000/4.92892};
 const WT = {g:1, kg:1000, oz:28.3495, lb:453.592, lbs:453.592};
 function number(t){
   t = t.trim(); let m;
@@ -65,7 +71,7 @@ export function measure(text){
   const out = {v:[0,0], w:[0,0], n:{}};
   const main = String(text).replace(/\s*\(about [^)]*\)$/, '');
   for(let part of main.split(' + ')){
-    part = part.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    part = part.replace(/\([^)]*\)/g, ' ').replace(/\bfl\.?\s*oz\b\.?/i, 'floz').replace(/\s+/g, ' ').trim();
     const m = part.match(/^((?:\d+(?:\.\d+)?\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?|\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]))(?:\s*[–-]\s*(\d+(?:\.\d+)?\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?|\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]))?\s*([A-Za-z]*)\s*([A-Za-z]*)$/);
     if(!m) return null;
     const lo = number(m[1]), hi = m[2] ? number(m[2]) : lo; if(lo == null || hi == null) return null;
@@ -91,7 +97,7 @@ function agrees(got, want){
 const AMTS = ['⅛','¼','⅓','½','⅔','¾','1','1¼','1⅓','1½','1⅔','1¾','2','2½','3','4'];
 const SETS = [
   ['tsp','Tbsp','cup'], ['tsp','Tbsp'], ['cup','Tbsp'], ['stick','Tbsp','cup'],
-  ['oz','lb'], ['g','kg'], ['ml','l'], ['cup','ml'], ['oz','g'], ['clove'], ['large'], [''],
+  ['oz','lb'], ['g','kg'], ['ml','l'], ['cup','ml'], ['oz','g'], ['fl oz','Tbsp','cup'], ['clove'], ['large'], [''],
 ];
 export function runRandom(check, n = 400){
   let seed = 20261119; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;

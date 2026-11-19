@@ -1182,3 +1182,5 @@ button.item.homerow{width:100%;text-align:left;font:inherit;color:inherit;border
 .a2hs-steps .xi{width:17px;height:17px;vertical-align:-3px;color:#007AFF}
 /* "Math" in the logo matches the diner red of the header stripe and buttons (Hayley, Nov 18) */
 .brand h1 span,.lp-ph-logo span{color:var(--red)}
+/* Header: the Saved status and the avatar sit on the same center line (".ok" and ".err" are also message styles with a top margin) */
+.hright .status{margin:0}

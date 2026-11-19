@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=14';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=15';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -449,6 +449,18 @@ function fixSplit(k){ let ch = false; const items = k.shopping.items, marks = k.
     items.forEach(x => { if(keys.has(x.key || splitIngredient(x.name).key) && rids.some(r => (x.recipes || []).includes(r))){ fixItem(x); if(mark && !marks[x.id]) marks[x.id] = mark; } });
     ch = true; }
   return ch; }
+// Lists saved before prep words at the end of a name were dropped ("Chickpeas drained" is now "Chickpeas") keep the old name.
+// It's renamed (or merged into the same item already there) so its amount still adds up from the recipes.
+function fixPrep(k){ let ch = false; const items = k.shopping.items;
+  for(const it of items.slice()){ if(it.custom || !(it.recipes || []).length) continue;
+    const p = splitIngredient(it.name), ok = (it.key || '') ; if(!p.key || p.key === ok) continue;
+    const rids = it.recipes.filter(x => R(x)), has = key => rids.some(rid => ingLines(D(R(rid))).some(l => splitIngredient(l).key === key));
+    if(has(ok) || !has(p.key)) continue;
+    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...it.recipes])]; items.splice(items.indexOf(it), 1); fixItem(dup); }
+    else { it.name = p.name; it.key = p.key; fixItem(it); }
+    ch = true; }
+  return ch; }
 function fixAnd(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(!/^and\s+(?:[\d½¼¾⅓⅔⅛⅜⅝⅞]|a\s+half|half)/i.test(it.name || '')) continue;
     const p = splitIngredient('1 ' + it.name); if(!p.qty || p.key === (it.key || '')) continue;
@@ -467,8 +479,8 @@ function fixPlus(k){ let ch = false; const items = k.shopping.items;
     else { it.name = p.name; it.key = p.key; }
     ch = true; }
   return ch; }
-function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c) | fixSplit(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
-  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); fixSplit(k); k.shopping.items.forEach(fixItem); }, true); }
+function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c) | fixSplit(c) | fixPrep(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
+  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); fixSplit(k); fixPrep(k); k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {

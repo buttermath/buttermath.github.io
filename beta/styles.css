@@ -1258,3 +1258,11 @@ body:has(.asksheet) #toast.show{transform:translate(-50%,0)}
 .mreport{display:inline-block;margin-top:8px;font:500 13px Inter,sans-serif;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
 .mreport:hover{color:var(--red)}
 .editform .mreport{display:block;text-align:center;margin-top:12px}
+
+/* current-step arrow: sits in the bottom corner, moves up only while Back to top is showing, fades out when you stop scrolling */
+.stepfab{bottom:calc(22px + var(--navlift,0px) + env(safe-area-inset-bottom))}
+body:has(.totop.show) .stepfab{bottom:calc(78px + var(--navlift,0px) + env(safe-area-inset-bottom))}
+#fab.stepfab{transition:opacity .4s,transform .2s,bottom .2s}
+#fab.stepfab.idle{opacity:0;pointer-events:none}
+/* ingredient circles sit centered between the paper's edge and the red margin line; the text stays where it was */
+.ing-col .ing .box{margin-left:-9px;margin-right:9px}

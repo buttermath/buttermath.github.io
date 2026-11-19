@@ -232,7 +232,7 @@ function renderAuth(){
   const inv = inviteToken() && inviteInfo && inviteInfo.name && inviteInfo.name !== '__self' ? inviteInfo.name : '';
   const gift = !inv && giftToken() && giftInfo && giftInfo.name && giftInfo.name !== '__self' ? giftInfo : null;
   const title = inv && m === 'signup' ? `Join ${esc(inv)} on Butter Math` : inv && m === 'signin' ? 'Welcome back' : m === 'signup' ? 'Create your kitchen' : m === 'forgot' ? 'Reset your password' : 'Welcome to <span style="white-space:nowrap">Butter Math!</span>';
-  return `<div class="authwrap">${inv || gift ? '' : '<button class="linkbtn lp-back" data-act="landing">← About Butter Math</button>'}
+  return `<div class="authwrap">${inv || gift ? '' : '<button class="linkbtn lp-back" data-act="landing">' + ICON_BACK + 'About Butter Math</button>'}
     <div class="authhero">${AUTH_ART}</div>
     <div class="card panel auth">${inv && m !== 'forgot' ? `<div class="invhead">${avatar(inviteInfo.t, inv)}<span>${esc(inv)} invited you</span></div>` : gift && m !== 'forgot' ? `<div class="invhead">${avatar(giftInfo.t, gift.name)}<span>${esc(gift.name)} sent you ${esc(gift.title || 'a recipe')}</span></div>` : ''}<h2>${title}</h2>
     <p class="muted" style="margin:4px 0 14px">${gift && m === 'signup' ? `Create a free account and ${esc(gift.title || 'the recipe')} will be waiting for you.` : gift && m === 'signin' ? `Sign in to get ${esc(gift.title || 'the recipe')}.` : inv && m === 'signup' ? `Create a free account, then accept ${esc(inv)}'s friend request.` : inv && m === 'signin' ? `Sign in to see ${esc(inv)}'s friend request.` : m === 'signup' ? 'Save recipes, build a shopping list, and follow along step by step on any device.' : m === 'forgot' ? "Enter your email and we'll send you a link." : 'Sign in to view your recipes and shopping list.'}</p>
@@ -381,9 +381,9 @@ const ingListed = (id, line) => { const key = splitIngredient(line).key; return 
 let addSheet = null, choosing = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null, shopAdd = false;
 const srcCredit = srcs => srcs.length ? `<div class="srcline">Recipe from <a href="${esc(srcs[0].url)}" target="_blank" rel="noopener">${esc(hostOf(srcs[0].url))}</a></div>` : '';
 const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./, ''); }catch(e){ return 'website'; } };
-const ICON_PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
+const ICON_PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
 const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
-const ICON_PLUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>';
+const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
 
 /* ---------------- render ---------------- */
 function route(){
@@ -404,13 +404,13 @@ let fSavedOnly = false, fCat = [], fCatOpen = false, fSortOpen = false, fSortK =
 const FSORTS = {recent:'Recent', az:'A–Z'};
 let sendLink = null;
 let friends = null, inbox = [], saves = [], friendsAt = 0, addFriendOpen = false, frSent = null, sendSheet = null, fbook = {}, fQ = '', inviteInfo = null;
-const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M19 8v6M16 11h6"/></svg>';
-const ICON_LINK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
-const ICON_LOCK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
-const ICON_PLUS2 = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-const ICON_OK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg>';
-const ICON_RIGHT = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const ICON_ADDF = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>';
+const ICON_LINK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+const ICON_LOCK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+const ICON_PLUS2 = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+const ICON_OK = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>';
+const ICON_RIGHT = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 const AVC = ['#C8553D', '#4B57A8', '#3F7A55', '#B5142B', '#D9772B', '#6E4FA8'];
 const avColor = () => '#3F7A55';
 const avatar = (id, name, cls = '') => `<span class="av ${cls}" style="--a:${avColor(id)}">${esc((name || '?').trim().charAt(0).toUpperCase())}</span>`;
@@ -464,12 +464,12 @@ async function inviteMail(to){
   return {url, mail: 'mailto:' + E(to).replace(/%40/g, '@') + '?subject=' + E(subj) + '&body=' + E(body), gmail: 'https://mail.google.com/mail/?view=cm&fs=1&to=' + E(to) + '&su=' + E(subj) + '&body=' + E(body)};
 }
 function renderAddFriend(){
-  if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="pickhead"><div class="askt">User not found</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">✕</button></div>
+  if(frSent) return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="${frSent.invited ? 'User not found' : 'Friend request sent'}">${frSent.invited ? `<div class="pickhead"><div class="askt">User not found</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">${ICON_X}</button></div>
     <p class="frsent">We couldn't find a Butter Math account for <b>${esc(frSent.em)}</b>. They might not be on Butter Math yet.</p>
     <p class="frsent">Send them an invite and they'll receive your friend request when they log in for the first time.</p>
-    ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}${frSent.mail ? `<p class="frmore">If this did not open an email, <button class="linkbtn" data-act="frcopy">copy the invite link</button> so you can email or text the sign up link to a friend.</p>` : ''}` : `<div class="pickhead"><div class="askt">Request sent</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">✕</button></div>
+    ${frSent.mail ? `<a class="btn primary bigbtn" href="${esc(frSent.mail.mail)}" data-act="frmailed">` : `<button class="btn primary bigbtn" data-act="frmail">`}<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>Email them an invite${frSent.mail ? '</a>' : '</button>'}${frSent.mail ? `<p class="frmore">If this did not open an email, <button class="linkbtn" data-act="frcopy">copy the invite link</button> so you can email or text the sign up link to a friend.</p>` : ''}` : `<div class="pickhead"><div class="askt">Request sent</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">${ICON_X}</button></div>
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Butter Math.</p>`}</div>`;
-  return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="pickhead"><div class="askt">Add friend</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">✕</button></div>
+  return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="pickhead"><div class="askt">Add friend</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">${ICON_X}</button></div>
     <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
     <p class="frinvl">Not on Butter Math yet? Copy your invite link and text it to them.</p>
     <div class="emrow"><input class="tin frinv" id="fr-inv" readonly value="${esc(myInvite || '')}" placeholder="Making your invite link…" aria-label="Your invite link"><button class="btn" type="button" data-act="frinvcopy">Copy</button></div>
@@ -484,10 +484,10 @@ function fTile(fid, row){
 function renderFbook(fid){
   const f = friendBy(fid);
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div></div>`; }
-  if(!f || f.status !== 'accepted') return `<button class="back" data-act="go" data-h="friends">← Friends</button><div class="card empty">These recipes aren't shared with you.</div>`;
+  if(!f || f.status !== 'accepted') return `<button class="back" data-act="go" data-h="friends">${ICON_BACK}Friends</button><div class="card empty">These recipes aren't shared with you.</div>`;
   const b = fbook[fid]; if(!b) { setTimeout(() => loadFbook(fid)); }
   const rows = (b && b.rows) || [];
-  return `<button class="back" data-act="go" data-h="friends">← Friends</button>
+  return `<button class="back" data-act="go" data-h="friends">${ICON_BACK}Friends</button>
     <div class="fbanner">${avatar(fid, f.name)}<span class="ftx"><b>${esc(kitchenOf(f.name))}</b><span>${rows.length || f.recipes} recipe${(rows.length || f.recipes) == 1 ? '' : 's'}</span></span></div>
     ${rows.length ? `<div class="rsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fsearch" data-keep type="search" placeholder="Search ${esc(f.name)}'s recipes" autocomplete="off"></div>` : ''}
     ${rows.length > 1 ? fFilterBar(rows, fid) : ''}
@@ -503,7 +503,7 @@ function fFilterBar(rows, fid){
     ${nSaved ? `<button class="fpill savedp ${fSavedOnly ? 'on' : ''}" data-act="fsavedtog" aria-pressed="${fSavedOnly}">Saved<span class="fcount">${nSaved}</span></button>` : ''}
     <div class="fwrap fright"><button class="fpill sortp" data-act="fsortmenu" aria-haspopup="menu" aria-expanded="${fSortOpen}" aria-label="Sort: ${FSORTS[fSortK]}">${ICON_SORT}${FSORTS[fSortK]}</button>
     ${fSortOpen ? `<div class="fmenu right" role="menu">${Object.entries(FSORTS).map(([k, l]) => `<button role="menuitem" class="${k === fSortK ? 'on' : ''}" data-act="fsortpick" data-k="${k}">${l}${k === fSortK ? '<span>✓</span>' : ''}</button>`).join('')}</div>` : ''}</div></div>
-    ${on ? `<div class="selchips">${fCat.map(t => `<span class="selchip">${esc(t)}<button data-act="fcatpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">✕</button></span>`).join('')}${fCat.length > 1 ? `<button class="clearall" data-act="fcatclear">Clear all</button>` : ''}</div>${fCat.length > 1 ? `<div class="fnote">Showing recipes with ${fCat.length === 2 ? 'both' : 'all ' + fCat.length} tags</div>` : ''}` : ''}`;
+    ${on ? `<div class="selchips">${fCat.map(t => `<span class="selchip">${esc(t)}<button data-act="fcatpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">${ICON_X}</button></span>`).join('')}${fCat.length > 1 ? `<button class="clearall" data-act="fcatclear">Clear all</button>` : ''}</div>${fCat.length > 1 ? `<div class="fnote">Showing recipes with ${fCat.length === 2 ? 'both' : 'all ' + fCat.length} tags</div>` : ''}` : ''}`;
 }
 function fGrid(fid, rows){
   const tg = r => autoTags(r.data || {});
@@ -530,7 +530,7 @@ function renderFrecipe(key){
   if(friends === null){ loadFriends(true); return `<div class="grid"><div class="skeleton"></div></div>`; }
   if(!b){ setTimeout(() => loadFbook(fid)); return `<div class="grid"><div class="skeleton"></div></div>`; }
   const row = (b.rows || []).find(r => r.id === rid);
-  if(!f || !row) return `<button class="back" data-act="go" data-h="${f ? 'f-' + esc(fid) : 'friends'}">← ${f ? esc(kitchenOf(f.name)) : 'Friends'}</button><div class="card empty">${b.loading ? 'Loading…' : "This recipe isn't shared anymore."}</div>`;
+  if(!f || !row) return `<button class="back" data-act="go" data-h="${f ? 'f-' + esc(fid) : 'friends'}">${ICON_BACK}${f ? esc(kitchenOf(f.name)) : 'Friends'}</button><div class="card empty">${b.loading ? 'Loading…' : "This recipe isn't shared anymore."}</div>`;
   const d = row.data;
   const ings = (d.ingredients || []).map(g => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map(t => `<div class="ing ro"><span>${fmt(t)}</span></div>`).join('')).join('');
   let n = 0;
@@ -538,7 +538,7 @@ function renderFrecipe(key){
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const more = srcs.slice(1).filter(l => hostOf(l.url) !== hostOf(srcs[0].url));
   const notes = (d.notes && d.notes.length) || more.length ? `<div class="card panel extras">${d.notes && d.notes.length ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${more.map(l => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${esc(l.label || 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
-  return `<button class="back" data-act="go" data-h="f-${esc(fid)}">← ${esc(kitchenOf(f.name))}</button>
+  return `<button class="back" data-act="go" data-h="f-${esc(fid)}">${ICON_BACK}${esc(kitchenOf(f.name))}</button>
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}</div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2></div>
     ${srcCredit(srcs)}<div class="byl">${avatar(fid, f.name, 'xs')}From ${esc(kitchenOf(f.name))}</div>
@@ -553,7 +553,7 @@ function renderFrecipe(key){
 }
 function renderSendSheet(r){
   const acc = (friends || []).filter(f => f.status === 'accepted');
-  return `<div class="sheetbg" data-act="sendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Send to a friend"><div class="pickhead"><div class="askt">Send ${esc(D(r).title)}</div><button class="ibtn" data-act="sendclose" aria-label="Close">✕</button></div>
+  return `<div class="sheetbg" data-act="sendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Send to a friend"><div class="pickhead"><div class="askt">Send ${esc(D(r).title)}</div><button class="ibtn" data-act="sendclose" aria-label="Close">${ICON_X}</button></div>
     ${acc.length ? `<div class="sendlist">${acc.map(f => `<label class="sendrow">${avatar(f.friend_id, f.name, 'sm')}<span>${esc(f.name)}</span><input type="checkbox" class="sendck" value="${esc(f.friend_id)}" ${acc.length === 1 ? 'checked' : ''}></label>`).join('')}</div>
     <textarea class="tin" id="send-note" data-keep rows="2" maxlength="280" placeholder="Add a note (optional)"></textarea>
     <button class="btn primary bigbtn" id="send-go" data-act="sendgo" data-id="${esc(r.id)}"${acc.length === 1 ? '' : ' disabled'}>${acc.length === 1 ? 'Send' : 'Pick a friend to send'}</button>`
@@ -731,7 +731,7 @@ function renderShopping(){
   const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && (P().active[r.id] === true || all.some(i => (i.recipes || []).includes(r.id))));
   const colOf = listColors(chipRecipes.map(r => r.id));
   const chips = chipRecipes.map(r => { const on = isActive(r.id), nm = esc(D(r).short || D(r).title);
-    return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${colOf(r.id)}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">✕</button></span>`; }).join(' ');
+    return `<span class="chipw"><button class="chip ${on ? 'on' : ''}" style="--c:${colOf(r.id)}" data-act="active" data-drag="1" data-id="${esc(r.id)}" aria-pressed="${on}" title="${on ? 'Tap to hide its ingredients' : 'Tap to show its ingredients'}"><i class="sw"></i>${nm}</button><button class="chipx" data-act="chiprm" data-id="${esc(r.id)}" aria-label="Remove ${nm} from your list" title="Remove from your list">${ICON_X}</button></span>`; }).join(' ');
   const Q = shopQ.trim().toLowerCase();
   const pool = Q ? all.filter(i => i.name.toLowerCase().includes(Q) && (items.includes(i) || shop[i.id])) : f === 'have' ? all : items;
   const keep = i => { const st = shop[i.id] || ''; return Q || f === 'all' || (f === 'need' && !st) || (f === 'cart' && st === 'bought') || (f === 'have' && st === 'have'); };
@@ -750,16 +750,16 @@ function renderShopping(){
       const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + ((it.recipes || []).some(onListRid) ? it.recipes.filter(onListRid) : (it.recipes || [])).map(x => { const rr = R(x); return rr ? `<span class="tag" style="--c:${colOf(x)}">${esc(D(rr).short || D(rr).title)}</span>` : ''; }).join('');
       return `<div class="item ${st}"><button class="check" data-act="bought" data-id="${esc(it.id)}" aria-label="In my cart">${CHECK}</button>
       <div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? `<div class="qty">${fmt(it.qty)}</div>` : ''}${mathOf(it, colOf)}<div class="tags">${tags}</div></div>
-      <button class="have" data-act="have" data-id="${esc(it.id)}">${st === 'have' ? 'Have it ✓' : 'Have it'}</button><button class="del" data-act="delitem" data-id="${esc(it.id)}" aria-label="Remove ${esc(it.name)}">✕</button></div>`;
+      <button class="have" data-act="have" data-id="${esc(it.id)}">${st === 'have' ? 'Have it ✓' : 'Have it'}</button><button class="del" data-act="delitem" data-id="${esc(it.id)}" aria-label="Remove ${esc(it.name)}">${ICON_X}</button></div>`;
     }).join('') + `</div></div>`;
   });
   const secOpts = kitchen.shopping.sections;
-  return `${shopBack && mealIds().length ? `<button class="back" data-act="go" data-h="meal">← Back to your meal</button>` : ''}${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
+  return `${shopBack && mealIds().length ? `<button class="back" data-act="go" data-h="meal">${ICON_BACK}Back to your meal</button>` : ''}${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg></button>
     ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap a recipe to hide or show its ingredients. Done shopping? Drag it to Past trips.</div>` : ''}
     ${items.length ? `<div class="cartline"><button class="cl-cart ${f === 'cart' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="cart" aria-pressed="${f === 'cart'}" aria-label="Show the ${cnt.cart} item${cnt.cart === 1 ? '' : 's'} in your cart"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg><span><b>${cnt.cart}</b> in your cart</span></button><button class="cl-need ${f === 'need' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="need" aria-pressed="${f === 'need'}" aria-label="Show the ${cnt.need} item${cnt.need === 1 ? '' : 's'} you still need"><span><b>${cnt.need}</b> still needed</span></button></div>
     <div class="bar"><i style="width:${pct}%"></i></div>` : ''}
   </div>` : ''}
-  ${all.length ? `<div class="shopsearch ${Q ? 'on' : ''}" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="shopq" data-keep type="search" enterkeyhint="search" autocomplete="off" placeholder="Search your list" value="${esc(shopQ)}" aria-label="Search your list">${Q ? '<button class="sclear" data-act="sclear" aria-label="Clear search">✕</button>' : ''}</div>` : ''}
+  ${all.length ? `<div class="shopsearch ${Q ? 'on' : ''}" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="shopq" data-keep type="search" enterkeyhint="search" autocomplete="off" placeholder="Search your list" value="${esc(shopQ)}" aria-label="Search your list">${Q ? '<button class="sclear" data-act="sclear" aria-label="Clear search">' + ICON_X + '</button>' : ''}</div>` : ''}
   ${Q ? `<div class="qnote" aria-live="polite">${pool.length ? `${pool.length} match${pool.length === 1 ? '' : 'es'} across Need, In cart and Have` : `Nothing on your list matches “${esc(shopQ.trim())}”`}</div>` : ''}
   ${!Q && (all.length || (P().trips || []).length) ? `<div class="seg" role="group" aria-label="Show">${fbtn('all','All')}${fbtn('need','Need')}${fbtn('cart','In cart')}${fbtn('have','Have')}</div>` : ''}
   ${Q ? '' : ui.addOpen ? `<form class="card addcard addf" data-form="additem" autocomplete="off">
@@ -779,14 +779,14 @@ function renderShopping(){
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Drop here to move to Past trips</div>` : ''}
   ${pickSheet ? renderPickSheet(all) : ''}`;
 }
-const ICON_BOOKADD = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a3 3 0 0 1 3 3v12H7a3 3 0 0 1-3-3z"/><path d="M4 17a3 3 0 0 1 3-3h11"/><path d="M11 8v4M9 10h4"/></svg>';
+const ICON_BOOKADD = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v6"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="M9 10h6"/></svg>';
 function renderPickSheet(all){
   // Recipes already on the list show as "Already on your list" (open the recipe itself to add more of it).
   const onList = id => P().active[id] === true && !(P().done || {})[id] && all.some(i => (i.recipes || []).includes(id));
   const list = recipes.filter(r => !isArch(r.id)).slice().sort((a, b) => (onList(a.id) - onList(b.id)) || String(D(a).title || '').localeCompare(String(D(b).title || '')));
   const n = Object.keys(pickSheet.sel).length;
   return `<div class="sheetbg" data-act="pickclose"></div><div class="asksheet picksheet" role="dialog" aria-label="Add from a recipe">
-    <div class="pickhead"><div class="askt">Add from a recipe</div><button class="ibtn" data-act="pickclose" aria-label="Close">✕</button></div>
+    <div class="pickhead"><div class="askt">Add from a recipe</div><button class="ibtn" data-act="pickclose" aria-label="Close">${ICON_X}</button></div>
     <p class="muted pickp">Select which recipe(s) you're cooking. All ingredients will be added to your shopping list.</p>
     ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
     <div class="picklist"><button class="pickrow picknew" data-act="picknew"><span class="pt"><b>+ Add a new recipe</b><small>From a link, pasted text, or screenshot</small></span><span class="pplus" aria-hidden="true">+</span></button>${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
@@ -800,7 +800,7 @@ function renderPickSheet(all){
 // Start times come only from the time each recipe lists. Nothing is guessed: a recipe with no usable time says so.
 let mealPick = null, mealShop = null, mealBack = null, mealTick = null, shopBack = false;
 const MEAL_MAX = 5;
-const ICON_MEAL = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z"/><path d="M2 11h20"/><path d="M9 7c0-1.5 1-2 1-3.5M14 7c0-1.5 1-2 1-3.5"/></svg>';
+const ICON_MEAL = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></svg>';
 const FRAC = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3};
 function durMin(s){
   s = String(s || '').toLowerCase().replace(/\band\b/g, ' ').trim(); if(!s || /overnight/.test(s)) return null;
@@ -843,7 +843,7 @@ function renderMealPick(){
   const list = recipes.filter(r => !isArch(r.id)).slice().sort((a, b) => String(D(a).title || '').localeCompare(String(D(b).title || '')));
   const n = Object.keys(mealPick.sel).length;
   return `<div class="sheetbg" data-act="mealpickclose"></div><div class="asksheet picksheet mealpick" role="dialog" aria-label="Cook a Meal">
-    <div class="pickhead"><div class="askt">Cook a Meal</div><button class="ibtn" data-act="mealpickclose" aria-label="Close">✕</button></div>
+    <div class="pickhead"><div class="askt">Cook a Meal</div><button class="ibtn" data-act="mealpickclose" aria-label="Close">${ICON_X}</button></div>
     <p class="muted pickp">${MEAL_P} Pick up to ${MEAL_MAX}.</p>
     ${list.length > 6 ? `<input id="mealq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
     <div class="picklist">${list.map(r => { const d = D(r), sel = !!mealPick.sel[r.id], t = mealTime(d);
@@ -861,7 +861,7 @@ function laneState(r, eat){
   return {kind: 'now', p, t, text: `Step ${p.cur + 1} of ${p.total}`};
 }
 function renderMeal(){
-  const all = mealIds(), ids = mealOn(), back = `<button class="back" data-act="go" data-h="recipes">← Recipes</button>`;
+  const all = mealIds(), ids = mealOn(), back = `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button>`;
   if(!all.length) return back + `<div class="card empty mealempty"><h3>Cook a Meal</h3><p class="muted">${MEAL_P}</p><button class="btn primary" data-act="mealopen">${ICON_MEAL}Select recipes</button></div>`;
   const m = P().meal || {}, eat = m.eat || '18:00';
   // Everything is listed in the order you'd start it: longest recipe first, recipes with no listed time last.
@@ -870,11 +870,11 @@ function renderMeal(){
   const timed = rs.map(r => ({r, t: mealTime(D(r))})), known = timed.filter(x => x.t).sort((a, b) => b.t.min - a.t.min), unknown = timed.filter(x => !x.t);
   const longest = known.length ? known[0].t.min : 0;
   const ings = mealIngs(ids), have = ings.filter(mealOnList).length, allOn = ings.length && have === ings.length;
-  const pills = allR.map(r => { const off = mealOff(r.id); return `<span class="mchip ${off ? 'off' : ''}"><button class="mchn" data-act="mealoff" data-id="${esc(r.id)}" aria-pressed="${!off}" title="${off ? 'Show in this meal again' : 'Hide from this meal'}">${mname(r)}</button><button class="mchx" data-act="mealrm" data-id="${esc(r.id)}" aria-label="Remove ${mname(r)} from this meal" title="Remove from this meal">✕</button></span>`; }).join('') + (all.length < MEAL_MAX ? `<button class="mchip add" data-act="mealopen">+ Add recipe</button>` : '');
+  const pills = allR.map(r => { const off = mealOff(r.id); return `<span class="mchip ${off ? 'off' : ''}"><button class="mchn" data-act="mealoff" data-id="${esc(r.id)}" aria-pressed="${!off}" title="${off ? 'Show in this meal again' : 'Hide from this meal'}">${mname(r)}</button><button class="mchx" data-act="mealrm" data-id="${esc(r.id)}" aria-label="Remove ${mname(r)} from this meal" title="Remove from this meal">${ICON_X}</button></span>`; }).join('') + (all.length < MEAL_MAX ? `<button class="mchip add" data-act="mealopen">+ Add recipe</button>` : '');
   const shopCard = (m.hideShop && !allOn) || !ids.length ? '' : `<div class="mshop"><span class="mshopi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>
     <button class="mshopb" data-act="${allOn ? 'mealtolist' : 'mealshop'}"><b>${allOn ? 'All on your shopping list ✓' : 'Shop for ingredients'}</b><span>${allOn ? 'Go to your shopping list' : `${ings.length} ingredient${ings.length === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}${have ? ` · ${have} already on your list` : ''}`}</span></button>
     ${have ? `<button class="mshopgo" data-act="mealtolist" aria-label="Go to shopping list" title="Go to shopping list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : ''}
-    ${allOn ? '' : `<button class="mshopx" data-act="mealshophide" aria-label="Close" title="Close">✕</button>`}</div>`;
+    ${allOn ? '' : `<button class="mshopx" data-act="mealshophide" aria-label="Close" title="Close">${ICON_X}</button>`}</div>`;
   const rows = known.map(({r, t}) => `<li><span class="mt">${clock(eat, t.min)}</span><div class="mtcard"><span><b>Start ${esc(D(r).title)}</b><small>${fmtDur(t.min)} ${t.from === 'total' ? 'total' : '(prep + cook)'}</small></span></div></li>`).join('');
   const timeline = known.length ? `<h3 class="mh">When to start</h3><ol class="mline">${rows}<li><span class="mt">${clock(eat, 0)}</span><div class="mtcard ready"><span><b>Ready to eat</b><small>${known.length === rs.length ? 'Everything finishes together' : 'The timed recipes finish together'}</small></span></div></li></ol>` : '';
   const unk = unknown.length ? `<div class="mnote">${unknown.map(({r}) => `<b>${esc(D(r).title)}</b>`).join(', ')} ${unknown.length === 1 ? "doesn't" : "don't"} list a total time, so ${unknown.length === 1 ? "it isn't" : "they aren't"} on the timeline. <button class="linkbtn" data-act="mealrec" data-id="${esc(unknown[0].r.id)}" data-edit="1">Add a time</button></div>` : '';
@@ -886,7 +886,7 @@ function renderMeal(){
     const off = s.kind === 'wait' && s.t ? longest - s.t.min : 0;
     const wait = off > 0 ? `<div class="mwait" style="height:${Math.max(104, Math.round(off * scale))}px"><b>Don't start yet</b><small>Suggested start ${clock(eat, s.t.min)}, ${fmtDur(off)} after ${mname(rs[0])}</small><button class="btn mstart" data-act="mealnow" data-id="${esc(r.id)}">Start now</button></div>` : '';
     const list = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((x, k) => { const key = si + '-' + k; n++; const done = !!c.s[key];
-      const tm = (x.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">⏲ ${esc(t.label)}</span>`).join('');
+      const tm = (x.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
       return `<button class="step ${done ? 'done' : ''} ${s.kind === 'now' && s.p.all[s.p.cur].key === key ? 'cur' : ''}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}</span><span class="tx">${x.title ? `<div class="tt">${esc(x.title)}</div>` : ''}<p>${fmt(x.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`; }).join('')).join('');
     return `<section class="mlane ${s.kind}" id="lane-${i}"><div class="mlh"><b>${esc(d.title)}</b><small>${s.text}</small></div>${wait}
       <div class="mlb">${list || '<div class="muted">No steps listed.</div>'}</div><button class="linkbtn mopen" data-act="mealrec" data-id="${esc(r.id)}">Open the full recipe →</button></section>`; }).join('');
@@ -909,7 +909,7 @@ function renderMealShop(ids, ings){
   const rowsOf = s => ings.filter(e => e.section === s).map(e => { const on = mealOnList(e), ck = all ? !on : !!mealShop.sel[e.key];
     return `<label class="mrow2 ${on ? 'have' : ''}">${all ? `<i class="mck ${ck ? 'on' : ''}" aria-hidden="true">${ck ? CHECK : ''}</i>` : `<input type="checkbox" class="mealck" data-k="${esc(e.key)}" ${ck ? 'checked' : ''}>`}<span class="mn"><b>${esc(e.name)}</b><small>${e.qty ? fmt(e.qty) : 'Amount not listed'}${on ? ' · already on your list' : ''}</small><small class="mfor">${e.rids.map(x => mname(R(x))).join(', ')}</small></span></label>`; }).join('');
   return `<div class="sheetbg" data-act="mealshopclose"></div><div class="asksheet picksheet mealshop" role="dialog" aria-label="Shop for ingredients">
-    <div class="pickhead"><div class="askt">Shop for ingredients</div><button class="ibtn" data-act="mealshopclose" aria-label="Close">✕</button></div>
+    <div class="pickhead"><div class="askt">Shop for ingredients</div><button class="ibtn" data-act="mealshopclose" aria-label="Close">${ICON_X}</button></div>
     <p class="muted pickp">Shared ingredients are added up across recipes.</p>
     <div class="mseg" role="radiogroup" aria-label="What to add"><button role="radio" aria-checked="${all}" class="${all ? 'on' : ''}" data-act="mealmode" data-m="all">Get all ingredients</button><button role="radio" aria-checked="${!all}" class="${all ? '' : 'on'}" data-act="mealmode" data-m="sel">Select ingredients</button></div>
     <div class="mlist">${secs.map(s => `<div class="msec">${esc(s)}</div>${rowsOf(s)}`).join('')}</div>
@@ -937,14 +937,20 @@ const favOf = id => !!((P().fav || {})[id]);
 const allTags = () => { const used = recipes.flatMap(r => tagsOf(r)); return [...new Set(TAGS0.concat(P().ctags || [], used))]; };
 let recTags = [], recFav = false, recQ = '', catOpen = false, sortOpen = false, tagEdit = null;
 const SORTS = {recent:'Recent', az:'A–Z', made:'Most made', progress:'In progress'};
-const ICON_SERV = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v7M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 21V3c-2 1.5-3 4-3 7v3h3"/></svg>';
-const ICON_TIME = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
-const ICON_AGAIN = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg>';
-const ICON_EXT = '<svg class="ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
-function finCard(r){ return `<button class="btn dark again" data-act="again" data-id="${esc(r.id)}">${ICON_AGAIN}Make it again</button>`; }
-const ICON_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
-const ICON_SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>';
-const ICON_CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const ICON_SERV = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
+const ICON_TIME = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+const ICON_AGAIN = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+const ICON_EXT = '<svg class="ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+// When the last step is checked, a butter pat drops into the bowl (under a second), once.
+let finDrop = null;
+function finCard(r){ const drop = finDrop && finDrop.id === r.id && Date.now() - finDrop.t < 1400 ? `<div class="findrop" aria-hidden="true">${POT_ART.replace('class="pot"', 'class="finpot"').replace(/\n\s*<g class="drops">.*<\/g>(?=\n)/, '').replace('</svg>', '<g class="fpat"><rect x="67" y="-30" width="26" height="16" rx="3" fill="#F7D774" stroke="#141414" stroke-width="3"/><rect x="69" y="-28" width="22" height="5" rx="2" fill="#FFF1B8"/></g></svg>')}</div>` : '';
+  return `<div class="finwrap">${drop}<button class="btn dark again" data-act="again" data-id="${esc(r.id)}">${ICON_AGAIN}Make it again</button></div>`; }
+const ICON_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>';
+const ICON_SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>';
+const ICON_CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+const ICON_X = '<svg class="xi" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+const ICON_BACK = '<svg class="xi back-i" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>';
+const ICON_TIMER = '<svg class="xi" viewBox="0 0 24 24" aria-hidden="true"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>';
 function renderRecipes(){
   const addTile = `<button class="tile addtile" data-act="go" data-h="add"><span class="plus">+</span><span class="body"><h2>Add a recipe</h2><span class="meta">From a link or paste</span></span></button>`;
   const starters = !recipes.length ? `<div class="card panel" style="margin-bottom:16px"><h3>Start with a favorite?</h3><p class="muted" style="margin:4px 0 12px">Add our Blueberry Pie to try things out. Remove it anytime.</p><button class="btn primary" data-act="starters">Add Blueberry Pie</button></div>` : '';
@@ -970,7 +976,7 @@ function renderRecipes(){
   shown = shown.slice().sort((a, b) => (favOf(b.id) - favOf(a.id)) || (sortK === 'az' ? D(a).title.localeCompare(D(b).title) : sortK === 'made' ? (madeOf(b.id).n || 0) - (madeOf(a.id).n || 0) : sortK === 'progress' ? rank(a) - rank(b) : 0) || pos.get(a.id) - pos.get(b.id));
   const q = recQ.trim().toLowerCase();
   const filtered = catOn || recFav || sortK === 'progress';
-  const fnote = catOn ? `<div class="selchips">${recTags.map(t => `<span class="selchip">${esc(t)}<button data-act="catpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">✕</button></span>`).join('')}${recTags.length > 1 ? `<button class="clearall" data-act="catclear">Clear all</button>` : ''}</div>${recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : ''}` : '';
+  const fnote = catOn ? `<div class="selchips">${recTags.map(t => `<span class="selchip">${esc(t)}<button data-act="catpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">${ICON_X}</button></span>`).join('')}${recTags.length > 1 ? `<button class="clearall" data-act="catclear">Clear all</button>` : ''}</div>${recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : ''}` : '';
   return starters + search + fbar + fnote + `<div class="grid" id="rgrid">` + (filtered ? '' : q ? addTile.replace('<button class="tile addtile"', '<button hidden class="tile addtile"') : addTile) + shown.map(r => {
     const d = D(r), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
     const st = p.done === 0 ? 'Not started' : p.done === p.total ? 'Finished ✓' : `Step ${p.cur + 1} of ${p.total}`;
@@ -984,7 +990,7 @@ function renderRecipes(){
 
 function renderRecipe(id){
   const r = R(id);
-  if(!r) return `<button class="back" data-act="go" data-h="recipes">← Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
+  if(!r) return `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
   const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${fmt(t)}</span></button>`;
     if(choosing !== r.id) return row;
@@ -994,21 +1000,21 @@ function renderRecipe(id){
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey;
-    const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">⏲ ${esc(t.label)}</span>`).join('');
+    const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
     return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
   const more = srcs.slice(1).filter(l => hostOf(l.url) !== hostOf(srcs[0].url));
   const notes = hasNotes || more.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${more.map(l => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
-  return `${mealBack === r.id ? `<button class="back" data-act="go" data-h="meal">← Back to your meal</button>` : `<button class="back" data-act="go" data-h="recipes">← Recipes</button>`}
+  return `${mealBack === r.id ? `<button class="back" data-act="go" data-h="meal">${ICON_BACK}Back to your meal</button>` : `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button>`}
   <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe" aria-label="Edit recipe">${ICON_PEN}</button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu">${isArch(r.id) ? '' : `<button role="menuitem" class="privrow mealrow" data-act="mealfrom" data-id="${esc(r.id)}">${ICON_MEAL.replace('class="bi"', '')}<span class="pl"><b>Cook with other recipes…</b><small>Start a Meal with this recipe</small></span></button>`}<button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to a friend</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Remove recipe</button></div>` : ''}</div></div>
     ${srcCredit(srcs)}${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(d.yield)}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
-    <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">✕</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
+    <div class="rtags">${tagsOf(r).map(t => `<span class="rtag">${esc(t)}<button class="rtx" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-label="Remove ${esc(t)} tag" title="Remove tag">${ICON_X}</button></span>`).join('')}<button class="rtag add" data-act="tagedit" data-id="${esc(r.id)}">${tagsOf(r).length ? '+ Tag' : '+ Add a tag'}</button></div>
     <div class="prog-line" style="margin-top:14px"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div>
-    ${p.total && p.done === p.total && (P().photoAsked || {})[r.id] !== madeOf(r.id).n ? `<div class="madeitw"><label class="madeit"${d.photo ? ` data-act="madeitswap" data-id="${esc(r.id)}"` : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Add a photo of your finished recipe!<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}" data-asked="1"></label><button class="madeitx" data-act="madeitx" data-id="${esc(r.id)}" aria-label="Close" title="Close">✕</button></div>` : ''}
+    ${p.total && p.done === p.total && (P().photoAsked || {})[r.id] !== madeOf(r.id).n ? `<div class="madeitw"><label class="madeit"${d.photo ? ` data-act="madeitswap" data-id="${esc(r.id)}"` : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Add a photo of your finished recipe!<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}" data-asked="1"></label><button class="madeitx" data-act="madeitx" data-id="${esc(r.id)}" aria-label="Close" title="Close">${ICON_X}</button></div>` : ''}
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Add ingredients to list</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" aria-label="Keep screen on" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span class="wl">Screen on</span></button><button class="btn wake sendbtn" data-act="sendopen" data-id="${esc(r.id)}" aria-label="Send to a friend" title="Send to a friend">${ICON_SEND}</button></div>
   </div></div>
@@ -1018,8 +1024,8 @@ function renderRecipe(id){
     ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
 </div>
   </div>
-  ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="pickhead"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="ibtn" data-act="sheetclose" aria-label="Close">✕</button></div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b><span>Everything starts unchecked</span></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Choose ingredients</b><span>Tap the ones you need</span></button></div>` : ''}
-  ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="pickhead"><div class="askt">Tags</div><button class="ibtn" data-act="tagdone" aria-label="Close">✕</button></div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">✕</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
+  ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="pickhead"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="ibtn" data-act="sheetclose" aria-label="Close">${ICON_X}</button></div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b><span>Everything starts unchecked</span></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Choose ingredients</b><span>Tap the ones you need</span></button></div>` : ''}
+  ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="pickhead"><div class="askt">Tags</div><button class="ibtn" data-act="tagdone" aria-label="Close">${ICON_X}</button></div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">${ICON_X}</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
   ${sendSheet === r.id ? renderSendSheet(r) : ''}
   ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap ingredients to add them'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
 }
@@ -1046,12 +1052,12 @@ function ensureForm(id){
 }
 function renderForm(id){
   const r = id ? R(id) : null;
-  if(id && !r) return `<button class="back" data-act="go" data-h="recipes">← Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
+  if(id && !r) return `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const f = ensureForm(id), d = r ? D(r) : {};
   const link = (d.links || []).find(l => l.url) || {};
   const v = (k, dv) => esc(dv == null ? '' : dv);
   const photoNow = f.photoUrl || (!f.removePhoto && d.photo) || null;
-  return `<button class="back" data-act="go" data-h="${r ? 'r-' + esc(r.id) : 'recipes'}">← ${r ? 'Back to recipe' : 'Recipes'}</button>
+  return `<button class="back" data-act="go" data-h="${r ? 'r-' + esc(r.id) : 'recipes'}">${ICON_BACK}${r ? 'Back to recipe' : 'Recipes'}</button>
   <div class="card panel form">
     <h3>${r ? 'Edit recipe' : 'Add a recipe'}</h3>
     <div class="lbl2">Recipe website link <span class="hint">recommended</span></div>
@@ -1497,7 +1503,7 @@ function renderErrors(){
   return head(e.length) + `<p class="muted errnote">The last 50 problems members ran into, newest first. Tap one for details.</p><div class="errlist">${e.map(x => `<details class="errrow"><summary><b>${esc(x.msg)}</b><small>${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div>`;
 }
 function renderAdmin(){
-  const back = `<button class="back" data-act="go" data-h="shopping">← Shopping list</button><h2 class="ptitle">Admin</h2>`;
+  const back = `<button class="back" data-act="go" data-h="shopping">${ICON_BACK}Shopping list</button><h2 class="ptitle">Admin</h2>`;
   if(!isAdmin) return back + `<div class="card empty">This page is only for the site administrator.</div>`;
   if(!adminData && !adminBusy){
     adminBusy = true;
@@ -1719,7 +1725,7 @@ function renderTrips(){
       ${uniq.length ? `<details class="tings"><summary>See ingredients</summary>${gt.length ? `<h4>Bought</h4>${list(gt)}` : ''}${hd.length ? `<h4>Already had</h4>${list(hd)}` : ''}${sk.length ? `<h4>Didn't get</h4>${list(sk)}` : ''}</details>` : '<div class="muted" style="font-size:14px">Nothing was marked.</div>'}
       <div class="row" style="margin-top:12px"><button class="btn" data-act="untrip" data-at="${esc(ats)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>Back to shopping list</button></div></div></details>`;
   }).join('');
-  return `<button class="back" data-act="go" data-h="shopping">← Shopping list</button>
+  return `<button class="back" data-act="go" data-h="shopping">${ICON_BACK}Shopping list</button>
   <h2 class="ptitle">Past trips</h2>
   ${trips.length ? `<div class="trips">${body}</div>` : `<div class="card empty">No trips yet. They're saved when you start a new one.</div>`}`;
 }
@@ -1736,7 +1742,7 @@ function renderMenu(){
   </div>`;
 }
 function renderSettings(){
-  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button>
   <div class="card panel"><h3>Settings</h3>
     <div class="lbl2">Your name </div>
     <form data-form="name" class="row"><input class="tin" id="acc-name" data-keep style="flex:1;min-width:160px" value="${esc(firstName())}" maxlength="40" required><button class="btn dark" type="submit">Save name</button></form>
@@ -1757,7 +1763,7 @@ function renderSettings(){
 }
 function renderAccount(){
   const since = user.created_at ? new Date(user.created_at).toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'}) : '';
-  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button>
   <div class="card panel"><h3>Account</h3>
     <div class="lbl2">Email</div><div>${esc(user.email)}</div>
     ${since ? `<div class="lbl2">Member since</div><div>${esc(since)}</div>` : ''}
@@ -1780,7 +1786,7 @@ function renderAccount(){
 const FB_EMAIL = 'hello@buttermath.app';
 function renderFeedback(){
   const su = encodeURIComponent('Butter Math feedback');
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">${ICON_BACK}${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose fb"><h3>Send feedback</h3>
     <p>Ideas, bugs, or questions? Email us at <b>${FB_EMAIL}</b>.</p>
     <div class="fbbtns"><button class="btn dark sm" data-act="copyemail">Copy email address</button></div>
@@ -1796,7 +1802,7 @@ let tourStep = -1;
 function showTour(i){
   tourStep = i; const t = TOUR[i], last = i === TOUR.length - 1;
   const arw = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
-  $('#modalRoot').innerHTML = `<div class="modal"><div class="card tour" data-stop><button class="tourx" data-act="tourend" aria-label="Close the tour">✕</button>
+  $('#modalRoot').innerHTML = `<div class="modal"><div class="card tour" data-stop><button class="tourx" data-act="tourend" aria-label="Close the tour">${ICON_X}</button>
     <div class="tourart">${t.art()}</div>
     <div class="tourbody"><h3>${t.title}</h3><p>${t.text}</p>
     <div class="tournav"><button class="tarrow" data-act="tourgo" data-i="${i - 1}" aria-label="Previous" ${i ? '' : 'disabled'}>${arw('M15 5l-7 7 7 7')}</button>
@@ -1816,7 +1822,7 @@ function maybeTour(){
 }
 function renderHelp(){
   const step = (n, t) => `<div class="hstep"><div class="hnum">${n}</div><div><h4>${t.title}</h4><p>${t.text}</p></div></div>`;
-  return `<button class="back" data-act="go" data-h="recipes">← Recipes</button>
+  return `<button class="back" data-act="go" data-h="recipes">${ICON_BACK}Recipes</button>
   <div class="card panel prose help"><h3>How Butter Math works</h3>
     <p class="muted">Plan, shop, and cook from one place.</p>
     ${TOUR.map((t, i) => step(i + 1, t)).join('')}
@@ -1837,7 +1843,7 @@ function renderHelp(){
   </div>`;
 }
 function renderTerms(){
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">${ICON_BACK}${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Terms of Use</h3>
     <p class="muted">Last updated November 15, 2026</p>
     <p><b>Using Butter Math.</b> Butter Math is a free personal project for organizing recipes and shopping lists. It's for personal, non-commercial use and for ages 13 and up.</p>
@@ -1853,7 +1859,7 @@ function renderTerms(){
   </div>`;
 }
 function renderPrivacy(){
-  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">← ${user ? 'Recipes' : 'Sign in'}</button>
+  return `<button class="back" data-act="go" data-h="${user ? 'recipes' : ''}">${ICON_BACK}${user ? 'Recipes' : 'Sign in'}</button>
   <div class="card panel prose"><h3>Your privacy</h3>
     <p class="muted">Last updated November 16, 2026</p>
     <p><b>Your kitchen is yours.</b> Your recipes, photos, shopping list, and progress are tied to your account. Nothing is browsable through the site, and other members can't see your kitchen unless you become friends. As with most websites, the site administrator has technical access to the underlying database and can see a list of member names and email addresses to run the site. Your data is never reviewed, sold, shared, or used for advertising.</p>
@@ -1883,7 +1889,7 @@ function drawTimers(){
   const now = Date.now();
   $('#timerWrap').innerHTML = timers.map(t => { const ms = t.end - now; if(ms <= 0 && !t.rang){ t.rang = true; beep(); }
     const s = Math.max(0, Math.ceil(ms / 1000)); const txt = ms <= 0 ? 'Done!' : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    return `<div class="timer ${ms <= 0 ? 'ring' : ''}"><span>${esc(t.label)}</span><b>${txt}</b><button data-act="untimer" data-id="${t.id}" aria-label="Dismiss">✕</button></div>`; }).join('');
+    return `<div class="timer ${ms <= 0 ? 'ring' : ''}"><span>${esc(t.label)}</span><b>${txt}</b><button data-act="untimer" data-id="${t.id}" aria-label="Dismiss">${ICON_X}</button></div>`; }).join('');
   if(!timers.length){ clearInterval(tick); tick = null; }
 }
 let wakeLock = null, wantWake = false;
@@ -2040,7 +2046,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if(a === 'ing'){ const c = cookOf(id), key = el.dataset.k, v = !c.i[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.i = o.i || {})[key] = v; }); return; }
-  if(a === 'step'){ const c = cookOf(id), key = el.dataset.k, v = !c.s[key]; mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.s = o.s || {})[key] = v; delete o.before; syncMade(k, id); }); return; }
+  if(a === 'step'){ const c = cookOf(id), key = el.dataset.k, v = !c.s[key]; { const rr = R(id); const keys = rr ? stepList(D(rr)).map(x => x.key) : []; if(v && keys.length && keys.every(k2 => k2 === key || c.s[k2])) finDrop = {id, t: Date.now()}; } mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; (o.s = o.s || {})[key] = v; delete o.before; syncMade(k, id); }); return; }
   if(a === 'resetrecipe'){ confirmBox('Reset progress?', 'Unchecks every ingredient and step.', 'Reset', () => mutate(k => { bankLegacy(k, id); k.progress.cook[id] = {i:{}, s:{}}; })); return; }
   if(a === 'finishok'){ $('#modalRoot').innerHTML = ''; newTrip(); return; }
   if(a === 'fav'){ e.stopPropagation(); const v = !favOf(id); mutate(k => { const f = k.progress.fav = k.progress.fav || {}; if(v) f[id] = true; else delete f[id]; }); return; }
@@ -2114,7 +2120,7 @@ document.addEventListener('click', async e => {
   if(a === 'unmark'){ mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; if(!o.before) return; o.s = Object.assign({}, o.before); delete o.before; syncMade(k, id); }); toast('Back to where you were'); return; }
   if(a === 'again'){ mutate(k => { bankLegacy(k, id); k.progress.cook[id] = {i:{}, s:{}}; }); addSheet = {id, again: true}; render(); window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   if(a === 'recipex'){ const r = R(id); if(!r) return;
-    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><div class="mhead"><h3>${esc(D(r).title)}</h3><button class="ibtn mx" data-act="mclose" aria-label="Close">✕</button></div><div class="muted">Archive will hide the recipe, but can be unhidden at any time. Removing the recipe will delete it from your recipe box entirely.</div><div class="row"><button class="btn" data-act="archive" data-id="${esc(id)}">Archive</button><button class="btn dangerbtn" data-act="delrecipe" data-id="${esc(id)}">Remove</button></div></div></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><div class="mhead"><h3>${esc(D(r).title)}</h3><button class="ibtn mx" data-act="mclose" aria-label="Close">${ICON_X}</button></div><div class="muted">Archive will hide the recipe, but can be unhidden at any time. Removing the recipe will delete it from your recipe box entirely.</div><div class="row"><button class="btn" data-act="archive" data-id="${esc(id)}">Archive</button><button class="btn dangerbtn" data-act="delrecipe" data-id="${esc(id)}">Remove</button></div></div></div>`;
     return; }
   if(a === 'archive'){ $('#modalRoot').innerHTML = ''; const r = R(id); mutate(k => { (k.progress.archived = k.progress.archived || {})[id] = true; }); toast(D(r).title + ' archived'); if(location.hash !== '#recipes') location.hash = 'recipes'; return; }
   if(a === 'unarch'){ const r = R(id); mutate(k => { if(k.progress.archived) delete k.progress.archived[id]; }); toast(D(r).title + ' is back'); return; }

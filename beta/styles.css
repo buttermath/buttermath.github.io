@@ -1336,10 +1336,8 @@ button.tag.tago::after{inset:0 -4px -8px}
 @keyframes tabhint{0%{opacity:0;transform:scaleX(.2)}35%,65%{opacity:.9;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
 @keyframes tabhintc{35%,65%{color:#fff}}
 @media(prefers-reduced-motion:reduce){.tab.tabhint,.tab.tabhint::after{animation:none}}
-/* the size picked on a recipe, after its name on the list ("Pumpkin Pie 3×") */
+/* the size picked on a recipe, after its name on the list ("Pumpkin Pie (3)") */
 .sz{font-weight:500;white-space:nowrap}
-/* Nov 19: recipe tags on the list look tappable (they open the recipe): a thin edge in the recipe's color, darker while pressed */
-button.tag.tago{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,white);transition:background-color .12s,transform .12s}
-button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white);transform:scale(.96)}
+/* Nov 19: recipe tags on the list open their recipe; they darken while pressed (no edge, no movement) */
+button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 @media(hover:hover){button.tag.tago:hover{background:color-mix(in srgb,var(--c) 20%,white)}}
-button.tag.tago:focus-visible{outline:2px solid var(--c);outline-offset:2px}

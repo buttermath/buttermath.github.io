@@ -1244,3 +1244,7 @@ body:has(.asksheet) #toast.show{transform:translate(-50%,0)}
 /* Current step button (Nov 19): fades away while the current step is on screen */
 #fab{transition:opacity .2s,transform .2s}
 #fab.away{opacity:0;transform:translateY(12px);pointer-events:none}
+
+/* Amount note on a recipe line (Nov 19): shown when the amount in parentheses doesn't match the main amount */
+.ingwarn{margin:-6px 4px 8px 44px;font:500 13px/1.4 Inter,sans-serif;color:var(--red)}
+.ingwarn .linkbtn{font:700 13px Inter,sans-serif;color:var(--ink);text-decoration:underline;padding:0 2px}

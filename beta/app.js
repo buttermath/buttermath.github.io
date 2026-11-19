@@ -1346,14 +1346,15 @@ const stepHasAmount = t => /[\d½¼¾⅓⅔⅛⅜⅝⅞]|\b(one|two|three|four|f
   .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s*(?:-|to)?\s*(?:minutes?|hours?|seconds?|days?)/gi, ' ').replace(/\bone\b(?=\s+(?:at a time|side|another|by one|more|last))/gi, ' ').replace(/\bhalf(?=[- ](?:way|of the|the))/gi, ' '));
 const ICON_MINUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>';
 // Recipe size: ½× to 3×, and − / + for one serving at a time when the recipe says how many it serves. It lasts until the recipe is finished.
-// Notes that come with a new size: pans for baked things, tasting for salt and spice.
+// The note that comes with a new size of a baked thing: more pans the same size, or a smaller pan.
 const PANW = /\b(pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i;
-function scaleNotes(d, f){ if(near1(f, 1)) return ''; const out = [];
-  if(PANW.test(d.yield || '')){ const sy = scaleYield(d.yield, f), m = sy.match(/(\d+)(?!\S*[½¼¾⅓⅔⅛⅜⅝⅞])\s+(?:\([^)]*\)\s+)?(?:[\w-]+\s+)?(pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i);
-    if(f < 1) out.push('Use a smaller pan.'); else out.push(m && +m[1] > 1 ? `Use ${m[1]} pans the same size, not one big one.` : 'Use more pans the same size, not one big one.'); }
-  if(f >= 2 && (d.ingredients || []).flatMap(g => g.items || []).some(l => { const p = splitIngredient(l); return p.key && (guessSection(p.name) === 'Spices' || /\b(salt|pepper|chili|cayenne|paprika)\b/i.test(p.key)); }))
-    out.push('Taste before adding all the salt and spices.');
-  return out.length ? `<div class="scalenotes">${out.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''; }
+function scaleNotes(d, f){ if(near1(f, 1) || !PANW.test(d.yield || '')) return '';
+  if(f < 1) return `<div class="scalenotes"><p>Use a smaller pan.</p></div>`;
+  // how many pans: the scaled count of pies, cakes or loaves, rounded up ("1½ pies" needs 2 pans)
+  const sy = scaleYield(d.yield, f), m = sy.match(/(\d*)([½¼¾⅓⅔⅛⅜⅝⅞]?)\s+(?:\([^)]*\)\s+)?(?:[\w-]+\s+)?(?:pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i);
+  const n = m && (m[1] || m[2]) ? Math.ceil((m[1] ? +m[1] : 0) + (m[2] ? ({'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875})[m[2]] : 0)) : Math.ceil(f);
+  const x = ({1.5: '1½'})[f] || (Number.isInteger(f) ? String(f) : '');
+  return `<div class="scalenotes"><p>${x ? `It's recommended to use ${n} similarly sized pans. Not a pan ${x}x as large` : `It's recommended to use ${n} similarly sized pans. Not one larger pan`}</p></div>`; }
 function scaleRow(r, d, f){
   const opts = [[.5, '½×'], [1, '1×'], [1.5, '1½×'], [2, '2×'], [3, '3×']], id = esc(r.id);
   const N = /serv|people|person|portion/i.test(d.yield || '') ? yieldCount(d.yield) : 0, now = Math.round(N * f);
@@ -1366,7 +1367,7 @@ const linkedLine = (id, line) => ingParts(line).some(pl => { const key = splitIn
 function addSheetBody(r, d){
   const id = esc(r.id), lines = ingLines(d), head = t => `<div class="askt">${t}</div><button class="ibtn" data-act="sheetclose" aria-label="Close">${ICON_X}</button></div>`;
   if(!addSheet.again && onList(r.id)){ const missing = lines.filter(l => !linkedLine(r.id, l)).length;
-    return head('Already on your list') + `<p class="frp">${missing ? `<b>${esc(d.title)}</b> is on your shopping list, but ${missing === 1 ? '1 ingredient isn\'t' : missing + ' ingredients aren\'t'}. Adding again won't double anything.` : `Every ingredient from <b>${esc(d.title)}</b> is on your shopping list. Adding it again won't double anything.`}</p>` +
+    return head('Already on your list') + `<p class="frp">${missing ? `<b>${esc(d.title)}</b> is on your shopping list, but ${missing === 1 ? '1 ingredient isn\'t' : missing + ' ingredients aren\'t'}. Adding again won't double anything.` : `Every ingredient from <b>${esc(d.title)}</b> is already on your shopping list.`}</p>` +
       `<button class="askopt main" data-act="go" data-h="shopping"><b>Open shopping list</b></button>` +
       (missing ? `<button class="askopt" data-act="addall" data-id="${id}"><b>Add missing ingredients</b><span>${missing} not on your list yet</span></button>` : '') +
       `<button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`; }

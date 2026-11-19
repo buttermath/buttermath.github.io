@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET } from './parse.js?v=13';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=14';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -305,7 +305,7 @@ const AMT_BEFORE = /(?:^|[\s(])(?:add|adding|the|in|into|with|and|or|stir|whisk|
 function stepAmounts(d){
   if(amtCache.has(d)) return amtCache.get(d);
   const out = new Map(), byKey = new Map();
-  (d.ingredients || []).flatMap(g => g.items || []).forEach(l => { const p = splitIngredient(l); if(!p.key) return; byKey.set(p.key, byKey.has(p.key) ? null : (p.qty ? p : null)); });
+  (d.ingredients || []).flatMap(g => g.items || []).flatMap(ingParts).forEach(l => { const p = splitIngredient(l); if(!p.key) return; byKey.set(p.key, byKey.has(p.key) ? null : (p.qty ? p : null)); });
   const ings = [...byKey.entries()].filter(([, p]) => p).map(([key, p]) => ({key, q: p.qty.replace(/\btbsps?\b\.?/gi, 'Tbsp'), terms: [...new Set([p.name.toLowerCase(), key, key + 's', key + 'es'])].filter(t => t.length >= 3)}));
   const found = [];
   stepList(d).forEach(({key: sk, st}) => { const t = String(st.text || '');
@@ -341,7 +341,7 @@ const pic = d => d.photo ? `<img src="${esc(d.photo)}" alt="" loading="lazy"${po
 const listName = d => d.short && !/…$/.test(d.short) ? d.short : (d.title || d.short || '');
 function addIngredientsTo(k, recipeId, groups){
   const items = k.shopping.items; const touched = new Set();
-  (groups || []).forEach(g => (g.items || []).forEach(line => {
+  (groups || []).forEach(g => (g.items || []).flatMap(ingParts).forEach(line => {
     const {qty, name, key} = splitIngredient(line); if(!key) return; logAmt(line);
     let it = items.find(i => (i.key || splitIngredient(i.name).key) === key);
     if(it){
@@ -374,7 +374,10 @@ function syncMade(k, id){
   if(full && !o.counted){ o.counted = true; const c = m[id] || {n:0}; m[id] = {n: (c.n || 0) + 1, last: new Date().toISOString().slice(0, 10)}; }
   else if(!full && o.counted){ o.counted = false; const c = m[id] || {n:0}; m[id] = Object.assign({}, c, {n: Math.max(0, (c.n || 0) - 1)}); }
 }
-const ingLines = d => (d.ingredients || []).flatMap(g => g.items || []).filter(l => splitIngredient(l).key);
+const ingLines = d => (d.ingredients || []).flatMap(g => g.items || []).flatMap(ingParts).filter(l => splitIngredient(l).key);
+// Each thing to buy in a recipe, with where it sits: a line like "2 heirloom tomatoes + 4 roma tomatoes" gives two (pi 0 and 1).
+const eachPart = (d, fn) => (d.ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => ingParts(l).forEach((p, pi) => fn(p, gi, li, pi, l))));
+const pqKey = (rid, gi, li, pi) => rid + '|' + gi + '|' + li + (pi ? '|' + pi : '');
 // An item's amount is always the sum of its recipes' lines, so taking a recipe off and adding it back never doubles it.
 // Only recipes still on the list count toward an item. Finished or archived ones stay linked (so a past trip can be restored) but add nothing.
 const onListRid = x => isActive(x) && !(P().done || {})[x];
@@ -382,12 +385,12 @@ function qtyFromRecipes(it){
   let rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
   const live = rs.filter(onListRid); if(live.length) rs = live;
   const key = it.key || splitIngredient(it.name).key; let q = '';
-  rs.forEach(x => (D(R(x)).ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => { const p = splitIngredient(l); if(!p.key || p.key !== key) return;
-    const o = (it.pq || {})[x + '|' + gi + '|' + li], v = o && o.base === l ? o.q : p.qty; if(v) q = addQty(q, v, {key}); })));
+  rs.forEach(x => eachPart(D(R(x)), (l, gi, li, pi) => { const p = splitIngredient(l); if(!p.key || p.key !== key) return;
+    const o = (it.pq || {})[pqKey(x, gi, li, pi)], v = o && o.base === l ? o.q : p.qty; if(v) q = addQty(q, v, {key}); }));
   return q;
 }
 // A list-only change to one recipe's amount ("Just this list"). It's kept with the recipe line it replaced, and dropped if that line changes.
-const partQ = (it, x) => { const o = (it.pq || {})[x.rid + '|' + x.gi + '|' + x.li]; return o && o.base === x.l ? o.q : splitIngredient(x.l).qty; };
+const partQ = (it, x) => { const o = (it.pq || {})[pqKey(x.rid, x.gi, x.li, x.pi)]; return o && o.base === x.l ? o.q : splitIngredient(x.l).qty; };
 // "1 cup (200g)" changed to "3 cups": the amount in parentheses is worked out for you, "3 cups (600g)".
 // Only when both amounts use the same unit and the parentheses hold a single weight or volume.
 function scaleParen(oldQ, newQ){
@@ -435,6 +438,17 @@ function fixBullets(k){ let ch = false; const items = k.shopping.items;
     else { it.name = p.name; it.key = p.key; if(!it.qty && p.qty && !(it.recipes || []).length) it.qty = p.qty; fixItem(it); }
     ch = true; }
   return ch; }
+// Lists saved before "2 heirloom tomatoes + 4 roma tomatoes" was split have one item for both. It's replaced by one item per ingredient,
+// added up again from the recipes, and a checked-off item stays checked off.
+function fixSplit(k){ let ch = false; const items = k.shopping.items, marks = k.progress.shop = k.progress.shop || {};
+  for(const it of items.slice()){ if(it.custom || !(it.recipes || []).length) continue;
+    const ps = ingParts((it.qty ? it.qty + ' ' : '') + it.name); if(ps.length < 2) continue;
+    const keys = new Set(ps.map(x => splitIngredient(x).key)), rids = (it.recipes || []).filter(x => R(x)), mark = marks[it.id];
+    items.splice(items.indexOf(it), 1); delete marks[it.id];
+    rids.forEach(rid => addIngredientsTo(k, rid, [{items: ingLines(D(R(rid))).filter(l => keys.has(splitIngredient(l).key))}]));
+    items.forEach(x => { if(keys.has(x.key || splitIngredient(x.name).key) && rids.some(r => (x.recipes || []).includes(r))){ fixItem(x); if(mark && !marks[x.id]) marks[x.id] = mark; } });
+    ch = true; }
+  return ch; }
 function fixAnd(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(!/^and\s+(?:[\d½¼¾⅓⅔⅛⅜⅝⅞]|a\s+half|half)/i.test(it.name || '')) continue;
     const p = splitIngredient('1 ' + it.name); if(!p.qty || p.key === (it.key || '')) continue;
@@ -453,8 +467,8 @@ function fixPlus(k){ let ch = false; const items = k.shopping.items;
     else { it.name = p.name; it.key = p.key; }
     ch = true; }
   return ch; }
-function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
-  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); k.shopping.items.forEach(fixItem); }, true); }
+function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c) | fixSplit(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
+  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); fixSplit(k); k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {
@@ -468,13 +482,13 @@ function unlinkRecipe(k, id, keys){
 function addFresh(k, id, lines){
   if(!(k.progress.active[id] !== false && !(k.progress.archived || {})[id] && !(k.progress.done || {})[id])) unlinkRecipe(k, id);
   addIngredientsTo(k, id, [{items: lines}]);
-  const keys = new Set(lines.map(l => splitIngredient(l).key));
+  const keys = new Set(lines.flatMap(ingParts).map(l => splitIngredient(l).key));
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items.forEach(i => { if((i.recipes || []).includes(id) && keys.has(i.key || splitIngredient(i.name).key)) delete marks[i.id]; });
   k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id];
   if(k.progress.archived) delete k.progress.archived[id];
 }
-const ingListed = (id, line) => { const key = splitIngredient(line).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]) && isActive(id) && !(P().done || {})[id]; };
+const ingListed = (id, line) => ingParts(line).some(pl => { const key = splitIngredient(pl).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]); }) && isActive(id) && !(P().done || {})[id];
 let addSheet = null, choosing = null, chooseSnap = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null, shopAdd = false;
 // At home mode: a separate pass for marking what's already in the kitchen, so the list itself has one thing to tap per row.
 let homeMode = false, editItem = null;
@@ -991,7 +1005,7 @@ function checkAmt(oldQ, newQ){
 function itemRecipeLine(it){
   const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || rs.length !== 1) return null;
   const r = R(rs[0]), key = it.key || splitIngredient(it.name).key;
-  const hits = []; (D(r).ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => { if(splitIngredient(l).key === key) hits.push({gi, li, l}); }));
+  const hits = []; eachPart(D(r), (l, gi, li, pi) => { if(splitIngredient(l).key === key) hits.push({gi, li, pi, l}); });
   return hits.length === 1 ? Object.assign({rid: rs[0]}, hits[0]) : null;
 }
 function rebuildLine(line, name, qty){
@@ -1007,7 +1021,7 @@ function rebuildLine(line, name, qty){
 function itemRecipeParts(it){
   const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || !rs.length) return null;
   const key = it.key || splitIngredient(it.name).key, parts = [];
-  for(const rid of rs){ const hits = []; (D(R(rid)).ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => { if(splitIngredient(l).key === key) hits.push({rid, gi, li, l}); }));
+  for(const rid of rs){ const hits = []; eachPart(D(R(rid)), (l, gi, li, pi) => { if(splitIngredient(l).key === key) hits.push({rid, gi, li, pi, l}); });
     if(!hits.length) return null; hits.forEach((h, n) => { h.many = hits.length > 1; h.n = n + 1; }); parts.push(...hits); }
   return parts.length > 1 ? parts : null;
 }
@@ -1051,21 +1065,21 @@ async function saveItemParts(toRecipes){
   const {id, name, parts} = editItem, it = allItems().find(i => i.id === id); if(!it) return;
   const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq);
   if(!toRecipes){ mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; const pq = y.pq = y.pq || {};
-      parts.forEach(x => { if(x.nq === x.oq) return; const kk = x.rid + '|' + x.gi + '|' + x.li; if(x.nq === splitIngredient(x.l).qty) delete pq[kk]; else pq[kk] = {q: x.nq, base: x.l}; });
+      parts.forEach(x => { if(x.nq === x.oq) return; const kk = pqKey(x.rid, x.gi, x.li, x.pi); if(x.nq === splitIngredient(x.l).qty) delete pq[kk]; else pq[kk] = {q: x.nq, base: x.l}; });
       delete y.qtyEdit; fixItem(y); });
     editItem = null; render(); toast('Updated your list'); return; }
   const done = [];
   for(const x of ch){ const r = R(x.rid); if(!r) continue; const nl = rebuildLine(x.l, splitIngredient(x.l).name, x.nq); if(!nl) continue;
-    const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = nl;
+    const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = ingReplacePart(data.ingredients[x.gi].items[x.li], x.pi, nl);
     const {error} = await sb.from('recipes').update({data}).eq('id', x.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
     r.data = data; const dn = D(r).short || D(r).title; if(!done.includes(dn)) done.push(dn); }
-  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[x.rid + '|' + x.gi + '|' + x.li]; }); fixItem(y); });
+  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[pqKey(x.rid, x.gi, x.li, x.pi)]; }); fixItem(y); });
   editItem = null; render(); toast(`Updated ${joinNames(done)} and your list`);
 }
 async function saveItemRecipe(id, name, qty){
   const it = allItems().find(i => i.id === id), hit = it && itemRecipeLine(it); if(!hit){ saveItemList(id, name, qty); return; }
   const nl = rebuildLine(hit.l, name, qty); if(!nl){ saveItemList(id, name, qty); return; }
-  const r = R(hit.rid), data = JSON.parse(JSON.stringify(D(r))); data.ingredients[hit.gi].items[hit.li] = nl;
+  const r = R(hit.rid), data = JSON.parse(JSON.stringify(D(r))); data.ingredients[hit.gi].items[hit.li] = ingReplacePart(data.ingredients[hit.gi].items[hit.li], hit.pi, nl);
   const {error} = await sb.from('recipes').update({data}).eq('id', hit.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
   r.data = data; const nk = splitIngredient(nl).key;
   mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; x.key = nk; delete x.qtyEdit; fixItem(x); });
@@ -1582,7 +1596,7 @@ async function saveForm(id){
   if(!val('#f-ing')){ f.err = 'Add the ingredients (paste the recipe and tap Download into form).'; render(); return; }
   const ingredients = ingTextToGroups(val('#f-ing'));
   if(f.amtFix){ const fx = f.amtFix; ingredients.forEach(g => { g.items = (g.items || []).map(l => fx[l] || l); }); }
-  ingredients.forEach(g => (g.items || []).forEach(logAmt));
+  ingredients.forEach(g => (g.items || []).flatMap(ingParts).forEach(l => logAmt(l)));
   if(!f.amtChecked){ const ws = recipeAmtWarns(old, ingredients); if(ws.length){ showAmtWarns(ws, id); return; } }
   const steps = stepTextToSections(val('#f-steps'), old.steps);
   const link = val('#f-link');
@@ -2464,13 +2478,13 @@ document.addEventListener('click', async e => {
     const go = $('.pickgo'); if(go){ go.disabled = !n; go.textContent = n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'; } return; }
   if(a === 'pickgo'){ if(!pickSheet) return; const ids = Object.keys(pickSheet.sel).filter(x => R(x)); pickSheet = null; if(!ids.length){ render(); return; }
     const SN = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); let total = 0; mutate(k => { ids.forEach(rid => { const lines = ingLines(D(R(rid))); total += lines.length; addFresh(k, rid, lines); }); });
-    toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`, () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); }); return; }
+    toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`, () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Items removed from list.'); }); return; }
   if(a === 'sheetclose'){ addSheet = null; render(); return; }
-  if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`, () => { mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); }); return; }
+  if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`, () => { mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Items removed from list.'); }); return; }
   if(a === 'choose'){ addSheet = null; choosing = id; chosenN = 0; chooseSnap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => unlinkRecipe(k, id)); setTimeout(() => { const c = $('.ing-col'); if(c) window.scrollTo({top: c.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth'}); }, 30); return; }
-  if(a === 'choosedone'){ choosing = null; render(); const SN = chooseSnap; chooseSnap = null; if(chosenN) toast(`${chosenN} added to your list`, SN ? () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); } : null); return; }
+  if(a === 'choosedone'){ choosing = null; render(); const SN = chooseSnap; chooseSnap = null; if(chosenN) toast(`${chosenN} added to your list`, SN ? () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Items removed from list.'); } : null); return; }
   if(a === 'ingadd'){ const r = R(id); if(!r) return; const [gi, ki] = el.dataset.k.split('-').map(Number); const line = ((D(r).ingredients || [])[gi] || {}).items[ki]; if(!line) return;
-    if(ingListed(id, line)){ chosenN = Math.max(0, chosenN - 1); const key = splitIngredient(line).key; mutate(k => unlinkRecipe(k, id, new Set([key]))); return; }
+    if(ingListed(id, line)){ chosenN = Math.max(0, chosenN - 1); const keys = new Set(ingParts(line).map(x => splitIngredient(x).key)); mutate(k => unlinkRecipe(k, id, keys)); return; }
     chosenN++; mutate(k => addFresh(k, id, [line])); return; }
   if(a === 'markall'){ const r = R(id); if(!r) return; const prev = JSON.parse(JSON.stringify(cookOf(id).s)); const keys = stepList(D(r)).map(x => x.key);
     mutate(k => { const o = k.progress.cook[id] = k.progress.cook[id] || {}; o.s = o.s || {}; o.before = Object.assign({}, prev); keys.forEach(x => { o.s[x] = true; }); syncMade(k, id); });

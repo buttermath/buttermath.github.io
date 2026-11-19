@@ -131,6 +131,19 @@ const DESCRIPTORS = /\b(fresh|freshly|chopped|sliced|diced|minced|softened|chill
 
 // Ingredient lines pasted from websites or chats often start with a bullet (•, ◦, ▪, -, *). It isn't part of the item.
 export const BULLET = /^[•◦▪▫●○‣∙·*\-–—]+\s*/;
+// Names that are the same thing at the store. They share one key, so they add up on one list line.
+const SAME_KEY = {'rice wine vinegar':'rice vinegar', 'scallion':'green onion', 'spring onion':'green onion',
+  'confectioners sugar':'powdered sugar', 'confectioner sugar':'powdered sugar', 'icing sugar':'powdered sugar',
+  'garbanzo bean':'chickpea', 'chick pea':'chickpea', 'bicarbonate of soda':'baking soda', 'bicarb soda':'baking soda',
+  'corn starch':'cornstarch', 'heavy whipping cream':'heavy cream', 'plain flour':'all purpose flour', 'ap flour':'all purpose flour',
+  'white sugar':'granulated sugar', 'granulated white sugar':'granulated sugar', 'courgette':'zucchini', 'aubergine':'eggplant',
+  'parmesan cheese':'parmesan'};
+// Names that might be the same thing. The shopping list asks before putting them on one line.
+export const MAYBE_SAME = [['olive oil','virgin olive oil'], ['vegetable oil','neutral oil','canola oil'], ['salt','kosher salt','sea salt','table salt','fine sea salt'],
+  ['butter','unsalted butter','salted butter'], ['brown sugar','light brown sugar','dark brown sugar'], ['heavy cream','whipping cream'],
+  ['flour','all purpose flour'], ['sugar','granulated sugar'], ['parmesan','parmigiano reggiano','parmigiano'], ['onion','yellow onion','white onion'],
+  ['soy sauce','tamari'], ['pepper','black pepper']];
+export const maybeSame = (a, b) => a !== b && MAYBE_SAME.some(g => g.includes(a) && g.includes(b));
 export function splitIngredient(line){
   let s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
@@ -156,7 +169,7 @@ export function splitIngredient(line){
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();
-  return {qty, name, key};
+  return {qty, name, key: SAME_KEY[key] || key};
 }
 
 // "2 heirloom tomatoes + 4 roma tomatoes" is two things to buy, so it becomes two shopping-list items.

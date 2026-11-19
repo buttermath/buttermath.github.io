@@ -616,6 +616,16 @@ function fActRow(fid, rid){
     : `<button class="btn primary grow" data-act="fsave" data-f="${esc(fid)}" data-id="${esc(rid)}" data-open="1">${ICON_PLUS2}Save to my recipe box</button>`;
 }
 const BOOK_ART = `<svg class="book" viewBox="0 0 160 96" aria-hidden="true"><ellipse cx="80" cy="90" rx="66" ry="4" fill="#141414" opacity=".12"/><rect x="8" y="76" width="144" height="9" rx="4" fill="#D7263D" stroke="#141414" stroke-width="2.5"/><path d="M14 76 L14 70 Q46 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M146 76 L146 70 Q114 60 80 72 L80 76 Z" fill="#fff" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 73 Q47 64 78 74M142 73 Q113 64 82 74" fill="none" stroke="#CFC8B6" stroke-width="1.5"/><g fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"><path class="pg p1" d="M80 73 Q112 60 144 68"/><path class="pg p2" d="M80 73 Q112 60 144 68"/><path class="pg p3" d="M80 73 Q112 60 144 68"/></g></svg>`;
+// After you save a friend's recipe, going back to your recipe box shows a recipe card dropping into a red recipe tin.
+const TIN_ART = `<svg class="tin" viewBox="0 0 160 150" aria-hidden="true"><rect x="34" y="40" width="92" height="16" rx="4" fill="#fff" stroke="#141414" stroke-width="3" transform="rotate(-14 34 56)"/><g class="tincw"><g class="tinc"><rect x="46" y="44" width="68" height="46" rx="4" fill="#fff" stroke="#141414" stroke-width="3"/><line x1="46" y1="56" x2="114" y2="56" stroke="#D7263D" stroke-width="3"/><line x1="54" y1="66" x2="104" y2="66" stroke="#B4B2A9" stroke-width="2"/><line x1="54" y1="74" x2="96" y2="74" stroke="#B4B2A9" stroke-width="2"/><line x1="54" y1="82" x2="100" y2="82" stroke="#B4B2A9" stroke-width="2"/></g></g><rect x="30" y="78" width="100" height="56" rx="8" fill="#D7263D" stroke="#141414" stroke-width="4"/><rect x="64" y="96" width="32" height="14" rx="3" fill="#FBF6EC" stroke="#141414" stroke-width="3"/><rect x="72" y="100" width="16" height="6" rx="1" fill="#F7D774"/></svg>`;
+let filedNew = false;
+function tinLoad(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const o = document.createElement('div'); o.className = 'bookload'; o.setAttribute('role', 'status');
+  o.innerHTML = `<div class="loader">${TIN_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
+  document.body.appendChild(o);
+  setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 1900);
+}
 function openMine(id){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){ location.hash = 'r-' + id; return; }
   const o = document.createElement('div'); o.className = 'bookload'; o.setAttribute('role', 'status');
@@ -892,6 +902,46 @@ function renderShopping(){
   ${pickSheet ? renderPickSheet(all) : ''}${editItem ? renderEditItem() : ''}`;
 }
 // Editing a list item. If it came from one recipe, offer to make the same change in that recipe (recommended), so the list and recipe agree next time.
+// Amount check (Nov 19): before a changed amount is saved, it's checked for things that look wrong, and you're asked before it's kept.
+//  - it has numbers but doesn't read as an amount ("2 cupz", "1/0 cup")
+//  - the amount in parentheses doesn't match the main amount ("2 cups (250g)" when the recipe says 1 cup is 200g, or "8 oz (100g)")
+//  - it's 8 or more times bigger or smaller than before (a likely typo)
+const AMT_VOL = {tsp:1, tbsp:3, cup:48, stick:24, floz:6, ml:0.202884, l:202.884, pint:96, quart:192, gallon:768};
+const AMT_WT = {g:1, kg:1000, oz:28.3495, lb:453.592};
+const AMT_UNIT = {c:'cup', cups:'cup', cup:'cup', tablespoon:'tbsp', tablespoons:'tbsp', tbsp:'tbsp', tbsps:'tbsp', tbs:'tbsp', tbl:'tbsp', teaspoon:'tsp', teaspoons:'tsp', tsp:'tsp', tsps:'tsp', stick:'stick', sticks:'stick', g:'g', gram:'g', grams:'g', kg:'kg', kilogram:'kg', kilograms:'kg', oz:'oz', ounce:'oz', ounces:'oz', lb:'lb', lbs:'lb', pound:'lb', pounds:'lb', ml:'ml', milliliter:'ml', milliliters:'ml', millilitre:'ml', millilitres:'ml', l:'l', liter:'l', liters:'l', litre:'l', litres:'l', pint:'pint', pints:'pint', quart:'quart', quarts:'quart', gallon:'gallon', gallons:'gallon'};
+function amtParse(q){
+  const F = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875,'⅙':1/6,'⅚':5/6};
+  const numOf = a => { a = a.trim(); let y; if((y = a.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +y[1] + F[y[2]]; if(F[a] != null) return F[a]; if((y = a.match(/^(\d+)\s+(\d+)\/(\d+)$/))) return +y[3] ? +y[1] + y[2] / y[3] : NaN; if((y = a.match(/^(\d+)\/(\d+)$/))) return +y[2] ? y[1] / y[2] : NaN; return +a; };
+  const one = t => { t = String(t).trim().replace(/^(about|approx\.?|approximately|~)\s*/i, '');
+    const x = t.match(/^(\d+\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])\s*(fl\.?\s*oz\.?|[A-Za-z]+\.?)?(.*)$/); if(!x) return null;
+    const n = numOf(x[1]); let u = (x[2] || '').toLowerCase().replace(/\.$/, '').replace(/\s+/g, ''); u = /^fl\.?oz/.test(u) ? 'floz' : (AMT_UNIT[u] || '');
+    return {n, u, word: x[2] || '', rest: x[3] || ''}; };
+  const s0 = String(q || '').trim(), pm = s0.match(/^(.*?)\s*\(([^)]*)\)\s*(.*)$/);
+  return {main: one(pm ? pm[1] + ' ' + pm[3] : s0), paren: pm ? one(pm[2]) : null, mainText: (pm ? pm[1] : s0).trim()};
+}
+const amtBase = a => a && a.u && AMT_VOL[a.u] ? {fam: 'v', v: a.n * AMT_VOL[a.u]} : a && a.u && AMT_WT[a.u] ? {fam: 'w', v: a.n * AMT_WT[a.u]} : null;
+function amtRound(v, u){ const r = u === 'g' || u === 'ml' ? (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10) : Math.round(v * 100) / 100; return r; }
+function checkAmt(oldQ, newQ){
+  const nq = String(newQ || '').trim(); if(!nq || nq === String(oldQ || '').trim() || !/\d/.test(nq)) return null;
+  if(/\d\s*(-|–|to)\s*\d/.test(nq) || /\+/.test(nq)) return null;
+  const sp = /\(\s*[\d.]+\s+[A-Za-z]/.test(nq) ? ' ' : '';
+  const N = amtParse(nq);
+  if(!N.main || !isFinite(N.main.n) || N.main.n <= 0) return {msg: `“${nq}” doesn't read as an amount. Start with a number, like 2 cups.`};
+  if(N.main.word && !N.main.u && /^[a-z]{2,}$/i.test(N.main.word) && /^(cu|tb|ts|ta|te|gr|ou|po|li|mi|sti|pi|qu|ga)/i.test(N.main.word) && !/^(clove|can|pinch|dash|large|medium|small|whole|head|bunch|slice|piece|sprig|package|pkg|jar|bag|box|bottle|egg)/i.test(N.main.word)) return {msg: `“${N.main.word}” isn't a unit Butter Math knows. Did you mean cups, Tbsp, tsp, grams, or ounces?`};
+  const mb = amtBase(N.main), pr = N.paren, pb = amtBase(pr);
+  // parentheses and main amount are both weights, or both volumes: they must agree
+  if(mb && pb && mb.fam === pb.fam){ const want = mb.v / (pb.fam === 'v' ? AMT_VOL[pr.u] : AMT_WT[pr.u]);
+    if(Math.abs(want - pr.n) / want > 0.08){ const r = amtRound(want, pr.u); return {msg: `${N.mainText} is about ${r}${sp}${pr.word}, not ${pr.n}${sp}${pr.word}.`, fix: `${N.mainText} (${r}${sp}${pr.word})`}; } }
+  const O = amtParse(oldQ), ob = /\+/.test(String(oldQ || '')) ? null : amtBase(O.main), opb = amtBase(O.paren);
+  // the recipe's own conversion (1 cup = 200g) says what the new parentheses should be
+  if(mb && pb && ob && opb && ob.fam === mb.fam && opb.fam === pb.fam && mb.fam !== pb.fam && ob.v){
+    const per = opb.v / ob.v, want = mb.v * per / (pb.fam === 'v' ? AMT_VOL[pr.u] : AMT_WT[pr.u]);
+    if(Math.abs(want - pr.n) / want > 0.08){ const r = amtRound(want, pr.u); return {msg: `The recipe has ${O.mainText} as ${O.paren.n}${sp}${O.paren.word}, so ${N.mainText} is about ${r}${sp}${pr.word}, not ${pr.n}${sp}${pr.word}.`, fix: `${N.mainText} (${r}${sp}${pr.word})`}; } }
+  // a big jump is usually a typo
+  if(mb && ob && mb.fam === ob.fam && ob.v){ const k = mb.v / ob.v;
+    if(k >= 8 || k <= 1 / 8){ return {msg: k >= 8 ? `That's ${Math.round(k)} times more than before (${String(oldQ).trim()}). Check that it's right.` : `That's ${Math.round(1 / k)} times less than before (${String(oldQ).trim()}). Check that it's right.`}; } }
+  return null;
+}
 function itemRecipeLine(it){
   const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || rs.length !== 1) return null;
   const r = R(rs[0]), key = it.key || splitIngredient(it.name).key;
@@ -921,6 +971,10 @@ const joinNames = nm => nm.length < 3 ? nm.join(' and ') : nm.slice(0, -1).join(
 function renderEditItem(){
   const it = allItems().find(i => i.id === editItem.id); if(!it){ editItem = null; return ''; }
   const head = t => `<div class="sheetbg" data-act="itemeditclose"></div><div class="asksheet" role="dialog" aria-label="${t}"><div class="pickhead"><div class="askt">${t}</div><button class="ibtn" data-act="itemeditclose" aria-label="Close">${ICON_X}</button></div>`;
+  if(editItem.step === 'warn'){ const w = editItem.warns, fx = w.filter(x => x.fix);
+    return head('Check this amount') + w.map(x => `<p class="frp amtwarn">${x.label ? `<b>${esc(x.label)}:</b> ` : ''}${esc(x.msg)}</p>`).join('') +
+      (fx.length ? `<button class="askopt main" data-act="amtfix"><b>Use ${fx.map(x => esc(x.fix)).join(', ')}</b><span>Recommended</span></button>` : '') +
+      `<button class="askopt${fx.length ? '' : ' main'}" data-act="amtback"><b>Change the amount</b></button><button class="askopt" data-act="amtkeep"><b>Keep what I typed</b></button></div>`; }
   if(editItem.step === 'askmulti'){ const ch = editItem.parts.filter(x => x.nq !== x.oq), rids = [...new Set(ch.map(x => x.rid))], many = rids.length > 1, nm = joinNames(rids.map(x => `<b>${esc(D(R(x)).short || D(R(x)).title)}</b>`));
     return head(many ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${ch.map(x => `${esc(partLabel(x))}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`).join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${many ? 'they are' : 'it is'} right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>${many ? 'Update the recipes too' : 'Update the recipe too'}</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>${many ? 'The recipes stay' : 'The recipe stays'} as ${many ? 'they are' : 'it is'}</span></button></div>`; }
@@ -928,13 +982,24 @@ function renderEditItem(){
     return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
   const parts = itemRecipeParts(it);
-  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(partQ(it, x))}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
+  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(editItem.draft ? editItem.draft.qs[i] : partQ(it, x))}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
   const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
-  return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
+  return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(editItem.draft ? editItem.draft.qty : it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
 }
 function saveItemList(id, name, qty){
   mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; if(qty !== (x.qty || '')){ x.qty = qty; if((x.recipes || []).length) x.qtyEdit = true; } });
   editItem = null; render(); toast('Updated your list');
+}
+// After the amount check: the same steps as before (offer to update the recipe, or save to the list).
+function itemEditGo(it, name, qty, ps){
+  if(ps){ const ch = ps.filter(x => x.nq !== x.oq);
+    if(!ch.length){ if(name !== it.name) saveItemList(it.id, name, it.qty || ''); else { editItem = null; render(); } return; }
+    if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
+    editItem = {id: it.id, name, parts: ps}; saveItemParts(false); return; }
+  if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
+  const hit = itemRecipeLine(it);
+  if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }
+  saveItemList(it.id, name, qty);
 }
 async function saveItemParts(toRecipes){
   const {id, name, parts} = editItem, it = allItems().find(i => i.id === id); if(!it) return;
@@ -2174,7 +2239,7 @@ document.addEventListener('click', async e => {
       sb.rpc('note_saved', {owner: fid, recipe: row.id}).then(() => {}, () => {});
       const ar = el.closest('.factrow'); if(ar) ar.innerHTML = fActRow(fid, id); else el.outerHTML = `<button class="savebtn done" data-act="funsave" data-f="${esc(fid)}" data-id="${esc(id)}" aria-label="Saved. Tap to remove from your recipe box" title="Tap to unsave">${ICON_OK}Saved</button>`;
       syncFbar(fid); fadeSwap(id);
-      toast('Recipe saved!'); }catch(err){ clearTimeout(slow); console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
+      filedNew = true; toast('Recipe saved!'); }catch(err){ clearTimeout(slow); console.error(err); toast("Couldn't save it. Try again."); el.disabled = false; el.classList.remove('busy'); el.innerHTML = was; } return; }
   if(a === 'openmine'){ openMine(id); return; }
   if(a === 'fsavedtog'){ fSavedOnly = !fSavedOnly; render(); return; }
   if(a === 'funsave'){ e.stopPropagation(); e.preventDefault(); const fid = el.dataset.f, mine = savedCopy(fid, id); if(!mine || el.disabled) return; el.disabled = true;
@@ -2226,6 +2291,11 @@ document.addEventListener('click', async e => {
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'itemedit'){ editItem = {id}; render(); setTimeout(() => { const n = $('#ed-qty'); if(n) n.focus(); }, 60); return; }
   if(a === 'itemeditclose'){ editItem = null; render(); return; }
+  if((a === 'amtfix' || a === 'amtkeep') && editItem && editItem.step === 'warn'){ const it = allItems().find(i => i.id === editItem.id); if(!it){ editItem = null; render(); return; }
+    const {name, ps, warns} = editItem; let qty = editItem.qty;
+    if(a === 'amtfix'){ if(ps) warns.forEach(w => { if(w.fix) ps[w.i].nq = w.fix; }); else if(warns[0].fix) qty = warns[0].fix; }
+    itemEditGo(it, name, qty, ps); return; }
+  if(a === 'amtback' && editItem && editItem.step === 'warn'){ editItem = {id: editItem.id, draft: editItem.draft}; render(); return; }
   if(a === 'itemsave' && editItem && editItem.step === 'askmulti'){ saveItemParts(el.dataset.to === 'recipe'); return; }
   if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty); else saveItemList(iid, name, qty); return; }
   if(a === 'homemode'){ homeMode = true; render(); window.scrollTo({top: 0}); return; }
@@ -2442,17 +2512,15 @@ document.addEventListener('submit', async e => {
   if(kind === 'itemedit'){
     const it = editItem && allItems().find(i => i.id === editItem.id); if(!it) return;
     const name = $('#ed-name').value.trim().replace(/\s+/g, ' '); let qty = (($('#ed-qty') || {}).value || '').trim().replace(/\s+/g, ' '); if(!name) return;
-    const parts = itemRecipeParts(it);
-    if(parts){ const ps = parts.map((x, i) => { const oq = partQ(it, x); return Object.assign({}, x, {oq, nq: scaleParen(oq, (($('#ed-q' + i) || {}).value || '').trim().replace(/\s+/g, ' '))}); });
-      const ch = ps.filter(x => x.nq !== x.oq);
-      if(!ch.length){ if(name !== it.name) saveItemList(it.id, name, it.qty || ''); else { editItem = null; render(); } return; }
-      if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
-      editItem = {id: it.id, name, parts: ps}; saveItemParts(false); return; }
-    if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
-    if(qty !== (it.qty || '')) qty = scaleParen(it.qty || '', qty);
-    const hit = itemRecipeLine(it);
-    if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }
-    saveItemList(it.id, name, qty); return;
+    const parts = itemRecipeParts(it), warns = [];
+    if(parts){ const typed = parts.map((x, i) => (($('#ed-q' + i) || {}).value || '').trim().replace(/\s+/g, ' '));
+      const ps = parts.map((x, i) => { const oq = partQ(it, x); return Object.assign({}, x, {oq, nq: scaleParen(oq, typed[i])}); });
+      ps.forEach((x, i) => { const w = checkAmt(x.oq, x.nq); if(w) warns.push(Object.assign({i, label: partLabel(x)}, w)); });
+      if(warns.length){ editItem = {id: it.id, step: 'warn', name, ps, warns, draft: {name, qs: typed}}; render(); return; }
+      itemEditGo(it, name, null, ps); return; }
+    if(qty !== (it.qty || '')){ const typed = qty; qty = scaleParen(it.qty || '', qty); const w = checkAmt(it.qty || '', qty);
+      if(w){ editItem = {id: it.id, step: 'warn', name, qty, warns: [w], draft: {name, qty: typed}}; render(); return; } }
+    itemEditGo(it, name, qty, null); return;
   }
   if(kind === 'additem'){
     const name = $('#addName').value.trim(); if(!name) return;
@@ -2480,7 +2548,7 @@ document.addEventListener('submit', async e => {
   }
 });
 document.addEventListener('change', e => { if(!e.target.classList || !e.target.classList.contains('sendck')) return; const n = document.querySelectorAll('.sendck:checked').length, b = $('#send-go'); if(b){ b.disabled = !n; b.textContent = n ? 'Send' : 'Pick a friend to send'; } });
-window.addEventListener('hashchange', () => { addSheet = null; pickSheet = null; homeMode = false; editItem = null; mealPick = null; mealShop = null; if(mealBack && !['#r-' + mealBack, '#edit-' + mealBack, '#meal'].includes(location.hash)) mealBack = null; if(location.hash !== '#shopping') shopBack = false; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
+window.addEventListener('hashchange', () => { if(filedNew && route().v === 'recipes'){ filedNew = false; tinLoad(); } addSheet = null; pickSheet = null; homeMode = false; editItem = null; mealPick = null; mealShop = null; if(mealBack && !['#r-' + mealBack, '#edit-' + mealBack, '#meal'].includes(location.hash)) mealBack = null; if(location.hash !== '#shopping') shopBack = false; addFriendOpen = false; frSent = null; sendSheet = null; fQ = ''; fCatOpen = false; fSortOpen = false; if(!/^#fr?-/.test(location.hash)){ fCat = []; fSavedOnly = false; } if(/^#(friends|f-)/.test(location.hash)) loadFriends(); choosing = null; moreOpen = false; shopQ = ''; catOpen = false; sortOpen = false; tagEdit = null;
   if(form && !/^#(add|edit-)/.test(location.hash)){ if(form.photoUrl) URL.revokeObjectURL(form.photoUrl); form = null; } // leaving the form without saving: next visit starts fresh
   render(); });
 

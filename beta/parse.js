@@ -353,10 +353,18 @@ export function scaleLine(line, f){
   return out.join(' + ');
 }
 // "Serves 4" at 2× is "Serves 8"; "4–6 servings" at ½× is "2–3 servings".
+// A bigger batch is more pans of the same size, not one giant one, so "one 9-inch pie" at 3× is "3 pies (9-inch)".
+const NUMW = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12};
 export function scaleYield(y, f){
   if(!y || !f || Math.abs(f - 1) < 1e-9) return y;
-  const m = String(y).match(/^(\D*?)(\d+(?:\.\d+)?)(?:(\s*(?:-|–|to)\s*)(\d+(?:\.\d+)?))?(.*)$/); if(!m) return y;
-  return m[1] + nice(+m[2] * f) + (m[4] ? m[3] + nice(+m[4] * f) : '') + m[5];
+  const w = String(y).replace(/^(\D*?)\b(an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?=\s+\S)/i, (x, pre, n) => pre + NUMW[n.toLowerCase()]);
+  const m = w.match(/^(\D*?)(\d+(?:\.\d+)?)(?:(\s*(?:-|–|to)\s*)(\d+(?:\.\d+)?))?(.*)$/); if(!m) return y;
+  const hi = (m[4] ? +m[4] : +m[2]) * f; let rest = m[5];
+  const sz = rest.match(/^\s+(\d+(?:\s*[x×]\s*\d+)?(?:[- ]inch|"|-in\.?| ?cm)(?![a-z]))\s+(.+)$/i);
+  if(sz) rest = ' ' + countWord(sz[2], hi > 1).replace(/^(\S+)/, '$1 (' + sz[1].replace(/\s+/g, ' ') + ')');
+  else if(/^\s+\([^)]*\)\s+[a-z]/i.test(rest)){ const pm = rest.match(/^\s+(\([^)]*\))\s+(.+)$/); rest = ' ' + pm[1] + ' ' + countWord(pm[2], hi > 1); }
+  else if(/^\s+[a-z]/i.test(rest) && !/^\s+(dozen|to|or|and|people|persons?)\b/i.test(rest)) rest = ' ' + countWord(rest.trim(), hi > 1);
+  return m[1] + nice(+m[2] * f) + (m[4] ? m[3] + nice(+m[4] * f) : '') + rest;
 }
 export function yieldCount(y){ const m = String(y || '').match(/^\D*?(\d+)(?!\s*(?:-|–|to)\s*\d)(?![\d.\/])/); return m ? +m[1] : 0; }
 

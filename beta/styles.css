@@ -1305,3 +1305,5 @@ button.tag.tago::after{inset:0 -4px -8px}
 /* faint ruled lines between ingredients are back on the notebook paper (Nov 19) */
 .ing-col .ing{border-bottom:1px solid var(--line)}
 .ing-col .ingrow .ing{border-bottom:0}
+/* an aisle's count ("1 to get", "all set ✓") stays on one line; a long aisle name wraps instead */
+.section h3 small{white-space:nowrap;flex:none}

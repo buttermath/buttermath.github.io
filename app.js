@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { STARTERS } from './starter.js';
 import { art, guessArt as guessKind } from './art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=17';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame } from './parse.js?v=18';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -339,11 +339,14 @@ const pic = d => d.photo ? `<img src="${esc(d.photo)}" alt="" loading="lazy"${po
 
 // On the shopping list, a long recipe name is written out in full and wraps, instead of the automatic short name that was cut off with "…"
 const listName = d => d.short && !/…$/.test(d.short) ? d.short : (d.title || d.short || '');
+// An item's keys: its own, plus any it was combined with ("Combine" on the shopping list), so all of them add up on that one line.
+const ikeys = it => [it.key || splitIngredient(it.name).key, ...(it.also || [])];
+const ihas = (it, key) => ikeys(it).includes(key);
 function addIngredientsTo(k, recipeId, groups){
   const items = k.shopping.items; const touched = new Set();
   (groups || []).forEach(g => (g.items || []).flatMap(ingParts).forEach(line => {
     const {qty, name, key} = splitIngredient(line); if(!key) return; logAmt(line);
-    let it = items.find(i => (i.key || splitIngredient(i.name).key) === key);
+    let it = items.find(i => ihas(i, key));
     if(it){
       const linked = (it.recipes || []).includes(recipeId);
       if(linked && !touched.has(it.id)) return;
@@ -384,8 +387,8 @@ const onListRid = x => isActive(x) && !(P().done || {})[x];
 function qtyFromRecipes(it){
   let rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
   const live = rs.filter(onListRid); if(live.length) rs = live;
-  const key = it.key || splitIngredient(it.name).key; let q = '';
-  rs.forEach(x => eachPart(D(R(x)), (l, gi, li, pi) => { const p = splitIngredient(l); if(!p.key || p.key !== key) return;
+  const key = it.key || splitIngredient(it.name).key, ks = ikeys(it); let q = '';
+  rs.forEach(x => eachPart(D(R(x)), (l, gi, li, pi) => { const p = splitIngredient(l); if(!p.key || !ks.includes(p.key)) return;
     const o = (it.pq || {})[pqKey(x, gi, li, pi)], v = o && o.base === l ? o.q : p.qty; if(v) q = addQty(q, v, {key}); }));
   return q;
 }
@@ -433,7 +436,7 @@ function pruneDone(k){ const pr = k.progress, on = x => pr.active[x] !== false &
 function fixBullets(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(!BULLET.test(it.name || '')) continue;
     const p = splitIngredient(it.name); if(!p.key) continue;
-    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    const dup = items.find(x => x !== it && ihas(x, p.key));
     if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...(it.recipes || [])])]; fixItem(dup); items.splice(items.indexOf(it), 1); }
     else { it.name = p.name; it.key = p.key; if(!it.qty && p.qty && !(it.recipes || []).length) it.qty = p.qty; fixItem(it); }
     ch = true; }
@@ -446,7 +449,7 @@ function fixSplit(k){ let ch = false; const items = k.shopping.items, marks = k.
     const keys = new Set(ps.map(x => splitIngredient(x).key)), rids = (it.recipes || []).filter(x => R(x)), mark = marks[it.id];
     items.splice(items.indexOf(it), 1); delete marks[it.id];
     rids.forEach(rid => addIngredientsTo(k, rid, [{items: ingLines(D(R(rid))).filter(l => keys.has(splitIngredient(l).key))}]));
-    items.forEach(x => { if(keys.has(x.key || splitIngredient(x.name).key) && rids.some(r => (x.recipes || []).includes(r))){ fixItem(x); if(mark && !marks[x.id]) marks[x.id] = mark; } });
+    items.forEach(x => { if(ikeys(x).some(kk => keys.has(kk)) && rids.some(r => (x.recipes || []).includes(r))){ fixItem(x); if(mark && !marks[x.id]) marks[x.id] = mark; } });
     ch = true; }
   return ch; }
 // Lists saved before prep words at the end of a name were dropped ("Chickpeas drained" is now "Chickpeas") keep the old name.
@@ -457,7 +460,7 @@ function fixPrep(k){ let ch = false; const items = k.shopping.items;
     const ok = it.key || '', rids = it.recipes.filter(x => R(x)), has = key => rids.some(rid => ingLines(D(R(rid))).some(l => splitIngredient(l).key === key));
     if(has(ok)) continue;
     const p = [splitIngredient(it.name), splitIngredient('1 ' + it.name)].find(x => x.key && x.key !== ok && has(x.key)); if(!p) continue;
-    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    const dup = items.find(x => x !== it && ihas(x, p.key));
     if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...it.recipes])]; items.splice(items.indexOf(it), 1); fixItem(dup); }
     else { it.name = p.name; it.key = p.key; fixItem(it); }
     ch = true; }
@@ -465,7 +468,7 @@ function fixPrep(k){ let ch = false; const items = k.shopping.items;
 function fixAnd(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(!/^and\s+(?:[\d½¼¾⅓⅔⅛⅜⅝⅞]|a\s+half|half)/i.test(it.name || '')) continue;
     const p = splitIngredient('1 ' + it.name); if(!p.qty || p.key === (it.key || '')) continue;
-    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    const dup = items.find(x => x !== it && ihas(x, p.key));
     if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...(it.recipes || [])])]; items.splice(items.indexOf(it), 1); }
     else { it.name = p.name; it.key = p.key; }
     ch = true; }
@@ -475,7 +478,7 @@ function fixAnd(k){ let ch = false; const items = k.shopping.items;
 function fixPlus(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(!/^(plus\s+(?:[\d½¼¾⅓⅔⅛⅜⅝⅞]|more\b)|\d.*\bplus more\b)/i.test(it.name || '')) continue;
     const p = splitIngredient(String(it.name).replace(/^plus\s+/i, '')); if(!p.key || p.key === (it.key || '')) continue;
-    const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
+    const dup = items.find(x => x !== it && ihas(x, p.key));
     if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...(it.recipes || [])])]; items.splice(items.indexOf(it), 1); }
     else { it.name = p.name; it.key = p.key; }
     ch = true; }
@@ -486,7 +489,7 @@ function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {
     if(!(i.recipes || []).includes(id)) return true;
-    if(keys && !keys.has(i.key || splitIngredient(i.name).key)) return true;
+    if(keys && !ikeys(i).some(kk => keys.has(kk))) return true;
     i.recipes = i.recipes.filter(x => x !== id);
     if(i.recipes.length){ fixItem(i); return true; } if(i.custom) return true;
     delete marks[i.id]; return false;
@@ -497,11 +500,11 @@ function addFresh(k, id, lines){
   addIngredientsTo(k, id, [{items: lines}]);
   const keys = new Set(lines.flatMap(ingParts).map(l => splitIngredient(l).key));
   const marks = k.progress.shop = k.progress.shop || {};
-  k.shopping.items.forEach(i => { if((i.recipes || []).includes(id) && keys.has(i.key || splitIngredient(i.name).key)) delete marks[i.id]; });
+  k.shopping.items.forEach(i => { if((i.recipes || []).includes(id) && ikeys(i).some(kk => keys.has(kk))) delete marks[i.id]; });
   k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id];
   if(k.progress.archived) delete k.progress.archived[id];
 }
-const ingListed = (id, line) => ingParts(line).some(pl => { const key = splitIngredient(pl).key; return allItems().some(i => (i.recipes || []).includes(id) && (i.key || splitIngredient(i.name).key) === key && !P().shop[i.id]); }) && isActive(id) && !(P().done || {})[id];
+const ingListed = (id, line) => ingParts(line).some(pl => { const key = splitIngredient(pl).key; return allItems().some(i => (i.recipes || []).includes(id) && ihas(i, key) && !P().shop[i.id]); }) && isActive(id) && !(P().done || {})[id];
 let addSheet = null, choosing = null, chooseSnap = null, chosenN = 0, moreOpen = false, shopQ = '', pickSheet = null, shopAdd = false;
 // At home mode: a separate pass for marking what's already in the kitchen, so the list itself has one thing to tap per row.
 let homeMode = false, editItem = null;
@@ -916,6 +919,10 @@ function renderShopping(){
   const items = visibleItems(), all = allItems(), shop = P().shop, f = homeMode ? 'all' : ui.filter;
   const done = items.filter(it => shop[it.id]).length;
   const allHome = items.length > 0 && items.every(it => shop[it.id] === 'have');
+  // Two items that might be the same thing ("Olive oil" and "Extra virgin olive oil"): ask once whether to put them on one line.
+  const apart = new Set(kitchen.shopping.apart || []), cand = items.filter(i => !i.custom && (i.recipes || []).length && !i.qtyEdit && !shop[i.id]);
+  let ask = null; for(let x = 0; x < cand.length && !ask; x++) for(let y = x + 1; y < cand.length && !ask; y++){ const A = cand[x], B = cand[y], kb = ikeys(B);
+    if(ikeys(A).some(ka => kb.some(k2 => maybeSame(ka, k2)))){ const pk = [ikeys(A)[0], kb[0]].sort().join('|'); if(!apart.has(pk)) ask = {A, B, pk}; } }
   const pct = items.length ? Math.round(done / items.length * 100) : 0;
   const chipRecipes = recipes.filter(r => !(P().done || {})[r.id] && !isArch(r.id) && all.some(i => (i.recipes || []).includes(r.id)));
   const colOf = listColors(chipRecipes.map(r => r.id));
@@ -969,6 +976,7 @@ function renderShopping(){
     <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from a recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Add individual item</button>'}</section>
     <p class="muted shophint">You can also tap <b>Shop for ingredients</b> while you are on any recipe page.</p>` : ''}
   ${!Q && !homeMode && items.length ? `<button class="homelink" data-act="homemode">${ICON_HOME}Check off pantry</button>` : ''}
+  ${ask && !Q && !homeMode ? `<div class="mergeask" role="status"><p>Are these items the same? <b>${esc(ask.A.name)}</b> and <b>${esc(ask.B.name)}</b>.</p><div class="mergebtns"><button class="btn dark sm" data-act="mergeyes" data-a="${esc(ask.A.id)}" data-b="${esc(ask.B.id)}">Combine</button><button class="btn quiet sm" data-act="mergeno" data-p="${esc(ask.pk)}">Keep separate</button></div></div>` : ''}
   <div class="f-${f}">${allHome && f === 'all' && !Q && !homeMode ? '<div class="card empty">Everything on your list is at home.</div>' : ''}${secs || (Q || (!items.length && !chipRecipes.length && f !== 'have') ? '' : `<div class="card empty">${!items.length && f !== 'have' ? 'Every recipe above is hidden. Tap one to show its ingredients.' : f === 'have' ? 'Nothing marked “At home” yet.' : f === 'cart' ? 'Nothing in your cart yet.' : allHome ? 'Everything on your list is at home.' : "All set — time to cook! 🎉"}</div>`)}</div>
   ${!homeMode && (all.length || (P().trips || []).length) ? `${all.length && !Q ? `<section class="tripend"><h3>Back from the store?</h3><p class="muted">Tap <b>Finish</b> to move everything on your list to <b>Past trips</b> and start a fresh list.</p><div class="te-btns"><button class="btn dark" data-act="resetshop">Finish</button><button class="btn" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div></section>` : ''}${all.length && !Q ? '' : `<div class="tf2-links"><button class="tf-link" data-act="go" data-h="trips">Past trips (${tripDays()})</button></div>`}` : ''}
   ${chipRecipes.length ? `<div id="tripDrop" class="dropzone" aria-hidden="true"><svg class="bi" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Drop here to move to Past trips</div>` : ''}
@@ -1018,7 +1026,7 @@ function checkAmt(oldQ, newQ){
 function itemRecipeLine(it){
   const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || rs.length !== 1) return null;
   const r = R(rs[0]), key = it.key || splitIngredient(it.name).key;
-  const hits = []; eachPart(D(r), (l, gi, li, pi) => { if(splitIngredient(l).key === key) hits.push({gi, li, pi, l}); });
+  const hits = []; eachPart(D(r), (l, gi, li, pi) => { if(ihas(it, splitIngredient(l).key)) hits.push({gi, li, pi, l}); });
   return hits.length === 1 ? Object.assign({rid: rs[0]}, hits[0]) : null;
 }
 function rebuildLine(line, name, qty){
@@ -1034,7 +1042,7 @@ function rebuildLine(line, name, qty){
 function itemRecipeParts(it){
   const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || !rs.length) return null;
   const key = it.key || splitIngredient(it.name).key, parts = [];
-  for(const rid of rs){ const hits = []; eachPart(D(R(rid)), (l, gi, li, pi) => { if(splitIngredient(l).key === key) hits.push({rid, gi, li, pi, l}); });
+  for(const rid of rs){ const hits = []; eachPart(D(R(rid)), (l, gi, li, pi) => { if(ihas(it, splitIngredient(l).key)) hits.push({rid, gi, li, pi, l}); });
     if(!hits.length) return null; hits.forEach((h, n) => { h.many = hits.length > 1; h.n = n + 1; }); parts.push(...hits); }
   return parts.length > 1 ? parts : null;
 }
@@ -1152,11 +1160,11 @@ const mname = r => esc(D(r).short || D(r).title || 'Recipe');
 function mealIngs(ids){
   const map = new Map();
   ids.forEach(id => ingLines(D(R(id))).forEach(l => { const p = splitIngredient(l); if(!p.key) return;
-    let e = map.get(p.key); if(!e){ const it = allItems().find(i => (i.key || splitIngredient(i.name).key) === p.key); e = {key: p.key, name: p.name, qty: '', rids: [], section: it ? (it.section || 'Other') : guessSection(p.name)}; map.set(p.key, e); }
+    let e = map.get(p.key); if(!e){ const it = allItems().find(i => ihas(i, p.key)); e = {key: p.key, name: p.name, qty: '', rids: [], section: it ? (it.section || 'Other') : guessSection(p.name)}; map.set(p.key, e); }
     if(p.qty) e.qty = addQty(e.qty, p.qty, {key: p.key}); if(!e.rids.includes(id)) e.rids.push(id); }));
   return [...map.values()];
 }
-const mealOnList = e => allItems().some(i => (i.key || splitIngredient(i.name).key) === e.key && e.rids.every(x => (i.recipes || []).includes(x) && onListRid(x)) && !P().shop[i.id]);
+const mealOnList = e => allItems().some(i => ihas(i, e.key) && e.rids.every(x => (i.recipes || []).includes(x) && onListRid(x)) && !P().shop[i.id]);
 const MEAL_P = "Select which recipes you are making. We'll let you know when to start each one so everything's ready at the same time.";
 function renderMealPick(){
   const list = recipes.filter(r => !isArch(r.id)).slice().sort((a, b) => String(D(a).title || '').localeCompare(String(D(b).title || '')));
@@ -2069,7 +2077,7 @@ function restoreTrip(at){
       const item = (it.id && k.shopping.items.find(x => x.id === it.id)) || k.shopping.items.find(x => x.name === it.n && (!ids.length || (x.recipes || []).some(r => ids.includes(r))));
       if(item){ if(it.s === 'bought' || it.s === 'have') marks[item.id] = it.s;
         const key = item.key || splitIngredient(item.name).key; item.recipes = item.recipes || [];
-        ids.forEach(id => { const r = R(id); if(r && !item.recipes.includes(id) && ingLines(D(r)).some(l => splitIngredient(l).key === key)) item.recipes.push(id); }); fixItem(item); }
+        ids.forEach(id => { const r = R(id); if(r && !item.recipes.includes(id) && ingLines(D(r)).some(l => ihas(item, splitIngredient(l).key))) item.recipes.push(id); }); fixItem(item); }
       else if(it.c){ const nid = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); k.shopping.items.push({id: nid, name: it.n, qty: it.q || '', section: it.sec || 'Other', key: splitIngredient(it.n).key, recipes: [], custom: true}); if(it.s === 'bought' || it.s === 'have') marks[nid] = it.s; }
     });
     t.splice(i, 1);
@@ -2419,6 +2427,16 @@ document.addEventListener('click', async e => {
     toast(`Removed ${listName(D(r))} from your list`, () => mutate(k => { k.shopping.items = snap.items; k.progress.shop = snap.shop; if(snap.act === undefined) delete k.progress.active[id]; else k.progress.active[id] = snap.act; })); return; }
   if(a === 'relist'){ const r = R(id); mutate(k => { if(r && !k.shopping.items.some(i => (i.recipes || []).includes(id))) addIngredientsTo(k, id, D(r).ingredients || []); k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id]; }); toast('Added to your shopping list'); return; }
   if(a === 'filter'){ ui.filter = el.dataset.tg && ui.filter === el.dataset.f ? 'all' : el.dataset.f; saveUi(); render(); return; }
+  if(a === 'mergeyes'){ const ia = el.dataset.a, ib = el.dataset.b, A0 = allItems().find(i => i.id === ia), B0 = allItems().find(i => i.id === ib); if(!A0 || !B0) return;
+    const SN = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}), names = A0.name + ' and ' + B0.name;
+    mutate(k => { const items = k.shopping.items, A = items.find(i => i.id === ia), B = items.find(i => i.id === ib); if(!A || !B) return;
+      A.also = [...new Set([...(A.also || []), ...ikeys(B)])].filter(x => x !== (A.key || splitIngredient(A.name).key));
+      if(B.name.length > A.name.length) A.name = B.name;
+      A.recipes = [...new Set([...(A.recipes || []), ...(B.recipes || [])])]; if(B.pq) A.pq = Object.assign({}, B.pq, A.pq || {});
+      const sh = k.progress.shop; if(!sh[A.id] && sh[B.id]) sh[A.id] = sh[B.id]; delete sh[B.id];
+      items.splice(items.indexOf(B), 1); fixItem(A); });
+    toast('Combined ' + names, () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. They\'re separate again.'); }); return; }
+  if(a === 'mergeno'){ const pk = el.dataset.p; mutate(k => { const ap = k.shopping.apart = k.shopping.apart || []; if(!ap.includes(pk)) ap.push(pk); }); return; }
   if(a === 'delitem'){ const it = allItems().find(i => i.id === id); const SN = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => { k.shopping.items = k.shopping.items.filter(i => i.id !== id); delete k.progress.shop[id]; ((it && it.recipes) || []).forEach(rid => { if(!k.shopping.items.some(i => (i.recipes || []).includes(rid))) k.progress.active[rid] = false; }); }); if(it) toast('Removed ' + it.name, () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast(it.name + ' is back on your list'); }); return; }
   if(a === 'copy'){
     const items = visibleItems().filter(i => !shop[i.id]); const secs = [...new Set(items.map(i => i.section || 'Other'))];

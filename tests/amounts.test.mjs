@@ -1,7 +1,7 @@
 // Butter Math: shopping-list math checks.
 // Run before every change goes to beta or live:  node tests/amounts.test.mjs
 // Every line must pass. If one fails, the change does not ship.
-import { addQty, splitIngredient } from '../parse.js';
+import { addQty, splitIngredient, scaleQty, scaleLine, scaleYield } from '../parse.js';
 
 const sum = (...q) => q.reduce((a, b) => addQty(a, b), '');
 const butter = (...q) => q.reduce((a, b) => addQty(a, b, {key: 'unsalted butter'}), '');
@@ -100,6 +100,67 @@ for(const [a, b] of [['2 tbsp rice wine vinegar', '1 tbsp rice vinegar'], ['3 sc
 for(const [a, b] of [['1 tsp kosher salt', '1 tsp salt'], ['2 tbsp unsalted butter', '2 tbsp butter'], ['1 cup brown sugar', '1 cup sugar'],
   ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro']])
   check('kept apart: ' + a.replace(/^[^a-z]+/i, '') + ' / ' + b.replace(/^[^a-z]+/i, ''), key(a) === key(b), false);
+
+// Scaling a recipe (½×, 1½×, 2×, 3×, or a serving size). Checked by hand, Nov 19.
+console.log('\nScaling a recipe');
+for(const [line, f, want] of [
+  ['2 cups all-purpose flour', .5, '1 cup all-purpose flour'], ['1 Tbsp olive oil', .5, '1½ tsp olive oil'], ['⅓ cup sugar', .5, '2 Tbsp + 2 tsp sugar'],
+  ['1 teaspoon of cinnamon', 3, '1 Tbsp cinnamon'], ['⅓ cup sugar', 1.5, '½ cup sugar'], ['1 Tbsp olive oil', 1.5, '1 Tbsp + 1½ tsp olive oil'],
+  ['3 large eggs', 1.5, '4½ large eggs'], ['1 (14 oz) can diced tomatoes', 2, '2 (14 oz) cans diced tomatoes'], ['8 oz cream cheese, softened', 2, '1 lb cream cheese, softened'],
+  ['12 oz pasta', 1.5, '1 lb + 2 oz pasta'], ['1 stick butter, melted', .5, '4 Tbsp butter, melted'], ['1 stick butter, melted', 2, '2 sticks butter, melted'],
+  ['1 cup (200g) sugar', 1.5, '1½ cups (300g) sugar'], ['1–2 tsp salt', 2, '2–4 tsp salt'], ['about 2 cups broth', 1.5, 'about 3 cups broth'],
+  ['1 cup plus 2 tablespoons flour', 2, '2¼ cups flour'], ['1 cup plus 2 tablespoons flour', 3, '3¼ cups + 2 Tbsp flour'], ['200g spinach', 1.5, '300g spinach'],
+  ['8 fl oz milk', 1.5, '12 fl oz milk'], ['2 heirloom tomatoes + 4 roma tomatoes', 3, '6 heirloom tomatoes + 12 roma tomatoes'],
+  ['1 cup of avocado or grapeseed oil', 2, '2 cups avocado or grapeseed oil'], ['Salt and pepper to taste', 2, 'Salt and pepper to taste'], ['a pinch of salt', 2, 'a pinch of salt'],
+  ['2 cups flour', 1, '2 cups flour']])
+  check(`scale ${f}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
+check('scale: unreadable amount is never shown scaled', scaleQty('2 x 400g', 2), null);
+for(const [line, f, want] of [['1 heaping cup flour', 2, '2 heaping cups flour'], ['2 scant cups sugar', .5, '1 scant cup sugar'], ['2 lemons, juiced', .5, '1 lemon, juiced'],
+  ['1 red bell pepper, sliced', 2, '2 red bell peppers, sliced'], ['2 large eggs', .5, '1 large egg'], ['1 medium potato', 2, '2 medium potatoes'], ['2 bay leaves', .5, '1 bay leaf'],
+  ['2 cherries', .5, '1 cherry'], ['1 bunch cilantro', 2, '2 bunches cilantro'], ['4 slices bacon', .25, '1 slice bacon'], ['2 cloves garlic', .5, '1 clove garlic'], ['1 small zucchini', 2, '2 small zucchini']])
+  check(`one or many ${f}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
+check('heaping cup is read as a cup', JSON.stringify(splitIngredient('1 heaping cup flour')), '{"qty":"1 cup","name":"Flour","key":"flour"}');
+check('serves 4 at 2×', scaleYield('Serves 4', 2), 'Serves 8');
+check('4–6 servings at ½×', scaleYield('4–6 servings', .5), '2–3 servings');
+// A bigger batch is more pans of the same size, not one giant one (Nov 19)
+for(const [y, f, want] of [['one 9-inch pie', 3, '3 pies (9-inch)'], ['1 loaf', 2, '2 loaves'], ['Makes 24 cookies', .5, 'Makes 12 cookies'], ['4 servings', .25, '1 serving'],
+  ['2 (9-inch) cakes', .5, '1 (9-inch) cake'], ['one 9x13-inch pan', 2, '2 pans (9x13-inch)'], ['About 2 dozen', 1.5, 'About 3 dozen']])
+  check(`yield ${f}×: ${y}`, scaleYield(y, f), want);
+// Every scaled spoon/cup amount, read back by a separate counter, is exactly the original times the size
+{ const F = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875,'⅙':1/6,'⅚':5/6}, U = {tsp:1, Tbsp:3, cup:48, cups:48};
+  const n = t => { const m = t.match(/^(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)$/); return (m[1] ? +m[1] : 0) + (m[2] ? F[m[2]] : 0); };
+  const tsp = q => q.split(' + ').reduce((a, p) => { const [x, u] = p.trim().split(' '); return a + n(x) * U[u]; }, 0);
+  let bad = 0, seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for(let i = 0; i < 500; i++){ const u = ['tsp', 'Tbsp', 'cup'][Math.floor(rnd() * 3)], w = Math.floor(rnd() * 3), fr = ['', '¼', '⅓', '½', '⅔', '¾'][Math.floor(rnd() * 6)];
+    const q = (w ? String(w) : '') + fr || '1', f = [.5, 1.5, 2, 3, 1.25, .75][Math.floor(rnd() * 6)], out = scaleQty(q + ' ' + u, f);
+    if(!/^(\d*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]? (tsp|Tbsp|cups?)( \+ |$))+$/.test(out) || Math.abs(tsp(out) - n(q) * U[u] * f) > 1/16 + 1e-9) bad++; }
+  check('500 random spoon and cup sizes, within 1/16 tsp', bad, 0); }
+
+// Stress test, Nov 19: container sizes without parentheses, number words, amounts inside the rest of a line, and never silently unscaled
+console.log('\nScaling stress test');
+for(const [line, f, want] of [
+  ['1 13.5 oz can coconut milk', 2, '2 (13.5 oz) cans coconut milk'], ['1 13.5-ounce can coconut milk', 1.5, '1½ (13.5 oz) cans coconut milk'],
+  ['2 15-ounce cans black beans, drained', .5, '1 (15 oz) can black beans, drained'], ['1 28 oz. can crushed tomatoes', 2, '2 (28 oz) cans crushed tomatoes'],
+  ['2 x 400g tins chopped tomatoes', 2, '4 (400g) tins chopped tomatoes'], ['10 oz bag frozen peas', 2, '2 (10 oz) bags frozen peas'],
+  ['1 8 oz block cream cheese', 2, '2 (8 oz) blocks cream cheese'], ['1 15 oz can + 1 28 oz can tomatoes', 2, '2 (15 oz) cans + 2 (28 oz) cans tomatoes'],
+  ['one egg', 2, '2 eggs'], ['two cups flour', 2, '4 cups flour'], ['a dozen eggs', .5, '6 eggs'], ['half a lemon', 2, '1 lemon'],
+  ['juice of 1 lemon', 2, 'juice of 2 lemons'], ['zest of 2 oranges', .5, 'zest of 1 orange'], ['2 eggs plus 1 yolk', 2, '4 eggs plus 2 yolks'],
+  ['1 cup milk (plus 2 Tbsp for brushing)', 2, '2 cups milk (plus 4 Tbsp for brushing)'], ['2 tsp active dry yeast (1 packet)', 2, '1 Tbsp + 1 tsp active dry yeast (2 packets)'],
+  ['1 cup (8 oz) cream cheese', 2, '2 cups (16 oz) cream cheese'], ['2 cups chicken stock (16 oz)', .5, '1 cup chicken stock (8 oz)'],
+  ['2 cups (about 2 medium) apples', 2, '4 cups (about 4 medium) apples'], ['1 (3-4 lb) whole chicken', 2, '2 (3–4 lb) whole chickens'],
+  ['1 lb 8 oz beef', 2, '3 lb beef'], ['⅛ tsp cayenne', 1/12, 'a pinch of cayenne'], ['1 packet active dry yeast', 1.5, '1½ packets active dry yeast'],
+  ['1 9-inch pie crust', 2, '2 9-inch pie crusts'], ['2 cups 2% milk', 2, '4 cups 2% milk'], ['1/2 cup half-and-half', 2, '1 cup half-and-half'],
+  ['1 cup (2 sticks; 226g) unsalted butter', 2, '4 sticks (452g) unsalted butter']])
+  check(`stress ${String(f).slice(0, 4)}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
+// never silently unchanged: a number Butter Math can't scale makes the whole line "Not scaled"
+for(const line of ['3 eggs, 1 separated', '1 cup flour, 2 if humid']) check(`not scaled: ${line}`, scaleLine(line, 2), null);
+check('two serving sizes', scaleYield('Serves 4 as a main or 6 as a side', 2), 'Serves 8 as a main or 12 as a side');
+check('13.5 oz can is coconut milk', splitIngredient('1 13.5 oz can coconut milk').name, 'Coconut milk');
+check('13.5 oz cans add up', addQty(splitIngredient('1 13.5 oz can coconut milk').qty, splitIngredient('1 (13.5 oz) can coconut milk').qty), '2 (13.5 oz) cans');
+// every real recipe line in the golden set scales at every size without failing
+{ const { LINES } = await import('./golden-lines.mjs'); let bad = 0;
+  for(const [l] of LINES) for(const f of [.5, 1.5, 2, 3, .75, 1.25]){ try{ if(scaleLine(l, f) == null) bad++; }catch(e){ bad++; } }
+  check(`all ${LINES.length} golden lines scale at 6 sizes`, bad, 0); }
 
 console.log(failed ? `\n${failed} FAILED. Do not ship.\n` : '\nAll checks passed.\n');
 process.exit(failed ? 1 : 0);

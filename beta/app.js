@@ -790,7 +790,7 @@ function renderPickSheet(all){
     <p class="muted pickp">Select which recipe(s) you're cooking. All ingredients will be added to your shopping list.</p>
     ${list.length > 6 ? `<input id="pickq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
     <div class="picklist"><button class="pickrow picknew" data-act="picknew"><span class="pt"><b>+ Add a new recipe</b><small>From a link, pasted text, or screenshot</small></span><span class="pplus" aria-hidden="true">+</span></button>${list.length ? list.map(r => { const d = D(r), on = onList(r.id), sel = !!pickSheet.sel[r.id], cnt = ingLines(d).length;
-      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? '✓' : ''}</span></button>`; }).join('') : `<div class="muted pickempty">No recipes yet. Add one above and its ingredients go straight to your list.</div>`}</div>
+      return `<button class="pickrow ${sel ? 'sel' : ''} ${on ? 'on' : ''}" data-act="picktog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" ${on ? 'disabled' : ''} aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${on ? 'Already on your list' : cnt + ' ingredient' + (cnt === 1 ? '' : 's')}</small></span><span class="pbox">${sel || on ? CHECK : ''}</span></button>`; }).join('') : `<div class="muted pickempty">No recipes yet. Add one above and its ingredients go straight to your list.</div>`}</div>
     ${list.length ? `<button class="btn primary pickgo" data-act="pickgo" ${n ? '' : 'disabled'}>${n ? `Add ingredients from ${n} recipe${n === 1 ? '' : 's'}` : 'Pick a recipe'}</button>` : `<button class="btn primary pickgo" data-act="picknew">Add a new recipe</button>`}
   </div>`;
 }
@@ -847,7 +847,7 @@ function renderMealPick(){
     <p class="muted pickp">${MEAL_P} Pick up to ${MEAL_MAX}.</p>
     ${list.length > 6 ? `<input id="mealq" class="tin" data-keep type="search" autocomplete="off" placeholder="Search your recipe box" aria-label="Search your recipe box">` : ''}
     <div class="picklist">${list.map(r => { const d = D(r), sel = !!mealPick.sel[r.id], t = mealTime(d);
-      return `<button class="pickrow ${sel ? 'sel' : ''}" data-act="mealtog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${t ? fmtDur(t.min) : 'No time listed'}</small></span><span class="pbox">${sel ? '✓' : ''}</span></button>`; }).join('')}</div>
+      return `<button class="pickrow ${sel ? 'sel' : ''}" data-act="mealtog" data-id="${esc(r.id)}" data-s="${esc(String(d.title || '').toLowerCase())}" aria-pressed="${sel}"><span class="pt"><b>${esc(d.title || 'Untitled recipe')}</b><small>${t ? fmtDur(t.min) : 'No time listed'}</small></span><span class="pbox">${sel ? CHECK : ''}</span></button>`; }).join('')}</div>
     <button class="btn primary pickgo mealgo" data-act="mealgo" ${n >= 2 ? '' : 'disabled'}>${mealGoText(n)}</button>
   </div>`;
 }
@@ -887,7 +887,7 @@ function renderMeal(){
     const wait = off > 0 ? `<div class="mwait" style="height:${Math.max(104, Math.round(off * scale))}px"><b>Don't start yet</b><small>Suggested start ${clock(eat, s.t.min)}, ${fmtDur(off)} after ${mname(rs[0])}</small><button class="btn mstart" data-act="mealnow" data-id="${esc(r.id)}">Start now</button></div>` : '';
     const list = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((x, k) => { const key = si + '-' + k; n++; const done = !!c.s[key];
       const tm = (x.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">⏲ ${esc(t.label)}</span>`).join('');
-      return `<button class="step ${done ? 'done' : ''} ${s.kind === 'now' && s.p.all[s.p.cur].key === key ? 'cur' : ''}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? '✓' : n}</span><span class="tx">${x.title ? `<div class="tt">${esc(x.title)}</div>` : ''}<p>${fmt(x.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`; }).join('')).join('');
+      return `<button class="step ${done ? 'done' : ''} ${s.kind === 'now' && s.p.all[s.p.cur].key === key ? 'cur' : ''}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}</span><span class="tx">${x.title ? `<div class="tt">${esc(x.title)}</div>` : ''}<p>${fmt(x.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`; }).join('')).join('');
     return `<section class="mlane ${s.kind}" id="lane-${i}"><div class="mlh"><b>${esc(d.title)}</b><small>${s.text}</small></div>${wait}
       <div class="mlb">${list || '<div class="muted">No steps listed.</div>'}</div><button class="linkbtn mopen" data-act="mealrec" data-id="${esc(r.id)}">Open the full recipe →</button></section>`; }).join('');
   const untimed = rs.filter(r => stepList(D(r)).some(x => !(x.st.timers || []).length));
@@ -987,14 +987,15 @@ function renderRecipe(id){
   if(!r) return `<button class="back" data-act="go" data-h="recipes">← Recipes</button><div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
   const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${fmt(t)}</span></button>`;
-    if(choosing !== r.id || !splitIngredient(t).key) return row;
+    if(choosing !== r.id) return row;
+    if(!splitIngredient(t).key) return `<div class="ing pick ro"><i class="pk none"></i><span>${fmt(t)}</span></div>`;
     const inl = ingListed(r.id, t);
-    return `<div class="ingrow">${row}<button class="ingadd ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-label="${inl ? 'Remove from shopping list' : 'Add to shopping list'}" title="${inl ? 'On your list. Tap to remove' : 'Add to shopping list'}">${inl ? CHECK.replace('#fff', 'currentColor') : ICON_PLUS}</button></div>`; }).join('')).join('');
+    return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${fmt(t)}</span></button>`; }).join('')).join('');
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">⏲ ${esc(t.label)}</span>`).join('');
-    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? '✓' : n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
+    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmt(st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
@@ -1020,7 +1021,7 @@ function renderRecipe(id){
   ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b><span>Everything starts unchecked</span></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Choose ingredients</b><span>Tap + next to the ones you need</span></button><button class="linkbtn askcancel" data-act="sheetclose">${addSheet.again ? 'Not now' : 'Cancel'}</button></div>` : ''}
   ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="askt">Tags</div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">✕</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="New tag, e.g. Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
   ${sendSheet === r.id ? renderSendSheet(r) : ''}
-  ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap + to add'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
+  ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap ingredients to add them'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
 }
 // On wide screens the Cook a Meal button sits on the checkered space just right of the page card, when there's room for it there.
 function placeFab(){ const b = document.querySelector('.mealfab'), m = document.querySelector('main'); if(!b || !m) return; b.style.left = ''; b.style.right = '';

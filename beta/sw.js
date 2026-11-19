@@ -2,7 +2,7 @@
 // Network first for everything: you always get the newest version when you have a signal.
 // Saved copies are only a fallback for when you're offline.
 // Change VERSION on every deploy. The old cache is deleted when the new worker takes over.
-const VERSION = 'b181';
+const VERSION = 'b182';
 const CACHE = 'butter-math-beta-' + VERSION;
 const OFFLINE = '/beta/offline.html';
 const PRECACHE = [OFFLINE, '/beta/icons/icon-192.png', '/beta/icons/apple-touch-icon.png'];
@@ -13,7 +13,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('butter-math-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('butter-math-beta-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

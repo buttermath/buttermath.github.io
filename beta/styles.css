@@ -1223,3 +1223,9 @@ body:has(.selbar) #toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 /* Toast while a bottom sheet is open (Nov 19): messages show at the top of the screen so they don't cover the sheet's buttons */
 body:has(.asksheet) #toast{top:calc(12px + env(safe-area-inset-top));bottom:auto;transform:translate(-50%,-160px)}
 body:has(.asksheet) #toast.show{transform:translate(-50%,0)}
+
+/* List item edit and remove (Nov 19): bigger tap targets with space between them, so it's harder to hit remove when you meant edit */
+.item .edit,.item .del{width:44px;height:44px}
+.item .edit .xi,.item .del .xi{width:21px;height:21px}
+.item .edit::after{content:none}
+.item .edit+.del{margin-left:0}

@@ -1211,3 +1211,6 @@ button.item.homerow{width:100%;text-align:left;font:inherit;color:inherit;border
 
 /* No sideways slide (Nov 18): a two-finger sideways swipe on a trackpad no longer drags the page left and right */
 html,body{overscroll-behavior-x:none}
+
+/* Toast above the selection bar (Nov 18): while "Tap ingredients to add them" is showing, messages pop up just above it instead of on top of it */
+body:has(.selbar) #toast{bottom:calc(88px + env(safe-area-inset-bottom))}

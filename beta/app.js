@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=22';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=23';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -345,10 +345,10 @@ const pic = d => d.photo ? `<img src="${esc(d.photo)}" alt="" loading="lazy"${po
 
 // On the shopping list, a long recipe name is written out in full and wraps, instead of the automatic short name that was cut off with "…"
 const listName = d => d.short && !/…$/.test(d.short) ? d.short : (d.title || d.short || '');
-// the size picked on a recipe, shown after its name on the shopping list ("Pumpkin Pie 3×"); nothing at 1×
+// the size picked on a recipe, shown after its name on the shopping list ("Pumpkin Pie (3)" = 3 times the recipe); nothing at 1×
 function sizeTag(id){ const f = scaleOf(id); if(near1(f, 1)) return '';
   const w = Math.floor(f + 1e-9), fr = ({0: '', .25: '¼', .5: '½', .75: '¾'})[Math.round((f - w) * 4) / 4], x = Math.abs(f * 4 - Math.round(f * 4)) < .02 && fr !== undefined ? (w || fr ? (w ? w : '') + fr : '0') : String(+f.toFixed(1));
-  return ` <span class="sz">${x}×</span>`; }
+  return ` <span class="sz">(${x})</span>`; }
 // An item's keys: its own, plus any it was combined with ("Combine" on the shopping list), so all of them add up on that one line.
 const ikeys = it => [it.key || splitIngredient(it.name).key, ...(it.also || [])];
 const ihas = (it, key) => ikeys(it).includes(key);

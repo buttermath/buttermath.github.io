@@ -1283,11 +1283,15 @@ function placeFab(){ const b = document.querySelector('.mealfab'), m = document.
   if(innerWidth - mr >= b.offsetWidth + 32){ b.style.left = (mr + 16) + 'px'; b.style.right = 'auto'; } else b.style.right = Math.max(16, innerWidth - mr) + 'px'; }
 window.addEventListener('resize', placeFab);
 function renderFab(r){
-  const old = $('#fab'); if(old) old.remove();
+  const old = $('#fab'); if(old) old.remove(); if(fabIO){ fabIO.disconnect(); fabIO = null; }
   if(MEAL_ON && r.v === 'recipes' && !mealPick && recipes.filter(x => !isArch(x.id)).length >= 2){ const n = mealIds().length; const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab mealfab'; b.innerHTML = ICON_MEAL + (n >= 2 ? `Your meal (${n})` : 'Cook a Meal'); b.title = 'Pick a few recipes to cook together'; b.dataset.act = n >= 2 ? 'go' : 'mealopen'; b.dataset.h = 'meal'; document.body.appendChild(b); placeFab(); return; }
   if(r.v !== 'recipe' || choosing) return; const rr = R(r.id); if(!rr) return; const p = progressOf(rr); if(p.cur < 0 || p.done === 0) return;
   const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn dark fab'; b.textContent = '↓ Current step'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
+  // Only shows while the current step is off screen. Once it's in view (you scrolled to it or tapped the button), the button goes away.
+  const st = document.getElementById('s-' + p.all[p.cur].key);
+  if(st && 'IntersectionObserver' in window){ b.classList.add('away'); fabIO = new IntersectionObserver(([en]) => b.classList.toggle('away', en.isIntersecting), {threshold: 0.3}); fabIO.observe(st); }
 }
+let fabIO = null;
 
 /* ---------------- add / edit form ---------------- */
 let form = null; // {forId, photoBlob, photoUrl, removePhoto, busy, err}

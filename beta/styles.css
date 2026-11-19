@@ -1277,3 +1277,10 @@ body:has(#fab.stepfab:not(.away)) .totop{left:calc(50% + 6px)}
 body:has(.totop.show) #fab.stepfab{left:calc(50% - 52px)}
 .totop,#fab.stepfab{transition:opacity .3s,transform .2s,left .2s}
 }
+/* recipe names on the shopping list open the recipe: the tag under each item, and a small arrow on each "Shopping for" chip */
+button.tag.tago{border:0;font-family:inherit;line-height:inherit;cursor:pointer;position:relative}
+button.tag.tago::after{content:"";position:absolute;inset:-12px -4px}
+.chipw .chip{padding-right:62px}
+.chipgo{position:absolute;right:31px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.chipgo:hover{background:rgba(0,0,0,.06)}
+.chipgo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}

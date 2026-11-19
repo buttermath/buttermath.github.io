@@ -366,8 +366,29 @@ function qtyFromRecipes(it){
   let rs = it.recipes || []; if(!rs.length || rs.some(x => !R(x))) return null;
   const live = rs.filter(onListRid); if(live.length) rs = live;
   const key = it.key || splitIngredient(it.name).key; let q = '';
-  rs.forEach(x => ingLines(D(R(x))).forEach(l => { const p = splitIngredient(l); if(p.key === key && p.qty) q = addQty(q, p.qty, {key}); }));
+  rs.forEach(x => (D(R(x)).ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => { const p = splitIngredient(l); if(!p.key || p.key !== key) return;
+    const o = (it.pq || {})[x + '|' + gi + '|' + li], v = o && o.base === l ? o.q : p.qty; if(v) q = addQty(q, v, {key}); })));
   return q;
+}
+// A list-only change to one recipe's amount ("Just this list"). It's kept with the recipe line it replaced, and dropped if that line changes.
+const partQ = (it, x) => { const o = (it.pq || {})[x.rid + '|' + x.gi + '|' + x.li]; return o && o.base === x.l ? o.q : splitIngredient(x.l).qty; };
+// "1 cup (200g)" changed to "3 cups": the amount in parentheses is worked out for you, "3 cups (600g)".
+// Only when both amounts use the same unit and the parentheses hold a single weight or volume.
+function scaleParen(oldQ, newQ){
+  const PR = /^(.*?)\s*\(\s*((?:~|about |approx\.? )?)(\d+(?:\.\d+)?)(\s*)(g|grams?|kg|ml|l|oz|ounces?)\s*\)\s*$/i;
+  const o = String(oldQ || '').match(PR), nn = String(newQ || '').trim(); if(!o || !nn) return newQ;
+  let main = nn; const m = nn.match(PR);
+  if(m){ if(m[3] !== o[3] || m[5].toLowerCase() !== o[5].toLowerCase()) return newQ; main = m[1]; } else if(/[()]/.test(nn)) return newQ;
+  const F = {'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875,'⅙':1/6,'⅚':5/6};
+  const lead = t => { const x = String(t).trim().match(/^(\d+\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])\s*([A-Za-z.]*)/); if(!x) return null;
+    const a = x[1].trim(); let n; let y;
+    if((y = a.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) n = +y[1] + F[y[2]]; else if(F[a]) n = F[a]; else if((y = a.match(/^(\d+)\s+(\d+)\/(\d+)$/))) n = +y[1] + y[2] / y[3]; else if((y = a.match(/^(\d+)\/(\d+)$/))) n = y[1] / y[2]; else n = +a;
+    const u0 = x[2].toLowerCase().replace(/\.$/, ''), u = ({c:'cup', cups:'cup', tablespoon:'tbsp', tablespoons:'tbsp', tbs:'tbsp', tbsps:'tbsp', teaspoon:'tsp', teaspoons:'tsp', tsps:'tsp', sticks:'stick', ounces:'oz', ounce:'oz', lbs:'lb', pounds:'lb', pound:'lb'})[u0] || u0;
+    return {n, u, raw: x[2]}; };
+  const a = lead(o[1]), b = lead(main); if(!a || !b || !a.n || !b.n || a.u !== b.u || Math.abs(a.n - b.n) < 1e-9) return newQ;
+  const v = +o[3] * b.n / a.n, r = v >= 10 ? Math.round(v) : Math.round(v * 10) / 10;
+  let mm = main.trim(); if(b.n > 1 && /^cup$/i.test(b.raw)) mm = mm.replace(/\bcup\b/i, 'cups'); else if(b.n <= 1 && /^cups$/i.test(b.raw)) mm = mm.replace(/\bcups\b/i, 'cup');
+  return `${mm} (${o[2]}${r}${o[4]}${o[5]})`;
 }
 let mathOpen = new Set();
 function mathOf(it, colOf){
@@ -907,7 +928,7 @@ function renderEditItem(){
     return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
   const parts = itemRecipeParts(it);
-  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(splitIngredient(x.l).qty)}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
+  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(partQ(it, x))}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
   const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
   return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
 }
@@ -918,13 +939,16 @@ function saveItemList(id, name, qty){
 async function saveItemParts(toRecipes){
   const {id, name, parts} = editItem, it = allItems().find(i => i.id === id); if(!it) return;
   const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq);
-  if(!toRecipes){ saveItemList(id, name, parts.reduce((q, x) => x.nq ? addQty(q, x.nq, {key}) : q, '')); return; }
+  if(!toRecipes){ mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; const pq = y.pq = y.pq || {};
+      parts.forEach(x => { if(x.nq === x.oq) return; const kk = x.rid + '|' + x.gi + '|' + x.li; if(x.nq === splitIngredient(x.l).qty) delete pq[kk]; else pq[kk] = {q: x.nq, base: x.l}; });
+      delete y.qtyEdit; fixItem(y); });
+    editItem = null; render(); toast('Updated your list'); return; }
   const done = [];
   for(const x of ch){ const r = R(x.rid); if(!r) continue; const nl = rebuildLine(x.l, splitIngredient(x.l).name, x.nq); if(!nl) continue;
     const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = nl;
     const {error} = await sb.from('recipes').update({data}).eq('id', x.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
     r.data = data; const dn = D(r).short || D(r).title; if(!done.includes(dn)) done.push(dn); }
-  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; fixItem(y); });
+  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[x.rid + '|' + x.gi + '|' + x.li]; }); fixItem(y); });
   editItem = null; render(); toast(`Updated ${joinNames(done)} and your list`);
 }
 async function saveItemRecipe(id, name, qty){
@@ -2417,14 +2441,15 @@ document.addEventListener('submit', async e => {
   }
   if(kind === 'itemedit'){
     const it = editItem && allItems().find(i => i.id === editItem.id); if(!it) return;
-    const name = $('#ed-name').value.trim().replace(/\s+/g, ' '), qty = (($('#ed-qty') || {}).value || '').trim().replace(/\s+/g, ' '); if(!name) return;
+    const name = $('#ed-name').value.trim().replace(/\s+/g, ' '); let qty = (($('#ed-qty') || {}).value || '').trim().replace(/\s+/g, ' '); if(!name) return;
     const parts = itemRecipeParts(it);
-    if(parts){ const ps = parts.map((x, i) => Object.assign({}, x, {oq: splitIngredient(x.l).qty, nq: (($('#ed-q' + i) || {}).value || '').trim().replace(/\s+/g, ' ')}));
+    if(parts){ const ps = parts.map((x, i) => { const oq = partQ(it, x); return Object.assign({}, x, {oq, nq: scaleParen(oq, (($('#ed-q' + i) || {}).value || '').trim().replace(/\s+/g, ' '))}); });
       const ch = ps.filter(x => x.nq !== x.oq);
       if(!ch.length){ if(name !== it.name) saveItemList(it.id, name, it.qty || ''); else { editItem = null; render(); } return; }
       if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
-      saveItemList(it.id, name, ps.reduce((q, x) => x.nq ? addQty(q, x.nq, {key: it.key || splitIngredient(it.name).key}) : q, '')); return; }
+      editItem = {id: it.id, name, parts: ps}; saveItemParts(false); return; }
     if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
+    if(qty !== (it.qty || '')) qty = scaleParen(it.qty || '', qty);
     const hit = itemRecipeLine(it);
     if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }
     saveItemList(it.id, name, qty); return;

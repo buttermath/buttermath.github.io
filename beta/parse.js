@@ -141,6 +141,8 @@ export function splitIngredient(line){
     // "1 cup plus 2 tablespoons flour" is one amount: 1 cup + 2 tablespoons
     const pl = name.match(/^(?:plus|\+)\s+/i), m2 = pl && name.slice(pl[0].length).match(LEAD);
     if(m2 && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m2[1]) && /[a-z]/i.test(m2[1].replace(/^(about|approx\.?)\s*/i, ''))){ qty = qty + ' + ' + m2[1].trim(); name = name.slice(pl[0].length + m2[1].length); } }
+  // "1 teaspoon of cinnamon": the "of" belongs to neither the amount nor the name
+  qty = qty.replace(/\s+of$/i, '');
   name = name.replace(/^\s*(?:plus|\+)\s+more\s+(?:for\s+[a-z]+\s+)?/i, '');
   while(/\([^()]*\)/.test(name)) name = name.replace(/\([^()]*\)/g,' ');
   name = name.replace(/[()]/g,' ').split(/,| – | - |;/)[0].replace(/\b(plus more|or more|divided|optional)\b.*$/i,'').replace(/\s+/g,' ').trim();

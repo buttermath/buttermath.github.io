@@ -1322,3 +1322,10 @@ button.tag.tago::after{inset:0 -4px -8px}
 .scaledef{color:var(--red-dark,#A3162B);font-size:14px}
 .scalenote{font-size:13px;color:var(--muted)}
 .noscale{display:block;font-size:12px;color:var(--muted);font-weight:500}
+/* What to buy vs. what the recipes use ("2 (14 oz) cans" / "Recipe uses 1½ (14 oz) cans") */
+.uses{font-size:13px;color:var(--muted);margin-top:1px}
+/* Notes that come with a new recipe size (pans, salt and spice) */
+.scalenotes{margin:-2px 0 10px;padding:8px 12px;background:var(--butter);color:var(--note);border-radius:12px;font:500 13px/1.45 Inter,sans-serif}
+.ing-col .scalenotes{margin-left:36px;margin-right:8px}
+.scalenotes p{margin:0}
+.step .noscale{margin-top:4px}

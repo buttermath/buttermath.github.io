@@ -1098,3 +1098,21 @@ textarea.tin{min-height:88px}
 #toast.show{transform:translate(-50%,0)}
 .tundo{color:var(--logo-coral);font-weight:700}
 .mnote{border:0;border-radius:12px}
+/* Design system rollout, step 6 (Nov 18): Lucide icons, calmer notebook paper, and the butter pat drop. */
+.xi{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mi,.olink .ext,.cbk .chev,.ibtn svg,.fpill svg{stroke-width:2}
+.chipx .xi,.mchx .xi,.tpdel .xi,.sclear .xi,.fpill .xi,.rtag .xi,.timer .xi{width:14px;height:14px}
+.ibtn .xi{width:20px;height:20px}
+.back,.linkbtn.lp-back{display:inline-flex;align-items:center;gap:6px}
+.back .xi{width:18px;height:18px}
+.tmr .xi,[data-act="timer"] .xi{width:15px;height:15px;margin-right:4px;vertical-align:-2px}
+.items,.ing-col{border:1.5px solid var(--line);box-shadow:none}
+.ing-col .ing{border-bottom:0;padding:9px 2px}
+.ing-col .grp{color:var(--red-dark)}
+.finwrap{position:relative}
+.findrop{position:absolute;left:50%;bottom:calc(100% + 6px);width:84px;margin-left:-42px;pointer-events:none;animation:findrop-out 1.3s ease-out forwards}
+.findrop svg{display:block;width:100%;height:auto;overflow:visible}
+.findrop .fpat{animation:findrop-pat .7s cubic-bezier(.3,0,.6,1) forwards}
+@keyframes findrop-pat{0%{transform:translateY(0);opacity:1}75%{transform:translateY(74px);opacity:1}100%{transform:translateY(78px);opacity:0}}
+@keyframes findrop-out{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.findrop{display:none}}

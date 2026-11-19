@@ -2,7 +2,7 @@
 // Each line is written the way real recipe sites, cookbooks and family cards write it.
 // The expected name and amount were written by hand, not copied from the program's output.
 // A change ships only if every line still reads exactly as expected.
-import { splitIngredient, ingParts } from '../parse.js';
+import { splitIngredient, ingParts, guessSection } from '../parse.js';
 
 export const LINES = [
   ['2 c flour', 'Flour', '2 c'],
@@ -270,7 +270,27 @@ export const SPLITS = [
   ['Salt + pepper', ['Salt + pepper | ']],
 ];
 
+// Which aisle a new list item lands in.
+export const AISLES = [
+  ['1 - 14 oz can of tomato purée', 'Pasta, grains & canned'],
+  ['1 - 28 oz can of fire roasted tomatoes', 'Pasta, grains & canned'],
+  ['1 (6 oz) can tomato paste', 'Pasta, grains & canned'],
+  ['1 (14 oz) can coconut milk', 'Pasta, grains & canned'],
+  ['1 (15 oz) can black beans', 'Pasta, grains & canned'],
+  ['1 (5 oz) can tuna in olive oil', 'Pasta, grains & canned'],
+  ['1 (14 oz) can sweetened condensed milk', 'Baking aisle'],
+  ['1 (15 oz) can pumpkin purée', 'Baking aisle'],
+  ['2 cups shredded coconut', 'Baking aisle'],
+  ['1 cup of avocado or grapeseed oil', 'Oils, sauces & condiments'],
+  ['2 Tbsp olive oil', 'Oils, sauces & condiments'],
+  ['1 jar salsa', 'Oils, sauces & condiments'],
+  ['4 roma tomatoes', 'Produce'],
+  ['1 avocado', 'Produce'],
+  ['2 cups milk', 'Dairy & eggs'],
+];
+
 export function run(check){
   for(const [s, name, qty] of LINES){ const p = splitIngredient(s); check(`line: ${s.slice(0, 46)}`, `${p.name} | ${p.qty}`, `${name} | ${qty}`); }
+  for(const [s, want] of AISLES){ const p = splitIngredient(s); check(`aisle: ${s.slice(0, 45)}`, guessSection(p.name, p.qty), want); }
   for(const [s, want] of SPLITS){ check(`split: ${s.slice(0, 45)}`, ingParts(s).map(x => { const p = splitIngredient(x); return `${p.name} | ${p.qty}`; }).join(' · '), want.join(' · ')); }
 }

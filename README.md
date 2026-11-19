@@ -1,4 +1,4 @@
-# Kitchen Notebook
+# Butter Math
 
 A free recipe and shopping-list website. Anyone can create an account, save recipes, build a shopping list, and cook step by step on a phone or computer. Each person's recipes, list and progress are private to their account.
 

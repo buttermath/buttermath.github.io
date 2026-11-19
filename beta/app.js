@@ -866,6 +866,8 @@ function render0(){
   if(key !== lastView){
     const keep = ['recipes', 'shopping', 'friends', 'fbook', 'trips'].includes(r.v) || (r.v === 'recipe' && lastView === 'form' + r.id);
     const y = keep ? scrollMem[key] || 0 : 0;
+    // when coming back mid-page, load the recipe photos right away so they don't blink in after the jump
+    if(y) document.querySelectorAll('#app img[loading="lazy"]').forEach(i => { i.loading = 'eager'; });
     window.scrollTo(0, y); if(y) requestAnimationFrame(() => window.scrollTo(0, y));
     lastView = key;
   }

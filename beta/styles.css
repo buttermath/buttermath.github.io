@@ -1219,3 +1219,7 @@ body:has(.selbar) #toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 .cl-home.flash{animation:homeflash 2.4s ease-out}
 @keyframes homeflash{0%,60%{box-shadow:0 0 0 3px var(--red)}100%{box-shadow:0 0 0 3px rgba(215,38,61,0)}}
 @media(prefers-reduced-motion:reduce){.cl-home.flash{animation:none;box-shadow:0 0 0 3px var(--red)}}
+
+/* Toast while a bottom sheet is open (Nov 19): messages show at the top of the screen so they don't cover the sheet's buttons */
+body:has(.asksheet) #toast{top:calc(12px + env(safe-area-inset-top));bottom:auto;transform:translate(-50%,-160px)}
+body:has(.asksheet) #toast.show{transform:translate(-50%,0)}

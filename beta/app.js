@@ -5,6 +5,8 @@ import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, 
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
+// Phantom check on the first step: shows twice per recipe per visit to the site, then stops
+const stepHinted = new Set(), stepHintT = {};
 const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = s => esc(prettyFractions(String(s == null ? '' : s).replace(/^\s*[•◦▪▫●‣∙]\s*/, ''))).replace(/([½¼¾⅓⅔⅛⅜⅝⅞])/g, '<span class="fr">$1</span>');
@@ -547,7 +549,7 @@ function renderAddFriend(){
     <p class="frsent">If <b>${esc(frSent.em)}</b> has an account, they'll see your friend request when they log in to Butter Math.</p>`}</div>`;
   return `<div class="sheetbg" data-act="addfriendclose"></div><div class="asksheet frsheet" role="dialog" aria-label="Add friend"><div class="pickhead"><div class="askt">Add friend</div><button class="ibtn" data-act="addfriendclose" aria-label="Close">${ICON_X}</button></div>
     <form class="emrow" data-form="frsend"><input class="tin" id="fr-email" data-keep type="email" inputmode="email" autocomplete="off" placeholder="Enter friend's email" aria-label="Enter friend's email" required><button class="btn primary" type="submit">Send</button></form>
-    <p class="frinvl">Not on Butter Math yet? Copy your invite link and text it to them.</p>
+    <p class="frinvl">Not on Butter Math? Copy an invite link and send them a text</p>
     <div class="emrow"><input class="tin frinv" id="fr-inv" readonly value="${esc(myInvite || '')}" placeholder="Making your invite link…" aria-label="Your invite link"><button class="btn" type="button" data-act="frinvcopy">Copy</button></div>
   </div>`;
 }
@@ -1151,10 +1153,11 @@ function renderRecipe(id){
     const inl = ingListed(r.id, t);
     return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${fmt(t)}</span></button>`; }).join('')).join('');
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
+  if(!p.done && !stepHinted.has(r.id) && !stepHintT[r.id]) stepHintT[r.id] = setTimeout(() => stepHinted.add(r.id), 4500);
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
-    const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey;
+    const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey && choosing !== r.id;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
-    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
+    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
@@ -1170,7 +1173,7 @@ function renderRecipe(id){
     <div class="actrow">${isArch(r.id) ? `<button class="btn primary grow" data-act="unarch" data-id="${esc(r.id)}">Unarchive</button>` : `<button class="btn primary addlist grow" data-act="addask" data-id="${esc(r.id)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18"/><path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25"/><circle cx="18" cy="20" r="2"/><circle cx="8" cy="20" r="2"/></svg>Add ingredients to list</button>`}<button class="btn wake ${wakeLock ? 'on' : ''}" data-act="wake" aria-pressed="${!!wakeLock}" aria-label="Keep screen on" title="Keep the screen from turning off while you cook"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="${wakeLock ? 'currentColor' : 'none'}"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg><span class="wl">Screen on</span></button><button class="btn wake sendbtn" data-act="sendopen" data-id="${esc(r.id)}" aria-label="Send to a friend" title="Send to a friend">${ICON_SEND}</button></div>
   </div></div>
   <div class="layout">
-    <div class="card panel ing-col"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${ings || '<div class="muted">No ingredients yet.</div>'}</div>
+    <div class="card panel ing-col${choosing === r.id ? ' choosing' : ''}"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${ings || '<div class="muted">No ingredients yet.</div>'}</div>
     <div><h3 style="font-size:19px;margin:0 4px 10px">Steps</h3>${p.total ? `<div class="stepprog"><div class="prog-line"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div><div class="bar"><i style="width:${pct}%"></i></div></div>` : ''}${steps || '<div class="card empty">No steps yet.</div>'}
     ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
 </div>
@@ -1873,7 +1876,7 @@ function renderTrips(){
     const seen = new Map(); all.forEach(i => { const key = i.id || i.n; if(!seen.has(key)) seen.set(key, i); });
     const uniq = [...seen.values()], gt = uniq.filter(i => i.s === 'bought'), hd = uniq.filter(i => i.s === 'have'), sk = uniq.filter(i => i.s === 'skip');
     const ats = g.trips.map(t => t.at).join('|');
-    return `<details class="card trip" ${n === 0 ? 'open' : ''}><summary><div><b>${esc(when)}</b><div class="muted">${[`${gt.length} bought`, `${hd.length} already had`].concat(sk.length ? [`${sk.length} didn't get`] : []).join(' · ')}</div></div><button class="tripx" data-act="deltrip" data-at="${esc(ats)}" aria-label="Remove this trip" title="Remove trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button><span class="chev">▾</span></summary>
+    return `<details class="card trip"><summary><div><b>${esc(when)}</b><div class="muted">${[`${gt.length} bought`, `${hd.length} already had`].concat(sk.length ? [`${sk.length} didn't get`] : []).join(' · ')}</div></div><button class="tripx" data-act="deltrip" data-at="${esc(ats)}" aria-label="Remove this trip" title="Remove trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button><span class="chev">▾</span></summary>
       <div class="tbody">${names.length ? `<div class="tname">${esc(names.join(', '))}</div>` : ''}
       ${uniq.length ? `<details class="tings"><summary>See ingredients</summary>${gt.length ? `<h4>Bought</h4>${list(gt)}` : ''}${hd.length ? `<h4>Already had</h4>${list(hd)}` : ''}${sk.length ? `<h4>Didn't get</h4>${list(sk)}` : ''}</details>` : '<div class="muted" style="font-size:14px">Nothing was marked.</div>'}
       <div class="row" style="margin-top:12px"><button class="btn" data-act="untrip" data-at="${esc(ats)}"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18"/><path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25"/><circle cx="18" cy="20" r="2"/><circle cx="8" cy="20" r="2"/></svg>Back to shopping list</button></div></div></details>`;
@@ -2271,7 +2274,7 @@ document.addEventListener('click', async e => {
     let total = 0; mutate(k => { ids.forEach(rid => { const lines = ingLines(D(R(rid))); total += lines.length; addFresh(k, rid, lines); }); });
     toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`); return; }
   if(a === 'sheetclose'){ addSheet = null; render(); return; }
-  if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`); return; }
+  if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`, () => { mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Your list is back.'); }); return; }
   if(a === 'choose'){ addSheet = null; choosing = id; chosenN = 0; mutate(k => unlinkRecipe(k, id)); setTimeout(() => { const c = $('.ing-col'); if(c) window.scrollTo({top: c.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth'}); }, 30); return; }
   if(a === 'choosedone'){ choosing = null; render(); if(chosenN) toast(`${chosenN} added to your list`); return; }
   if(a === 'ingadd'){ const r = R(id); if(!r) return; const [gi, ki] = el.dataset.k.split('-').map(Number); const line = ((D(r).ingredients || [])[gi] || {}).items[ki]; if(!line) return;
@@ -2313,7 +2316,7 @@ document.addEventListener('click', async e => {
   if(a === 'signout'){ await flush(); try{ sessionStorage.removeItem('mb-in'); }catch(err){} gate = 'gate'; await sb.auth.signOut(); location.hash = ''; return; }
   if(a === 'enter'){ enterKitchen(); return; }
   if(a === 'wake'){
-    if(wakeLock){ wantWake = false; try{ await wakeLock.release(); }catch(err){} wakeLock = null; render(); return; }
+    if(wakeLock){ wantWake = false; try{ await wakeLock.release(); }catch(err){} wakeLock = null; render(); toast('Screen can sleep again'); return; }
     wantWake = true;
     try{ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; render(); }); toast('Screen will stay on'); render(); }
     catch(err){ wantWake = false; toast("Not supported on this browser"); }

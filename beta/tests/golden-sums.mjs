@@ -9,6 +9,12 @@ const sum = (key, ...q) => q.reduce((a, b) => addQty(a, b, {key}), '');
 
 export const HAND = [
   // [what it is, ingredient key, amounts..., expected total]
+  ['dash can sizes add up', 'tomato puree', '1 (14 oz) can', '1 (14 oz) can', '2 (14 oz) cans'],
+  ['different can sizes stay apart', 'tomato', '1 (14 oz) can', '1 (28 oz) can', '1 (14 oz) can + 1 (28 oz) can'],
+  ['different sizes stay apart', 'onion', '1 large', '1 small', '1 large + 1 small'],
+  ['in-between size stays apart', 'sweet potato', '1 medium-small', '1 medium', '1 medium-small + 1 medium'],
+  ['same in-between size adds up', 'sweet potato', '1 medium-small', '1 medium-small', '2 medium-small'],
+  ['no size joins the one size', 'egg', '2 large', '3', '5 large'],
   ['cinnamon with "of" (reported line)', 'cinnamon', '1 teaspoon', '1 teaspoon', '2 tsp'],
   ['flour with "of" plus cups', 'flour', '1 cup', '1½ cups', '2½ cups'],
   ['two pies of butter', 'unsalted butter', '1 cup (2 sticks; 226g)', '1 cup (2 sticks; 226g)', '4 sticks (452g)'],

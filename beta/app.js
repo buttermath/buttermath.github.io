@@ -216,7 +216,7 @@ function renderLanding(member){
     <ol class="lp-three lp-four lp-steps">
       ${step(1, 'Save a recipe', 'Paste a link from any recipe site or social media post, add a photo of a cookbook page, or type in your own.')}
       ${step(2, 'Build your list', 'Tap <b>Shop for ingredients</b> on any recipe, or add recipe ingredients directly on your shopping list page. Ingredients land on one list, sorted by aisle, with shared ones added up.')}
-      ${step(3, 'Shop', 'Check things off as you go, and tap <b>Have it</b> for anything already in your kitchen.')}
+      ${step(3, 'Shop', 'Check things off as you go, and tap <b>Check off pantry</b> to mark anything already in your kitchen.')}
       ${step(4, 'Cook', "Follow the recipe step by step and check off each one. Tap <b>Screen on</b> so your phone doesn't go dark mid-recipe.")}
     </ol>
   </section>
@@ -1321,7 +1321,7 @@ function renderFab(r){
   if(MEAL_ON && r.v === 'recipes' && !mealPick && recipes.filter(x => !isArch(x.id)).length >= 2){ const n = mealIds().length; const b = document.createElement('button'); b.id = 'fab'; b.className = 'btn primary fab mealfab'; b.innerHTML = ICON_MEAL + (n >= 2 ? `Your meal (${n})` : 'Cook a Meal'); b.title = 'Pick a few recipes to cook together'; b.dataset.act = n >= 2 ? 'go' : 'mealopen'; b.dataset.h = 'meal'; document.body.appendChild(b); placeFab(); return; }
   if(r.v !== 'recipe' || choosing) return; const rr = R(r.id); if(!rr) return; const p = progressOf(rr); if(p.cur < 0 || p.done === 0) return;
   // A round arrow button (same look as Back to top). It points down or up, toward where the current step is.
-  const b = document.createElement('button'); b.id = 'fab'; b.className = 'stepfab'; b.type = 'button'; b.setAttribute('aria-label', 'Go to the current step'); b.title = 'Current step'; b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
+  const b = document.createElement('button'); b.id = 'fab'; b.className = 'stepfab'; b.type = 'button'; b.setAttribute('aria-label', 'Go to step ' + (p.cur + 1)); b.title = 'Current step'; b.innerHTML = '<span class="sfl">Step ' + (p.cur + 1) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>'; b.dataset.act = 'jump'; b.dataset.k = p.all[p.cur].key; document.body.appendChild(b);
   // Only shows while the current step is off screen. Once it's in view (you scrolled to it or tapped the button), the button goes away.
   const st = document.getElementById('s-' + p.all[p.cur].key);
   if(st && 'IntersectionObserver' in window){ b.classList.add('away'); fabIO = new IntersectionObserver(([en]) => { b.classList.toggle('away', en.isIntersecting); b.classList.toggle('up', !en.isIntersecting && en.boundingClientRect.top < 0); }, {threshold: 0.3}); fabIO.observe(st); }
@@ -1329,7 +1329,8 @@ function renderFab(r){
 }
 let fabIO = null, fabIdleT;
 // The current-step arrow fades out after 1.5 seconds without scrolling and comes back when you scroll
-function fabWake(){ const b = document.getElementById('fab'); if(!b || !b.classList.contains('stepfab')) return; b.classList.remove('idle'); clearTimeout(fabIdleT); fabIdleT = setTimeout(() => b.classList.add('idle'), 1500); }
+// On phones only one button shows at a time: the "Step N" pill while your current step is off screen, otherwise Back to top. Both fade the same way.
+function fabWake(){ const b = document.getElementById('fab'), t = document.querySelector('.totop'), els = [b && b.classList.contains('stepfab') ? b : null, t].filter(Boolean); if(!els.length) return; els.forEach(e => e.classList.remove('idle')); clearTimeout(fabIdleT); fabIdleT = setTimeout(() => els.forEach(e => e.classList.add('idle')), 1500); }
 window.addEventListener('scroll', fabWake, {passive: true});
 
 /* ---------------- add / edit form ---------------- */
@@ -2120,7 +2121,7 @@ function renderFeedback(){
 }
 const TOUR = [
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M14 16h-4M14 28h-4M14 40h-4"/><path d="M24 20h16M24 28h16M24 36h10"/><path d="M38 44l4 4 8-9" class="accl"/></svg>`, title: 'Add to your recipe box', text: 'Use the Recipes tab as your own personal recipe box to store as many recipes as you\'d like. You can copy and paste a website link, copy from a social media post caption, or add a screenshot of the recipe.'},
-  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'There are two ways to add ingredients to your shopping list: open a recipe and tap <b>Shop for ingredients</b>, or go to your <b>Shopping list</b> tab and tap <b>Add from a recipe</b>. Add as many recipes as you like. Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Have it</b> for anything already in your kitchen.'},
+  {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M6 12h7l6 28h28l5-20H16"/><circle cx="23" cy="50" r="4"/><circle cx="43" cy="50" r="4"/><path d="M29 30l3 3 6-6" class="accl"/></svg>`, title: 'Shop for groceries', text: 'There are two ways to add ingredients to your shopping list: open a recipe and tap <b>Shop for ingredients</b>, or go to your <b>Shopping list</b> tab and tap <b>Add from a recipe</b>. Add as many recipes as you like. Your ingredients are grouped by grocery aisle, like Produce and Dairy, and you can reorder the aisles. Check things off as you shop, or tap <b>Check off pantry</b> to mark anything already in your kitchen.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 30h44v6c0 10-8 18-18 18h-8c-10 0-18-8-18-18z"/><path d="M6 30h52"/><path d="M24 22c-3-4 3-6 0-11M32 22c-3-4 3-6 0-11M40 22c-3-4 3-6 0-11" class="accl"/></svg>`, title: 'Cook at home', text: 'Follow along with your recipes as you cook. Each one lists every ingredient, amount, and step, and you can check them off as you go.'},
   {art: () => `<svg class="tourico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="7"/><path d="M8 48c1-8 7-13 14-13s13 5 14 13"/><circle cx="43" cy="24" r="6"/><path d="M38 36c2-1 3.5-1.5 5-1.5c6 0 11 4.5 12 11.5"/><path d="M47 6c-2-2.5-6-1-5 2c.6 2 5 5 5 5s4.4-3 5-5c1-3-3-4.5-5-2z" class="acc"/></svg>`, title: 'Share with friends', text: 'Add friends in the <b>Friends</b> tab to see each other\'s recipes. Save any of theirs to your recipe box, or send them one of yours.'},
 ];

@@ -1118,3 +1118,47 @@ textarea.tin{min-height:88px}
 @media(prefers-reduced-motion:reduce){.findrop{display:none}}
 /* Lucide everywhere: one 2px line weight with rounded ends for every 24px icon */
 body svg[viewBox="0 0 24 24"]{stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Shopping list: At home mode, edit button, and edit sheet (Nov 18) */
+.item .edit,.item .del{flex:none;position:relative;border:0;background:none;color:var(--muted);width:32px;height:32px;border-radius:50%;padding:0;display:grid;place-items:center;cursor:pointer}
+.item .edit:hover,.item .del:hover{background:var(--sand);color:var(--ink)}
+.item .edit .xi{width:17px;height:17px}.item .del .xi{width:18px;height:18px}
+.item .edit::after{content:"";position:absolute;inset:-6px}
+.item .edit+.del{margin-left:-6px}
+.homelink{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 14px;padding:11px 14px;border:1.5px dashed var(--line-dark);border-radius:999px;background:#fff;color:var(--ink);font:500 15px Inter,sans-serif;cursor:pointer}
+.homelink:hover{border-color:var(--ink)}
+.homebar{position:sticky;top:8px;z-index:6;display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 12px 12px 16px;background:var(--ink);color:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}
+.homebar div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.homebar b{font:700 15px Inter,sans-serif}.homebar span{font:400 13px/1.4 Inter,sans-serif;color:var(--header-muted)}
+.homebar .btn.dark{background:#fff;color:var(--ink);border-color:#fff;flex:none}
+button.item.homerow{width:100%;text-align:left;font:inherit;color:inherit;border:0;border-top:1px solid var(--line);background:transparent;cursor:pointer}
+.items button.item.homerow:first-child{border-top:0}
+.homeck{flex:none;width:32px;height:32px;border-radius:50%;border:2px solid var(--line-dark);display:grid;place-items:center;color:var(--line-dark);background:#fff}
+.homeck .xi{width:17px;height:17px}
+.homerow.have .homeck{background:var(--ink);border-color:var(--ink);color:#fff}
+.homerow.have .info{opacity:1}.homerow.have .name{text-decoration:none}
+.homelbl{flex:none;font:700 12px Inter,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.homebox{margin-top:14px;padding:0;overflow:hidden}
+.homebox summary{display:flex;align-items:center;gap:8px;padding:14px 16px;cursor:pointer;list-style:none;font:500 15px Inter,sans-serif}
+.homebox summary::-webkit-details-marker{display:none}
+.homebox summary .fc{color:var(--muted)}
+.homebox summary .chev{margin-left:auto;width:18px;height:18px;fill:none;stroke:currentColor;transition:transform .15s}
+.homebox[open] summary .chev{transform:rotate(180deg)}
+.homeitem{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid var(--line)}
+.homeitem span{min-width:0}.homeitem b{font-weight:500}.homeitem small{color:var(--muted);font-size:13px}
+.homeitem .linkbtn{flex:none;font-size:14px;font-weight:500;padding:6px 0}
+.editform{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.editform .lab{font:700 13px Inter,sans-serif;color:var(--ink);margin-top:6px}
+.editform .btn{margin-top:12px;justify-content:center}
+.editform .frhint{margin:2px 0 0}
+.amt{font-weight:700;color:var(--ink)}
+/* Recipe cards: every card in the grid is the same size. Titles get up to 3 lines; the picture frame is fixed. */
+.tile h2{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.tile .art{overflow:hidden;flex:none}
+.tile .meta{max-height:2.9em;overflow:hidden}
+.hero .art{overflow:hidden}
+/* Fitting your own photo into the frame */
+.picprev.canpos{cursor:grab;touch-action:none}.picprev.canpos:active{cursor:grabbing}
+.picprev.canpos img{user-select:none;-webkit-user-select:none;pointer-events:auto}
+.picfit{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-width:420px;font:400 13px/1.4 Inter,sans-serif;color:var(--muted)}
+.picfit label{display:flex;align-items:center;gap:12px;font:700 13px Inter,sans-serif;color:var(--ink)}
+.picfit input[type=range]{flex:1;accent-color:var(--ink)}

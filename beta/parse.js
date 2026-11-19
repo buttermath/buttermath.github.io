@@ -135,6 +135,8 @@ export function splitIngredient(line){
   let s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   // Recipe cards often write T. for tablespoon and t. for teaspoon (capital T is the bigger spoon)
+  // "3 garlic cloves" is 3 cloves of garlic, the same item as "2 cloves garlic", so the two add up
+  s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*(?:\s*(?:-|–|to)\s*[\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*)?)\s+((?:large|medium|small)\s+)?garlic\s+(cloves?)(?![A-Za-z])/i, (m, n, z, c) => n + ' ' + (z || '') + c.toLowerCase() + ' garlic');
   // "1 - 14 oz can of tomatoes" is one 14 oz can, not 1 to 14 cans: a weight or volume right before a container is the container's size
   s = s.replace(/^(\d+)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(oz|ounces?|fl\.? ?oz|g|grams?|kg|ml|l|lbs?|pounds?)\.?\s+(cans?|jars?|packages?|pkgs?|bags?|box(?:es)?|bottles?|containers?|cartons?|tubs?)(?![A-Za-z])/i, (m, n, z, u, c) => +z > +n ? n + ' (' + z + ' ' + u + ') ' + c : m);
   s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*T\.?(?=\s)/, '$1 Tbsp').replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*t\.?(?=\s)/, '$1 tsp'); name = s;
@@ -193,6 +195,7 @@ export function guessSection(name, qty){
   // anything named oil ("avocado or grapeseed oil") is with the oils, unless it's packed in oil ("tuna in oil")
   if(/\boils?\b/.test(n) && !/\b(?:in|packed in) (?:olive )?oil\b|oil[- ]packed/.test(n)) return 'Oils, sauces & condiments';
   if(CANNED.test(n)) return 'Pasta, grains & canned';
+  if(/\bgarlic\b/.test(n) && !/\bgarlic (?:powder|salt|granules|flakes)\b|\bgranulated garlic\b/.test(n)) return 'Produce';
   let sec = 'Other'; for(const [s, re] of GUESS) if(re.test(n)){ sec = s; break; }
   // bought in a can ("1 (14 oz) can black beans"): the canned aisle, unless it's a sauce, or a baking can (condensed or evaporated milk, pumpkin)
   if(/\bcans?\b/i.test(String(qty || ''))){ if(/\b(condensed|evaporated|pumpkin)\b/.test(n)) return 'Baking aisle'; if(sec !== 'Oils, sauces & condiments') return 'Pasta, grains & canned'; }

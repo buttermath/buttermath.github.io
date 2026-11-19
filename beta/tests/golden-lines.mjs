@@ -243,6 +243,14 @@ export const LINES = [
   ['1 medium-small sweet potato (about 8 ounces), peeled, cut into 1-inch pieces', 'Sweet potato', '1 medium-small'],
   ['2 small-medium onions', 'Onions', '2 small-medium'],
   ['1 whole head of garlic', 'Garlic', '1 whole head'],
+  // ---- prep words at the end with no comma
+  ['4 roma tomatoes roughly chopped', 'Roma tomatoes', '4'],
+  ['4 cloves garlic minced', 'Garlic', '4 cloves'],
+  ['1 onion peeled and diced', 'Onion', '1'],
+  ['2 cups cheddar cheese shredded', 'Cheddar cheese', '2 cups'],
+  ['2 Tbsp butter melted', 'Butter', '2 Tbsp'],
+  ['1 (28 oz) can crushed tomatoes', 'Crushed tomatoes', '1 (28 oz) can'],
+  ['½ cup sliced almonds', 'Sliced almonds', '½ cup'],
   // ---- no amount
   ['Salt and pepper, to taste', 'Salt and pepper', ''],
   ['Fresh parsley, for garnish', 'Fresh parsley', ''],
@@ -252,7 +260,7 @@ export const LINES = [
 
 // One line that names two things to buy becomes two shopping-list items; an amount with a "+" stays one item.
 export const SPLITS = [
-  ['2 heirloom tomatoes + 4 roma tomatoes roughly chopped', ['Heirloom tomatoes | 2', 'Roma tomatoes roughly chopped | 4']],
+  ['2 heirloom tomatoes + 4 roma tomatoes roughly chopped', ['Heirloom tomatoes | 2', 'Roma tomatoes | 4']],
   ['1 tsp salt + 1/2 tsp pepper', ['Salt | 1 tsp', 'Pepper | ½ tsp']],
   ['1 cup + 2 Tbsp flour', ['Flour | 1 cup + 2 Tbsp']],
   ['1 cup plus 2 tablespoons flour', ['Flour | 1 cup + 2 tablespoons']],

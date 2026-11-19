@@ -136,5 +136,31 @@ for(const [y, f, want] of [['one 9-inch pie', 3, '3 pies (9-inch)'], ['1 loaf', 
     if(!/^(\d*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]? (tsp|Tbsp|cups?)( \+ |$))+$/.test(out) || Math.abs(tsp(out) - n(q) * U[u] * f) > 1/16 + 1e-9) bad++; }
   check('500 random spoon and cup sizes, within 1/16 tsp', bad, 0); }
 
+// Stress test, Nov 19: container sizes without parentheses, number words, amounts inside the rest of a line, and never silently unscaled
+console.log('\nScaling stress test');
+for(const [line, f, want] of [
+  ['1 13.5 oz can coconut milk', 2, '2 (13.5 oz) cans coconut milk'], ['1 13.5-ounce can coconut milk', 1.5, '1½ (13.5 oz) cans coconut milk'],
+  ['2 15-ounce cans black beans, drained', .5, '1 (15 oz) can black beans, drained'], ['1 28 oz. can crushed tomatoes', 2, '2 (28 oz) cans crushed tomatoes'],
+  ['2 x 400g tins chopped tomatoes', 2, '4 (400g) tins chopped tomatoes'], ['10 oz bag frozen peas', 2, '2 (10 oz) bags frozen peas'],
+  ['1 8 oz block cream cheese', 2, '2 (8 oz) blocks cream cheese'], ['1 15 oz can + 1 28 oz can tomatoes', 2, '2 (15 oz) cans + 2 (28 oz) cans tomatoes'],
+  ['one egg', 2, '2 eggs'], ['two cups flour', 2, '4 cups flour'], ['a dozen eggs', .5, '6 eggs'], ['half a lemon', 2, '1 lemon'],
+  ['juice of 1 lemon', 2, 'juice of 2 lemons'], ['zest of 2 oranges', .5, 'zest of 1 orange'], ['2 eggs plus 1 yolk', 2, '4 eggs plus 2 yolks'],
+  ['1 cup milk (plus 2 Tbsp for brushing)', 2, '2 cups milk (plus 4 Tbsp for brushing)'], ['2 tsp active dry yeast (1 packet)', 2, '1 Tbsp + 1 tsp active dry yeast (2 packets)'],
+  ['1 cup (8 oz) cream cheese', 2, '2 cups (16 oz) cream cheese'], ['2 cups chicken stock (16 oz)', .5, '1 cup chicken stock (8 oz)'],
+  ['2 cups (about 2 medium) apples', 2, '4 cups (about 4 medium) apples'], ['1 (3-4 lb) whole chicken', 2, '2 (3–4 lb) whole chickens'],
+  ['1 lb 8 oz beef', 2, '3 lb beef'], ['⅛ tsp cayenne', 1/12, 'a pinch of cayenne'], ['1 packet active dry yeast', 1.5, '1½ packets active dry yeast'],
+  ['1 9-inch pie crust', 2, '2 9-inch pie crusts'], ['2 cups 2% milk', 2, '4 cups 2% milk'], ['1/2 cup half-and-half', 2, '1 cup half-and-half'],
+  ['1 cup (2 sticks; 226g) unsalted butter', 2, '4 sticks (452g) unsalted butter']])
+  check(`stress ${String(f).slice(0, 4)}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
+// never silently unchanged: a number Butter Math can't scale makes the whole line "Not scaled"
+for(const line of ['3 eggs, 1 separated', '1 cup flour, 2 if humid']) check(`not scaled: ${line}`, scaleLine(line, 2), null);
+check('two serving sizes', scaleYield('Serves 4 as a main or 6 as a side', 2), 'Serves 8 as a main or 12 as a side');
+check('13.5 oz can is coconut milk', splitIngredient('1 13.5 oz can coconut milk').name, 'Coconut milk');
+check('13.5 oz cans add up', addQty(splitIngredient('1 13.5 oz can coconut milk').qty, splitIngredient('1 (13.5 oz) can coconut milk').qty), '2 (13.5 oz) cans');
+// every real recipe line in the golden set scales at every size without failing
+{ const { LINES } = await import('./golden-lines.mjs'); let bad = 0;
+  for(const [l] of LINES) for(const f of [.5, 1.5, 2, 3, .75, 1.25]){ try{ if(scaleLine(l, f) == null) bad++; }catch(e){ bad++; } }
+  check(`all ${LINES.length} golden lines scale at 6 sizes`, bad, 0); }
+
 console.log(failed ? `\n${failed} FAILED. Do not ship.\n` : '\nAll checks passed.\n');
 process.exit(failed ? 1 : 0);

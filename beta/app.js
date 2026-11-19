@@ -47,7 +47,7 @@ function normalize(row){
 
 let statusNow = {kind:'', text:''};
 function setStatus(kind, text){ statusNow = {kind, text}; const el = $('#status'); if(!el) return; el.className = 'status ' + kind; el.querySelector('span').textContent = text; }
-let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); el.dataset.until = Date.now() + 8000; clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2500); }
+let toastT; function toast(t, undo, label){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = label || 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); el.dataset.until = Date.now() + 8000; clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? (label ? 6000 : 4000) : 2500); }
 // While you scroll, a toast stays on screen (fixed at the bottom) instead of timing out mid-scroll. It still goes away within 8 seconds.
 window.addEventListener('scroll', () => { const el = document.getElementById('toast'); if(!el || !el.classList.contains('show')) return; const left = +el.dataset.until - Date.now(); if(left <= 0) return; clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), Math.min(1800, left)); }, {passive: true});
 
@@ -417,6 +417,20 @@ function scaleParen(oldQ, newQ){
   let mm = main.trim(); if(b.n > 1 && /^cup$/i.test(b.raw)) mm = mm.replace(/\bcup\b/i, 'cups'); else if(b.n <= 1 && /^cups$/i.test(b.raw)) mm = mm.replace(/\bcups\b/i, 'cup');
   return `${mm} (${o[2]}${r}${o[4]}${o[5]})`;
 }
+// You can't buy half a can or half an egg: the list says what to buy (rounded up) and, under it, what the recipes use.
+// Only for things you count (cans, jars, packages, eggs, lemons); cups, spoons and pounds stay as they are.
+const BUYC = /^(?:cans?|jars?|packages?|pkgs?|bags?|tins?|packets?|blocks?|bricks?|box|boxes|bottles?|containers?|cartons?|tubs?|envelopes?|heads?|bunch|bunches|sticks?)$/i;
+function buyOf(q){
+  const m = String(q || '').match(/^(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)((?: \([^)]*\))?)((?: (?:extra[- ])?(?:large|medium|small|jumbo|whole))?)((?: \([^)]*\))?)(?: ([A-Za-z]+))?$/);
+  if(!m || !m[2] || /\+|–/.test(q)) return null; const unit = m[6] || '';
+  if(unit && !BUYC.test(unit)) return null;
+  const n = Math.ceil((m[1] ? +m[1] : 0) + ({'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875,'⅙':1/6,'⅚':5/6})[m[2]]);
+  const u = !unit ? '' : n > 1 ? (/(ch|sh|x)$/i.test(unit.replace(/e?s$/, '')) ? unit.replace(/(es)?$/, '').replace(/$/, 'es') : unit.replace(/s?$/, 's')) : unit.replace(/(?<=(?:ch|sh|x))es$|s$/i, '');
+  return n + m[3] + m[4] + m[5] + (u ? ' ' + u : '');
+}
+function qtyLine(it){ const b = buyOf(it.qty); if(!b) return `<div class="qty">${fmt(it.qty)}</div>`;
+  const many = (it.recipes || []).filter(x => R(x) && onListRid(x)).length > 1;
+  return `<div class="qty">${fmt(b)}</div><div class="uses">${many ? 'Recipes use' : 'Recipe uses'} ${fmt(it.qty)}</div>`; }
 let mathOpen = new Set();
 function mathOf(it, colOf){
   const rs = (it.recipes || []).filter(x => R(x) && onListRid(x)); if(rs.length < 2 || !it.qty) return '';
@@ -738,20 +752,21 @@ function renderSendSheet(r){
     : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add friend</button>`}
     <div class="ordiv">or</div>
     <button class="btn outline bigbtn" data-act="reccopy" data-id="${esc(r.id)}">${ICON_LINK}Copy to share in a text</button>
-    <div class="frhint">For friends who aren't on Butter Math yet. ${srcOf(D(r)) ? `Copies the original ${esc(hostOf(srcOf(D(r))))} link` : 'Copies the ingredients and steps'}, plus a link to save it in their own free Butter Math recipe box.</div></div>`;
+    <div class="frhint">For friends who aren't on Butter Math yet. ${!near1(scaleOf(r.id), 1) ? 'Copies the ingredients and steps at the size you picked' : srcOf(D(r)) ? `Copies the original ${esc(hostOf(srcOf(D(r))))} link` : 'Copies the ingredients and steps'}, plus a link to save it in their own free Butter Math recipe box.</div></div>`;
 }
 const srcOf = d => ((d.links || []).find(l => /^https?:\/\//i.test(l.url || '')) || {}).url || '';
-function shareText(d, link){
+function shareText(d, link, f = 1){
   const plain = x => prettyFractions(String(x || '')).replace(/<[^>]+>/g, '').trim();
   const bm = `Save it to your own free Butter Math recipe box: ${link || 'https://buttermath.app'}`;
-  const title = plain(d.title) || 'Recipe', src = srcOf(d);
-  if(src) return `${title}\n${src}\n\n${bm}`;
+  const sized = !near1(f, 1), size = ({0.5: '½×', 1.5: '1½×', 2: '2×', 3: '3×'})[f] || (d.yield ? scaleYield(d.yield, f) : '') || 'new size', title = (plain(d.title) || 'Recipe') + (sized ? ` (${size})` : ''), src = srcOf(d);
+  if(src && !sized) return `${title}\n${src}\n\n${bm}`;
   const out = [title];
-  if(d.yield || d.total) out.push([d.yield, d.total].filter(Boolean).map(plain).join(' · '));
-  const ings = (d.ingredients || []).flatMap(g => typeof g === 'string' ? ['• ' + plain(g)] : [...(g.group ? ['', plain(g.group) + ':'] : []), ...(g.items || []).map(i => '• ' + plain(i))]);
+  if(d.yield || d.total) out.push([sized ? scaleYield(d.yield, f) : d.yield, d.total].filter(Boolean).map(plain).join(' · '));
+  const one = i => { if(!sized) return '• ' + plain(i); const x = scaleLine(plain(i), f); return '• ' + (x == null ? plain(i) + ' (not scaled)' : x); };
+  const ings = (d.ingredients || []).flatMap(g => typeof g === 'string' ? [one(g)] : [...(g.group ? ['', plain(g.group) + ':'] : []), ...(g.items || []).map(one)]);
   if(ings.length) out.push('', 'INGREDIENTS', ...ings);
   let n = 0; const steps = (d.steps || []).flatMap(sec => typeof sec === 'string' ? [`${++n}. ${plain(sec)}`] : [...(sec.section ? ['', plain(sec.section) + ':'] : []), ...(sec.items || []).map(st => `${++n}. ${st.title ? plain(st.title) + ': ' : ''}${plain(st.text)}`)]);
-  if(steps.length) out.push('', 'STEPS', ...steps);
+  if(steps.length) out.push('', 'STEPS', ...(sized && (d.steps || []).some(sec => (sec.items || []).some(st => stepHasAmount(st.text))) ? ['(Amounts written in the steps are for the original size.)'] : []), ...steps);
   if(d.notes && d.notes.length) out.push('', 'GOOD TO KNOW', ...d.notes.map(x => '• ' + plain(x)));
   out.push('', bm);
   return out.join('\n');
@@ -950,7 +965,7 @@ function renderShopping(){
       const st = shop[it.id] || '';
       const tags = (it.custom ? `<span class="tag" style="--c:#6E6259">Added by you</span>` : '') + ((it.recipes || []).some(onListRid) ? it.recipes.filter(onListRid) : (it.recipes || [])).map(x => { const rr = R(x); return !rr ? '' : homeMode ? `<span class="tag" style="--c:${colOf(x)}">${esc(listName(D(rr)))}</span>` : `<button class="tag tago" style="--c:${colOf(x)}" data-act="go" data-h="r-${esc(x)}" aria-label="Open ${esc(D(rr).title)}">${esc(listName(D(rr)))}</button>`; }).join('');
       // (While checking off the pantry, each whole row is one button, so the tags there are plain labels: a button can't sit inside a button.)
-      const info = `<div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? `<div class="qty">${fmt(it.qty)}</div>` : ''}${homeMode ? '' : mathOf(it, colOf)}<div class="tags">${tags}</div></div>`;
+      const info = `<div class="info"><div class="name">${Q ? esc(it.name).replace(new RegExp('(' + esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : esc(it.name)}</div>${it.qty ? qtyLine(it) : ''}${homeMode ? '' : mathOf(it, colOf)}<div class="tags">${tags}</div></div>`;
       if(homeMode) return `<button class="item homerow ${st === 'have' ? 'have' : ''}" data-act="have" data-id="${esc(it.id)}" aria-pressed="${st === 'have'}"><span class="homeck">${ICON_HOME}</span>${info}<span class="homelbl">${st === 'have' ? 'At home' : ''}</span></button>`;
       const lead = st === 'have' ? `<button class="check homeon" data-act="have" data-id="${esc(it.id)}" aria-label="At home. Tap to put it back on your list" title="At home. Tap to put it back on your list">${ICON_HOME}</button>` : `<button class="check" data-act="bought" data-id="${esc(it.id)}" aria-label="In my cart">${CHECK}</button>`;
       return `<div class="item ${st}">${lead}
@@ -1325,19 +1340,33 @@ function renderRecipes(){
   }).join('') + `</div><div class="card empty" id="rnone" ${filtered && !shown.length ? '' : 'hidden'}>${sortK === 'progress' && !shown.length && !catOn && !recFav ? 'Nothing in progress right now. Open a recipe and check off a step to start.' : recTags.length > 1 ? `No recipes have ${recTags.length === 2 ? 'both' : 'all'} of these tags. Remove one to see more.` : 'No recipes match.'}</div>` + archBox;
 }
 
+// A step that writes its own amounts ("add 2 cups of the broth", "divide into 12 balls"). Times, temperatures and pan sizes don't count.
+const stepHasAmount = t => /[\d½¼¾⅓⅔⅛⅜⅝⅞]|\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|half)\b/i.test(String(t || '')
+  .replace(/[\d.\/½¼¾⅓⅔⅛⅜⅝⅞]+(?:\s*(?:-|–|to)\s*[\d.\/½¼¾⅓⅔⅛⅜⅝⅞]+)?\s*(?:-?\s*)(?:minutes?|mins?|hours?|hrs?|seconds?|secs?|days?|weeks?|°\s*[CF]?|degrees?(?:\s*[CF])?|[CF]\b|%|inch(?:es)?|in\b|cm|x\s*\d+[\s-]*(?:inch|in|cm)|-inch|quarts?(?= (?:pot|dutch|saucepan|casserole|baking|dish))|qt\b|times|batch(?:es)?|layers?|sides?|stages?)/gi, ' ')
+  .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s*(?:-|to)?\s*(?:minutes?|hours?|seconds?|days?)/gi, ' ').replace(/\bone\b(?=\s+(?:at a time|side|another|by one|more|last))/gi, ' ').replace(/\bhalf(?=[- ](?:way|of the|the))/gi, ' '));
 const ICON_MINUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>';
 // Recipe size: ½× to 3×, and − / + for one serving at a time when the recipe says how many it serves. It lasts until the recipe is finished.
+// Notes that come with a new size: pans for baked things, tasting for salt and spice.
+const PANW = /\b(pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i;
+function scaleNotes(d, f){ if(near1(f, 1)) return ''; const out = [];
+  if(PANW.test(d.yield || '')){ const sy = scaleYield(d.yield, f), m = sy.match(/(\d+)(?!\S*[½¼¾⅓⅔⅛⅜⅝⅞])\s+(?:\([^)]*\)\s+)?(?:[\w-]+\s+)?(pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i);
+    if(f < 1) out.push('Use a smaller pan.'); else out.push(m && +m[1] > 1 ? `Use ${m[1]} pans the same size, not one big one.` : 'Use more pans the same size, not one big one.'); }
+  if(f >= 2 && (d.ingredients || []).flatMap(g => g.items || []).some(l => { const p = splitIngredient(l); return p.key && (guessSection(p.name) === 'Spices' || /\b(salt|pepper|chili|cayenne|paprika)\b/i.test(p.key)); }))
+    out.push('Taste before adding all the salt and spices.');
+  return out.length ? `<div class="scalenotes">${out.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''; }
 function scaleRow(r, d, f){
   const opts = [[.5, '½×'], [1, '1×'], [1.5, '1½×'], [2, '2×'], [3, '3×']], id = esc(r.id);
   const N = /serv|people|person|portion/i.test(d.yield || '') ? yieldCount(d.yield) : 0, now = Math.round(N * f);
   return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div>` +
-    (N ? `<div class="servstep"><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now - 1) / N}" aria-label="Fewer servings" ${now <= 1 ? 'disabled' : ''}>${ICON_MINUS}</button><span>${esc(scaleYield(d.yield, f))}</span><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now + 1) / N}" aria-label="More servings" ${now >= N * 10 ? 'disabled' : ''}>${ICON_PLUS}</button></div>` : '') + `</div>`;
+    (N ? `<div class="servstep"><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now - 1) / N}" aria-label="Fewer servings" ${now <= 1 ? 'disabled' : ''}>${ICON_MINUS}</button><span>${esc(scaleYield(d.yield, f))}</span><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now + 1) / N}" aria-label="More servings" ${now >= N * 10 ? 'disabled' : ''}>${ICON_PLUS}</button></div>` : '') + `</div>` + scaleNotes(d, f);
 }
 function renderRecipe(id){
   const r = R(id);
   if(!r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0, f = scaleOf(r.id);
-  const ingTx = t => { if(near1(f, 1)) return fmt(t); const sl = scaleLine(t, f); return sl == null ? fmt(t) + '<small class="noscale">Not scaled</small>' : fmt(sl); };
+  const ingTx = t => { if(near1(f, 1)) return fmt(t); const sl = scaleLine(t, f); if(sl == null) return fmt(t) + '<small class="noscale">Not scaled</small>';
+    const egg = /^(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])\s+(?:(?:extra[- ])?(?:large|medium|small|jumbo)\s+)?eggs?\b/i.test(sl);
+    return fmt(sl) + (egg ? `<small class="noscale">Beat 1 egg and use ${/½/.test(sl) ? 'half' : 'part'}.</small>` : ''); };
   const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${ingTx(t)}</span></button>`;
     if(choosing !== r.id) return row + ingWarn(r.id, key, t);
     if(!splitIngredient(t).key) return `<div class="ing pick ro"><i class="pk none"></i><span>${ingTx(t)}</span></div>`;
@@ -1348,7 +1377,7 @@ function renderRecipe(id){
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey && choosing !== r.id;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
-    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
+    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${!near1(f, 1) && stepHasAmount(st.text) ? '<small class="noscale">Amounts in this step are for the original size.</small>' : ''}${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;
@@ -2390,7 +2419,7 @@ document.addEventListener('click', async e => {
   if(a === 'reclink'){ let u = sendLink && sendLink.id === id ? sendLink.u : null; if(!u){ el.disabled = true; u = await recipeLink(id); el.disabled = false; }
     if(!u){ toast("Couldn't make a link. Try again."); return; }
     try { await navigator.clipboard.writeText(u); flashCopied(el); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
-  if(a === 'reccopy'){ const r = R(id); if(!r) return; const link = sendLink && sendLink.id === id ? sendLink.u : null; const txt = shareText(D(r), link);
+  if(a === 'reccopy'){ const r = R(id); if(!r) return; const link = sendLink && sendLink.id === id ? sendLink.u : null; const txt = shareText(D(r), link, scaleOf(id));
     try { await navigator.clipboard.writeText(txt); flashCopied(el); toast('Copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this and paste it into a text:', txt); } return; }
   if(a === 'madeitx'){ mutate(k => { (k.progress.photoAsked = k.progress.photoAsked || {})[id] = madeOf(id).n; }); return; }
   if(a === 'madeitswap'){ e.preventDefault(); const inp = el.querySelector('input[type=file]'); confirmBox('Replace your photo?', 'Your new photo will replace the current one.', 'Replace', () => { if(inp){ document.body.appendChild(inp); inp.click(); } }); return; }
@@ -2535,7 +2564,9 @@ document.addEventListener('click', async e => {
     chosenN++; mutate(k => addFresh(k, id, [line])); return; }
   if(a === 'scale'){ const f = +el.dataset.f, r = R(id); if(!r || !(f > 0) || near1(f, scaleOf(id))) return;
     mutate(k => { const s = k.progress.scale = k.progress.scale || {}; if(near1(f, +((k.progress.scaleDef || {})[id]) || 1)) delete s[id]; else s[id] = f; k.shopping.items.forEach(i => { if((i.recipes || []).includes(id)) fixItem(i); }); });
-    if(onList(id)) toast('Shopping list updated to match'); return; }
+    const typed = allItems().filter(i => (i.recipes || []).includes(id) && i.qtyEdit);
+    if(typed.length) toast(`Your list has ${typed.length === 1 ? 'an amount' : 'amounts'} you typed. Change ${typed.length === 1 ? 'it' : 'them'} to match?`, () => mutate(k => k.shopping.items.forEach(i => { if((i.recipes || []).includes(id) && i.qtyEdit){ delete i.qtyEdit; fixItem(i); } })), 'Change');
+    else if(onList(id)) toast('Shopping list updated to match'); return; }
   if(a === 'scaledef'){ const f = scaleOf(id); if(!R(id)) return;
     mutate(k => { const d = k.progress.scaleDef = k.progress.scaleDef || {}; if(near1(f, 1)) delete d[id]; else d[id] = f; if(k.progress.scale) delete k.progress.scale[id]; });
     toast(near1(f, 1) ? 'This recipe now opens at its original size' : 'This recipe now opens at this size'); return; }

@@ -596,6 +596,9 @@ async function saveCopy(data, from){
 }
 let myInvite = null;
 function getInvite(){ if(myInvite) return Promise.resolve(myInvite); return sb.rpc('create_invite_link').then(({data}) => { if(data) myInvite = location.origin + location.pathname + '#invite-' + data; return myInvite; }, () => null); }
+// After copying, the button itself says "Copied!" in green for a couple of seconds, so you can see it worked.
+function flashCopied(el){ if(!el || el.classList.contains('copied')) return; const html = el.innerHTML; el.classList.add('copied'); el.innerHTML = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Copied!';
+  setTimeout(() => { if(el.isConnected){ el.innerHTML = html; el.classList.remove('copied'); } }, 2000); }
 async function copyInviteLink(){
   const {data, error} = await sb.rpc('create_invite_link');
   if(error || !data){ toast("Couldn't make a link. Try again."); return; }
@@ -1849,9 +1852,9 @@ document.addEventListener('click', async e => {
   if(a === 'sendopen'){ moreOpen = false; sendSheet = id; sendLink = null; if(friends === null) loadFriends(true); recipeLink(id).then(u => { if(sendSheet === id) sendLink = {id, u}; }); render(); return; }
   if(a === 'reclink'){ let u = sendLink && sendLink.id === id ? sendLink.u : null; if(!u){ el.disabled = true; u = await recipeLink(id); el.disabled = false; }
     if(!u){ toast("Couldn't make a link. Try again."); return; }
-    try { await navigator.clipboard.writeText(u); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
+    try { await navigator.clipboard.writeText(u); flashCopied(el); toast('Link copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this link to the recipe:', u); } return; }
   if(a === 'reccopy'){ const r = R(id); if(!r) return; const link = sendLink && sendLink.id === id ? sendLink.u : null; const txt = shareText(D(r), link);
-    try { await navigator.clipboard.writeText(txt); toast('Copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this and paste it into a text:', txt); } return; }
+    try { await navigator.clipboard.writeText(txt); flashCopied(el); toast('Copied. Paste it into a text or email.'); } catch(_) { prompt('Copy this and paste it into a text:', txt); } return; }
   if(a === 'madeitx'){ mutate(k => { (k.progress.photoAsked = k.progress.photoAsked || {})[id] = madeOf(id).n; }); return; }
   if(a === 'madeitswap'){ e.preventDefault(); const inp = el.querySelector('input[type=file]'); confirmBox('Replace your photo?', 'Your new photo will replace the current one.', 'Replace', () => { if(inp){ document.body.appendChild(inp); inp.click(); } }); return; }
   if(a === 'math'){ if(mathOpen.has(id)) mathOpen.delete(id); else mathOpen.add(id); render(); return; }

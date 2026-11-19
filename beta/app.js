@@ -1584,7 +1584,7 @@ function reviewCard(rv){ if(!rv.url && !rv.warn) return ''; return `<div class="
 function stepLines(t){ return String(t || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !/:$/.test(l)); }
 function stepCheck(t, fromSite){
   const ls = stepLines(t), long = ls.some(l => l.length > 450);
-  if(fromSite && (ls.length <= 3 || long)) return 'Review all recipe steps to ensure no steps are missing or are combined into one step by mistake.';
+  if(fromSite && (ls.length <= 3 || long)) return "Review all recipe steps to catch anything that's missing.";
   if(long) return 'A few steps look combined. Give each step its own line.';
   return '';
 }

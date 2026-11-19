@@ -514,12 +514,12 @@ function unlinkRecipe(k, id, keys){
     delete marks[i.id]; return false;
   });
 }
-function addFresh(k, id, lines){
+function addFresh(k, id, lines, keepCart){
   if(!(k.progress.active[id] !== false && !(k.progress.archived || {})[id] && !(k.progress.done || {})[id])) unlinkRecipe(k, id);
   addIngredientsTo(k, id, [{items: lines}]);
   const keys = new Set(lines.flatMap(ingParts).map(l => splitIngredient(l).key));
   const marks = k.progress.shop = k.progress.shop || {};
-  k.shopping.items.forEach(i => { if((i.recipes || []).includes(id) && ikeys(i).some(kk => keys.has(kk))) delete marks[i.id]; });
+  if(!keepCart) k.shopping.items.forEach(i => { if((i.recipes || []).includes(id) && ikeys(i).some(kk => keys.has(kk))) delete marks[i.id]; });
   k.progress.active[id] = true; if(k.progress.done) delete k.progress.done[id];
   if(k.progress.archived) delete k.progress.archived[id];
 }
@@ -1360,6 +1360,18 @@ function scaleRow(r, d, f){
   return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div>` +
     (N ? `<div class="servstep"><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now - 1) / N}" aria-label="Fewer servings" ${now <= 1 ? 'disabled' : ''}>${ICON_MINUS}</button><span>${esc(scaleYield(d.yield, f))}</span><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now + 1) / N}" aria-label="More servings" ${now >= N * 10 ? 'disabled' : ''}>${ICON_PLUS}</button></div>` : '') + `</div>` + scaleNotes(d, f);
 }
+// "Shop for ingredients" on a recipe that's already on the list: say so, and never add it twice.
+// On the list in any state (still needed, in the cart, or at home)
+const linkedLine = (id, line) => ingParts(line).some(pl => { const key = splitIngredient(pl).key; return allItems().some(i => (i.recipes || []).includes(id) && ihas(i, key)); });
+function addSheetBody(r, d){
+  const id = esc(r.id), lines = ingLines(d), head = t => `<div class="askt">${t}</div><button class="ibtn" data-act="sheetclose" aria-label="Close">${ICON_X}</button></div>`;
+  if(!addSheet.again && onList(r.id)){ const missing = lines.filter(l => !linkedLine(r.id, l)).length;
+    return head('Already on your list') + `<p class="frp">${missing ? `<b>${esc(d.title)}</b> is on your shopping list, but ${missing === 1 ? '1 ingredient isn\'t' : missing + ' ingredients aren\'t'}. Adding again won't double anything.` : `Every ingredient from <b>${esc(d.title)}</b> is on your shopping list. Adding it again won't double anything.`}</p>` +
+      `<button class="askopt main" data-act="go" data-h="shopping"><b>Open shopping list</b></button>` +
+      (missing ? `<button class="askopt" data-act="addall" data-id="${id}"><b>Add missing ingredients</b><span>${missing} not on your list yet</span></button>` : '') +
+      `<button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`; }
+  return head(addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list') + `<button class="askopt main" data-act="addall" data-id="${id}"><b>Add all ${lines.length} ingredients</b></button><button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`;
+}
 function renderRecipe(id){
   const r = R(id);
   if(!r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
@@ -1398,7 +1410,7 @@ function renderRecipe(id){
     ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
 </div>
   </div>
-  ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="pickhead"><div class="askt">${addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list'}</div><button class="ibtn" data-act="sheetclose" aria-label="Close">${ICON_X}</button></div><button class="askopt main" data-act="addall" data-id="${esc(r.id)}"><b>Add all ${ingLines(d).length} ingredients</b></button><button class="askopt" data-act="choose" data-id="${esc(r.id)}"><b>Select specific ingredients</b></button></div>` : ''}
+  ${addSheet && addSheet.id === r.id ? `<div class="sheetbg" data-act="sheetclose"></div><div class="asksheet" role="dialog" aria-label="Add to your shopping list"><div class="pickhead">${addSheetBody(r, d)}</div>` : ''}
   ${tagEdit === r.id ? `<div class="sheetbg" data-act="tagdone"></div><div class="asksheet tagsheet" role="dialog" aria-label="Tags for ${esc(d.title)}"><div class="pickhead"><div class="askt">Tags</div><button class="ibtn" data-act="tagdone" aria-label="Close">${ICON_X}</button></div><div class="tagpick">${allTags().map(t => { const on = tagsOf(r).includes(t); const own = (P().ctags || []).includes(t); return `<span class="tpw"><button class="tp ${on ? 'on' : ''} ${own ? 'own' : ''}" data-act="tagtog" data-id="${esc(r.id)}" data-t="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(t)}</button>${own ? `<button class="tpdel" data-act="tagdel" data-t="${esc(t)}" aria-label="Delete the ${esc(t)} tag everywhere" title="Delete this tag">${ICON_X}</button>` : ''}</span>`; }).join('')}</div><form class="newtag" data-form="newtag" data-id="${esc(r.id)}" autocomplete="off"><input id="newtag" data-keep placeholder="Holiday" maxlength="24" aria-label="New tag"><button class="btn" type="submit">Add</button></form><button class="btn primary tagdone" data-act="tagdone">Done</button></div>` : ''}
   ${sendSheet === r.id ? renderSendSheet(r) : ''}
   ${choosing === r.id ? `<div class="selbar"><span>${chosenN ? `${chosenN} added to your list` : 'Tap ingredients to add them'}</span><button class="btn primary" data-act="choosedone">Done</button></div>` : ''}`;
@@ -2556,7 +2568,8 @@ document.addEventListener('click', async e => {
     const SN = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); let total = 0; mutate(k => { ids.forEach(rid => { const lines = ingLines(D(R(rid))); total += lines.length; addFresh(k, rid, lines); }); });
     toast(`Added ${total} ingredient${total === 1 ? '' : 's'} from ${ids.length} recipe${ids.length === 1 ? '' : 's'}`, () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Item(s) removed from your list.'); }); return; }
   if(a === 'sheetclose'){ addSheet = null; render(); return; }
-  if(a === 'addall'){ const r = R(id); if(!r) return; const lines = ingLines(D(r)); addSheet = null; const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => addFresh(k, id, lines)); toast(`Added ${lines.length} ingredients to your list`, () => { mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Item(s) removed from your list.'); }); return; }
+  if(a === 'addall'){ const r = R(id); if(!r) return; const was = onList(id) && !(addSheet || {}).again, lines = was ? ingLines(D(r)).filter(l => !linkedLine(id, l)) : ingLines(D(r)); addSheet = null; if(!lines.length){ render(); return; }
+    const snap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => addFresh(k, id, was ? ingLines(D(r)) : lines, was)); toast(`Added ${lines.length} ${lines.length === 1 ? 'ingredient' : 'ingredients'} to your list`, () => { mutate(k => { const o = JSON.parse(snap); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Item(s) removed from your list.'); }); return; }
   if(a === 'choose'){ addSheet = null; choosing = id; chosenN = 0; chooseSnap = JSON.stringify({s: kitchen.shopping, p: kitchen.progress}); mutate(k => unlinkRecipe(k, id)); setTimeout(() => { const c = $('.ing-col'); if(c) window.scrollTo({top: c.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth'}); }, 30); return; }
   if(a === 'choosedone'){ choosing = null; render(); const SN = chooseSnap; chooseSnap = null; if(chosenN) toast(`${chosenN} added to your list`, SN ? () => { mutate(k => { const o = JSON.parse(SN); k.shopping = o.s; k.progress = o.p; }); toast('Undone. Item(s) removed from your list.'); } : null); return; }
   if(a === 'ingadd'){ const r = R(id); if(!r) return; const [gi, ki] = el.dataset.k.split('-').map(Number); const line = ((D(r).ingredients || [])[gi] || {}).items[ki]; if(!line) return;

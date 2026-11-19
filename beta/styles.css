@@ -1253,3 +1253,8 @@ body:has(.asksheet) #toast.show{transform:translate(-50%,0)}
 .stepfab{position:fixed;z-index:36;right:16px;bottom:calc(78px + var(--navlift,0px) + env(safe-area-inset-bottom));width:46px;height:46px;border-radius:50%;background:#fff;color:#141414;border:2px solid #141414;box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);display:grid;place-items:center;padding:0;cursor:pointer}
 .stepfab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
 .stepfab.up svg{transform:rotate(180deg)}
+
+/* Report a wrong amount (Nov 19): a quiet text link under Show the math and in Edit item */
+.mreport{display:inline-block;margin-top:8px;font:500 13px Inter,sans-serif;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.mreport:hover{color:var(--red)}
+.editform .mreport{display:block;text-align:center;margin-top:12px}

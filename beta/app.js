@@ -45,7 +45,9 @@ function normalize(row){
 
 let statusNow = {kind:'', text:''};
 function setStatus(kind, text){ statusNow = {kind, text}; const el = $('#status'); if(!el) return; el.className = 'status ' + kind; el.querySelector('span').textContent = text; }
-let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2500); }
+let toastT; function toast(t, undo){ if(/^Couldn.t|^Could not/.test(t)) logErr('shown', t); const el = $('#toast'); el.textContent = t; if(undo){ const b = document.createElement('button'); b.className = 'tundo'; b.textContent = 'Undo'; b.onclick = () => { el.classList.remove('show'); undo(); }; el.appendChild(b); } el.classList.add('show'); el.dataset.until = Date.now() + 8000; clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), undo ? 4000 : 2500); }
+// While you scroll, a toast stays on screen (fixed at the bottom) instead of timing out mid-scroll. It still goes away within 8 seconds.
+window.addEventListener('scroll', () => { const el = document.getElementById('toast'); if(!el || !el.classList.contains('show')) return; const left = +el.dataset.until - Date.now(); if(left <= 0) return; clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), Math.min(1800, left)); }, {passive: true});
 
 /* ---------------- error log ---------------- */
 // Problems members run into go to the error_log table and show on the Admin page. Never stores recipe text or passwords.
@@ -879,19 +881,44 @@ function rebuildLine(line, name, qty){
   if(name.toLowerCase() !== p.name.toLowerCase()){ const i = rest.toLowerCase().indexOf(p.name.toLowerCase()); if(i < 0) return null; rest = rest.slice(0, i) + name.charAt(0).toLowerCase() + name.slice(1) + rest.slice(i + p.name.length); }
   return ((qty ? qty + ' ' : '') + rest).trim();
 }
+// An item added up from 2+ recipes: each recipe's own line, so each amount can be edited on its own.
+function itemRecipeParts(it){
+  const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || rs.length < 2) return null;
+  const key = it.key || splitIngredient(it.name).key, parts = [];
+  for(const rid of rs){ const hits = []; (D(R(rid)).ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => { if(splitIngredient(l).key === key) hits.push({rid, gi, li, l}); }));
+    if(hits.length !== 1) return null; parts.push(hits[0]); }
+  return parts;
+}
+const joinNames = nm => nm.length < 3 ? nm.join(' and ') : nm.slice(0, -1).join(', ') + ', and ' + nm[nm.length - 1];
 function renderEditItem(){
   const it = allItems().find(i => i.id === editItem.id); if(!it){ editItem = null; return ''; }
   const head = t => `<div class="sheetbg" data-act="itemeditclose"></div><div class="asksheet" role="dialog" aria-label="${t}"><div class="pickhead"><div class="askt">${t}</div><button class="ibtn" data-act="itemeditclose" aria-label="Close">${ICON_X}</button></div>`;
+  if(editItem.step === 'askmulti'){ const ch = editItem.parts.filter(x => x.nq !== x.oq), nm = joinNames(ch.map(x => `<b>${esc(D(R(x.rid)).short || D(R(x.rid)).title)}</b>`));
+    return head(ch.length > 1 ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${ch.map(x => `${esc(D(R(x.rid)).short || D(R(x.rid)).title)}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`).join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${ch.length > 1 ? 'they are' : 'it is'} right next time?</p>
+    <button class="askopt main" data-act="itemsave" data-to="recipe"><b>${ch.length > 1 ? 'Update the recipes too' : 'Update the recipe too'}</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>${ch.length > 1 ? 'The recipes stay' : 'The recipe stays'} as ${ch.length > 1 ? 'they are' : 'it is'}</span></button></div>`; }
   if(editItem.step === 'ask'){ const r = R(editItem.rid);
     return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
-  const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, nm = rs.map(x => esc(D(R(x)).short || D(R(x)).title));
-  const names = nm.length < 3 ? nm.join(' and ') : nm.slice(0, -1).join(', ') + ', and ' + nm[nm.length - 1];
+  const parts = itemRecipeParts(it);
+  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><p class="frhint">Your list adds this up from ${parts.length} recipes${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change the amount for each recipe:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(D(R(x.rid)).short || D(R(x.rid)).title)}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(splitIngredient(x.l).qty)}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
+  const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
   return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
 }
 function saveItemList(id, name, qty){
   mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; if(qty !== (x.qty || '')){ x.qty = qty; if((x.recipes || []).length) x.qtyEdit = true; } });
   editItem = null; render(); toast('Updated your list');
+}
+async function saveItemParts(toRecipes){
+  const {id, name, parts} = editItem, it = allItems().find(i => i.id === id); if(!it) return;
+  const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq);
+  if(!toRecipes){ saveItemList(id, name, parts.reduce((q, x) => x.nq ? addQty(q, x.nq, {key}) : q, '')); return; }
+  const done = [];
+  for(const x of ch){ const r = R(x.rid); if(!r) continue; const nl = rebuildLine(x.l, splitIngredient(x.l).name, x.nq); if(!nl) continue;
+    const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = nl;
+    const {error} = await sb.from('recipes').update({data}).eq('id', x.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
+    r.data = data; done.push(D(r).short || D(r).title); }
+  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; fixItem(y); });
+  editItem = null; render(); toast(`Updated ${joinNames(done)} and your list`);
 }
 async function saveItemRecipe(id, name, qty){
   const it = allItems().find(i => i.id === id), hit = it && itemRecipeLine(it); if(!hit){ saveItemList(id, name, qty); return; }
@@ -2154,6 +2181,7 @@ document.addEventListener('click', async e => {
   if(a === 'bought'){ const v = shop[id] === 'bought' ? '' : 'bought'; mutate(k => { k.progress.shop[id] = v; }); return; }
   if(a === 'itemedit'){ editItem = {id}; render(); setTimeout(() => { const n = $('#ed-qty'); if(n) n.focus(); }, 60); return; }
   if(a === 'itemeditclose'){ editItem = null; render(); return; }
+  if(a === 'itemsave' && editItem && editItem.step === 'askmulti'){ saveItemParts(el.dataset.to === 'recipe'); return; }
   if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty); else saveItemList(iid, name, qty); return; }
   if(a === 'homemode'){ homeMode = true; render(); window.scrollTo({top: 0}); return; }
   if(a === 'homedone'){ homeMode = false; render(); const n = allItems().filter(i => P().shop[i.id] === 'have').length;
@@ -2371,7 +2399,13 @@ document.addEventListener('submit', async e => {
   }
   if(kind === 'itemedit'){
     const it = editItem && allItems().find(i => i.id === editItem.id); if(!it) return;
-    const name = $('#ed-name').value.trim().replace(/\s+/g, ' '), qty = $('#ed-qty').value.trim().replace(/\s+/g, ' '); if(!name) return;
+    const name = $('#ed-name').value.trim().replace(/\s+/g, ' '), qty = (($('#ed-qty') || {}).value || '').trim().replace(/\s+/g, ' '); if(!name) return;
+    const parts = itemRecipeParts(it);
+    if(parts){ const ps = parts.map((x, i) => Object.assign({}, x, {oq: splitIngredient(x.l).qty, nq: (($('#ed-q' + i) || {}).value || '').trim().replace(/\s+/g, ' ')}));
+      const ch = ps.filter(x => x.nq !== x.oq);
+      if(!ch.length){ if(name !== it.name) saveItemList(it.id, name, it.qty || ''); else { editItem = null; render(); } return; }
+      if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
+      saveItemList(it.id, name, ps.reduce((q, x) => x.nq ? addQty(q, x.nq, {key: it.key || splitIngredient(it.name).key}) : q, '')); return; }
     if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
     const hit = itemRecipeLine(it);
     if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }

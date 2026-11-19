@@ -114,7 +114,12 @@ for(const [line, f, want] of [
   ['1 cup of avocado or grapeseed oil', 2, '2 cups avocado or grapeseed oil'], ['Salt and pepper to taste', 2, 'Salt and pepper to taste'], ['a pinch of salt', 2, 'a pinch of salt'],
   ['2 cups flour', 1, '2 cups flour']])
   check(`scale ${f}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
-check('scale: unreadable amount is never shown scaled', scaleQty('1 heaping cup', 2), null);
+check('scale: unreadable amount is never shown scaled', scaleQty('2 x 400g', 2), null);
+for(const [line, f, want] of [['1 heaping cup flour', 2, '2 heaping cups flour'], ['2 scant cups sugar', .5, '1 scant cup sugar'], ['2 lemons, juiced', .5, '1 lemon, juiced'],
+  ['1 red bell pepper, sliced', 2, '2 red bell peppers, sliced'], ['2 large eggs', .5, '1 large egg'], ['1 medium potato', 2, '2 medium potatoes'], ['2 bay leaves', .5, '1 bay leaf'],
+  ['2 cherries', .5, '1 cherry'], ['1 bunch cilantro', 2, '2 bunches cilantro'], ['4 slices bacon', .25, '1 slice bacon'], ['2 cloves garlic', .5, '1 clove garlic'], ['1 small zucchini', 2, '2 small zucchini']])
+  check(`one or many ${f}×: ${line}`.slice(0, 44), scaleLine(line, f), want);
+check('heaping cup is read as a cup', JSON.stringify(splitIngredient('1 heaping cup flour')), '{"qty":"1 cup","name":"Flour","key":"flour"}');
 check('serves 4 at 2×', scaleYield('Serves 4', 2), 'Serves 8');
 check('4–6 servings at ½×', scaleYield('4–6 servings', .5), '2–3 servings');
 // Every scaled spoon/cup amount, read back by a separate counter, is exactly the original times the size

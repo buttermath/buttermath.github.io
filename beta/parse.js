@@ -148,6 +148,9 @@ export function splitIngredient(line){
   name = name.replace(/^\s*(?:plus|\+)\s+more\s+(?:for\s+[a-z]+\s+)?/i, '');
   while(/\([^()]*\)/.test(name)) name = name.replace(/\([^()]*\)/g,' ');
   name = name.replace(/[()]/g,' ').split(/,| – | - |;/)[0].replace(/\b(plus more|or more|divided|optional)\b.*$/i,'').replace(/\s+/g,' ').trim();
+  // "4 roma tomatoes roughly chopped" with no comma: the prep words at the end aren't part of what you buy ("Roma tomatoes")
+  { const PREP = '(?:(?:roughly|finely|coarsely|thinly|lightly)\\s+)?(?:chopped|diced|minced|sliced|grated|shredded|crushed|peeled|halved|quartered|cubed|julienned|torn|smashed|trimmed|rinsed|drained|beaten|melted|softened|sifted|toasted)';
+    const t = name.replace(new RegExp('\\s+' + PREP + '(?:\\s+(?:and|&)\\s+' + PREP + ')*$', 'i'), ''); if(t && t !== name && /[a-z]/i.test(t)) name = t; }
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();

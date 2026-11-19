@@ -1242,7 +1242,7 @@ function renderRecipe(id){
   if(!r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0;
   const ings = (d.ingredients || []).map((g, gi) => (g.group ? `<div class="grp">${esc(g.group)}</div>` : '') + (g.items || []).map((t, k) => { const key = gi + '-' + k; const row = `<button class="ing ${c.i[key] ? 'on' : ''}" data-act="ing" data-id="${esc(r.id)}" data-k="${key}"><i class="box">${CHECK}</i><span>${fmt(t)}</span></button>`;
-    if(choosing !== r.id) return row;
+    if(choosing !== r.id) return row + ingWarn(r.id, key, t);
     if(!splitIngredient(t).key) return `<div class="ing pick ro"><i class="pk none"></i><span>${fmt(t)}</span></div>`;
     const inl = ingListed(r.id, t);
     return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${fmt(t)}</span></button>`; }).join('')).join('');
@@ -1502,6 +1502,9 @@ async function uploadPhoto(recipeId, blob){
   return {path, url: sb.storage.from('photos').getPublicUrl(path).data.publicUrl};
 }
 // The recipe editor runs the same amount check as the shopping list, on every ingredient line you add or change.
+// On your own recipe page, a line whose amounts disagree ("3 Tbsp (30ml)") gets a red note and a Fix button.
+function ingWarn(rid, key, t){ const p = splitIngredient(t); if(!p.qty) return ''; const w = checkAmt('', p.qty); if(!w || !w.fix || !rebuildLine(t, p.name, w.fix)) return '';
+  return `<div class="ingwarn" role="note">${esc(w.msg)} <button class="linkbtn" data-act="ingfix" data-id="${esc(rid)}" data-k="${key}">Fix</button></div>`; }
 function recipeAmtWarns(old, ingredients){
   const oldQ = new Map(), dup = new Set();
   (old.ingredients || []).forEach(g => (g.items || []).forEach(l => { const p = splitIngredient(l); if(!p.key) return; if(oldQ.has(p.key)) dup.add(p.key); oldQ.set(p.key, p.qty || ''); }));
@@ -2448,6 +2451,11 @@ document.addEventListener('click', async e => {
   if((a === 'amtsaveas' || a === 'amtsavefix') && amtWarnPend && form){ const {ws, id: fid} = amtWarnPend; amtWarnPend = null; $('#modalRoot').innerHTML = '';
     form.amtChecked = true; if(a === 'amtsavefix'){ form.amtFix = {}; ws.forEach(w => { if(w.fixLine) form.amtFix[w.line] = w.fixLine; }); }
     saveForm(fid); return; }
+  if(a === 'ingfix'){ const r = R(id); if(!r) return; const [gi, li] = el.dataset.k.split('-').map(Number); const l = ((D(r).ingredients || [])[gi] || {items: []}).items[li]; if(!l) return;
+    const p = splitIngredient(l), w = checkAmt('', p.qty), nl = w && w.fix ? rebuildLine(l, p.name, w.fix) : null; if(!nl) return;
+    const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[gi].items[li] = nl;
+    const {error} = await sb.from('recipes').update({data}).eq('id', id); if(error){ toast("Couldn't update the recipe. Try again."); return; }
+    r.data = data; mutate(k => k.shopping.items.forEach(i => { if((i.recipes || []).includes(id)) fixItem(i); })); toast('Updated to ' + w.fix); return; }
   if(a === 'mok'){ $('#modalRoot').innerHTML = ''; const fn = confirmFn; confirmFn = null; if(fn) fn(); return; }
   if(a === 'signout'){ await flush(); try{ sessionStorage.removeItem('mb-in'); }catch(err){} gate = 'gate'; await sb.auth.signOut(); location.hash = ''; return; }
   if(a === 'enter'){ enterKitchen(); return; }

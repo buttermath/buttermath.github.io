@@ -1268,3 +1268,5 @@ body:has(.totop.show) .stepfab{bottom:calc(78px + var(--navlift,0px) + env(safe-
 .ing-col .ing .box{margin-left:-9px;margin-right:9px}
 .ing-col .ing .pk{margin-left:-9px;margin-right:9px}
 .ing-col .ing.pick.ro{padding-left:2px}
+/* on phones the current-step arrow sits centered at the bottom, like a chat's jump-to-latest arrow */
+@media(max-width:640px){.stepfab,body:has(.totop.show) .stepfab{right:auto;left:calc(50% - 23px);bottom:calc(22px + var(--navlift,0px) + env(safe-area-inset-bottom))}}

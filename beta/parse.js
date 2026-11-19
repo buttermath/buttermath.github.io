@@ -154,6 +154,21 @@ export function splitIngredient(line){
   return {qty, name, key};
 }
 
+// "2 heirloom tomatoes + 4 roma tomatoes" is two things to buy, so it becomes two shopping-list items.
+// A " + " followed by an amount starts a new ingredient only when every piece names its own ingredient:
+// "1 cup + 2 Tbsp flour" stays one amount of flour. The recipe line itself is never changed.
+export function ingParts(line){
+  const s = String(line || ''), cut = []; let d = 0;
+  for(let i = 0; i < s.length; i++){ const ch = s[i]; if(ch === '(') d++; else if(ch === ')') d = Math.max(0, d - 1);
+    else if(!d && ch === '+' && /\s$/.test(s.slice(0, i)) && /^\+\s*[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(s.slice(i))) cut.push(i); }
+  if(!cut.length) return [s];
+  const parts = []; let from = 0; cut.forEach(i => { parts.push(s.slice(from, i).trim()); from = i + 1; }); parts.push(s.slice(from).trim());
+  const named = t => { const x = splitIngredient(t), w = prettyFractions(t.replace(BULLET, '').trim()); return !!x.key && x.qty.length < w.length && /[a-z]/i.test(w.slice(x.qty.length)); };
+  return parts.every(named) ? parts : [s];
+}
+// Puts a changed piece back into its recipe line ("Update the recipe too" on one of two items from the same line).
+export function ingReplacePart(line, i, text){ const parts = ingParts(line); if(parts.length < 2) return text; parts[i] = text; return parts.join(' + '); }
+
 export const SECTIONS = ['Produce','Meat & seafood','Dairy & eggs','Bakery & bread','Baking aisle','Pasta, grains & canned','Oils, sauces & condiments','Spices','Frozen','Supplies','Other'];
 const W = s => new RegExp('\\b(' + s + ')(e?s)?\\b');
 const GUESS = [
@@ -176,7 +191,7 @@ export function guessSection(name){
 
 // ---- adding amounts together ("1 large + 2 large" → "3 large") ----
 const FV = {'⅙':1/6,'⅚':5/6,'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
-const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
+const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(heads?)$/i,'head'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
 function num(s){
   s = s.trim(); let m;
   if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +m[1] + FV[m[2]];
@@ -204,6 +219,8 @@ function parsePart(p){
   let desc = '', pre = ''; p = String(p).trim().replace(QDESC, (x, d) => { desc = d.toLowerCase(); return ''; })
     // "8 fl oz" is a volume (1 fl oz = 2 Tbsp); "1 small box" keeps its size with the container
     .replace(/\b(?:fl\.?\s*oz\.?|fluid\s+ounces?)(?![A-Za-z])/i, 'floz')
+    // "1 whole head" of garlic is 1 head
+    .replace(/^(\S+)\s+whole\s+(?=[A-Za-z])/i, '$1 ')
     .replace(/^(\S+)\s+((?:extra[- ])?large|medium|small|jumbo)\s+(?=[A-Za-z])/i, (x, q, d) => { pre = d.toLowerCase(); return q + ' '; });
   const m = p.match(PART);
   if(!m) return null;
@@ -234,7 +251,7 @@ export function addQty(a, b, o = {}){
     for(const gs of bySize.values()){ const bare = gs.find(g => !sums.get(g).desc), sized = gs.filter(g => sums.get(g).desc); if(!bare || sized.length !== 1) continue;
       const s = sums.get(sized[0]), e = sums.get(bare); s.n += e.n; s.hi += e.hi; s.c += e.c; if(e.ranged) s.ranged = true;
       if(s.pok && e.pok && (!s.pu || !e.pu || s.pu === e.pu)){ s.pu = s.pu || e.pu; s.pv += e.pv; } else s.pok = false; sums.delete(bare); } }
-  const plural = (u, n) => n > 1 && /(^| )(cup|clove|can|stick|jar|bag|package|bottle|container|envelope|carton|tub)$/.test(u) ? u + 's' : n > 1 && /(^| )box$/.test(u) ? u + 'es' : u;
+  const plural = (u, n) => n > 1 && /(^| )(cup|clove|head|can|stick|jar|bag|package|bottle|container|envelope|carton|tub)$/.test(u) ? u + 's' : n > 1 && /(^| )box$/.test(u) ? u + 'es' : u;
   // Spoons, sticks and cups are one family, and so are pounds and ounces. When amounts are added up they're
   // written the way you'd measure them: "4⅓ cups + 1 Tbsp + 1 tsp", never "4.42 cups". Butter goes in
   // sticks + Tbsp ("2 sticks + 2 Tbsp").

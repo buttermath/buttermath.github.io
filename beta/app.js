@@ -790,6 +790,9 @@ function renderInviteCard(){
 }
 
 let lastView = '';
+// Going back from a recipe to the recipe box (yours or a friend's) returns you to where you were scrolled, not the top.
+const scrollMem = {};
+window.addEventListener('hashchange', () => { if(lastView) scrollMem[lastView] = window.scrollY; });
 const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
 function fadeSwap(id){ document.querySelectorAll(`.factrow > *, .tile [data-act="fsave"][data-id="${id}"], .tile [data-act="funsave"][data-id="${id}"]`).forEach(x => x.classList.add('fadein')); }
 function syncFbar(fid){ const r = route(), bar = document.querySelector('.fbar2'), rows = (fbook[fid] || {}).rows || []; if(r.v === 'fbook' && bar){ const sc = document.querySelector('.selchips'), fn = document.querySelector('.fnote'); if(sc) sc.remove(); if(fn) fn.remove(); bar.outerHTML = fFilterBar(rows, fid); } if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id)); }
@@ -859,7 +862,12 @@ function render0(){
   { const fp = $('#f-paste'), fb = $('#f-parsebtn'); if(fp && fb) fb.disabled = !fp.value.trim(); }
   if(ae && sameView){ const el = document.getElementById(ae.id); if(el){ el.focus({preventScroll:true}); if(sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
   const key = r.v + (r.id || '');
-  if(key !== lastView){ window.scrollTo(0, 0); lastView = key; }
+  if(key !== lastView){
+    const back = (key === 'recipes' && /^(recipe|form)/.test(lastView)) || (r.v === 'fbook' && /^frecipe/.test(lastView));
+    const y = back ? scrollMem[key] || 0 : 0;
+    window.scrollTo(0, y); if(y) requestAnimationFrame(() => window.scrollTo(0, y));
+    lastView = key;
+  }
   renderFab(r);
 }
 function renderHeader(r){

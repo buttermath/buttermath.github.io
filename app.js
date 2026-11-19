@@ -691,7 +691,7 @@ function renderFrecipe(key){
   </div></div>
   <div class="layout">
     <div class="card panel ing-col"><div class="inghead"><h3>Ingredients</h3></div>${ings || '<div class="muted">No ingredients listed.</div>'}</div>
-    <div><h3 style="font-size:19px;margin:0 4px 10px">Steps</h3>${steps || '<div class="card empty">No steps listed.</div>'}${notes}</div>
+    <div><h3 style="font-size:20px;margin:0 4px 10px">Steps</h3>${steps || '<div class="card empty">No steps listed.</div>'}${notes}</div>
   </div>`;
 }
 function renderSendSheet(r){
@@ -790,6 +790,10 @@ function renderInviteCard(){
 }
 
 let lastView = '';
+// List pages (Recipes, Shopping list, Friends, a friend's recipes, Past trips) reopen where you left them, however you come back.
+// Other pages start at the top, except a recipe you return to from its edit form. Tap the tab you're on to jump to the top.
+const scrollMem = {};
+window.addEventListener('hashchange', () => { if(lastView) scrollMem[lastView] = window.scrollY; });
 const rowsSaved = fid => ((fbook[fid] || {}).rows || []).filter(r => savedCopy(fid, r.id)).length;
 function fadeSwap(id){ document.querySelectorAll(`.factrow > *, .tile [data-act="fsave"][data-id="${id}"], .tile [data-act="funsave"][data-id="${id}"]`).forEach(x => x.classList.add('fadein')); }
 function syncFbar(fid){ const r = route(), bar = document.querySelector('.fbar2'), rows = (fbook[fid] || {}).rows || []; if(r.v === 'fbook' && bar){ const sc = document.querySelector('.selchips'), fn = document.querySelector('.fnote'); if(sc) sc.remove(); if(fn) fn.remove(); bar.outerHTML = fFilterBar(rows, fid); } if(r.v === 'fbook' || r.v === 'frecipe') app.__h = viewKey(r.v === 'fbook' ? renderFbook(r.id) : renderFrecipe(r.id)); }
@@ -859,7 +863,14 @@ function render0(){
   { const fp = $('#f-paste'), fb = $('#f-parsebtn'); if(fp && fb) fb.disabled = !fp.value.trim(); }
   if(ae && sameView){ const el = document.getElementById(ae.id); if(el){ el.focus({preventScroll:true}); if(sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
   const key = r.v + (r.id || '');
-  if(key !== lastView){ window.scrollTo(0, 0); lastView = key; }
+  if(key !== lastView){
+    const keep = ['recipes', 'shopping', 'friends', 'fbook', 'trips'].includes(r.v) || (r.v === 'recipe' && lastView === 'form' + r.id);
+    const y = keep ? scrollMem[key] || 0 : 0;
+    // when coming back mid-page, load the recipe photos right away so they don't blink in after the jump
+    if(y) document.querySelectorAll('#app img[loading="lazy"]').forEach(i => { i.loading = 'eager'; });
+    window.scrollTo(0, y); if(y) requestAnimationFrame(() => window.scrollTo(0, y));
+    lastView = key;
+  }
   renderFab(r);
 }
 function renderHeader(r){
@@ -910,7 +921,7 @@ function renderShopping(){
   });
   const secOpts = kitchen.shopping.sections;
   return `${installTip()}${shopBack && mealIds().length ? `<button class="back" data-act="go" data-h="meal">${ICON_BACK}Back to your meal</button>` : ''}${chipRecipes.length || items.length ? `<div class="card shop-head"><button class="copyic" data-act="copy" aria-label="Copy my list" title="Copy what I still need"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
-    ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap a recipe to hide or show its ingredients. Done shopping? Drag it to Past trips.</div>` : ''}
+    ${chipRecipes.length ? `<div class="lbl">Shopping for</div><div class="row">${chips}</div><div class="draghint">Tap recipe names to hide their ingredients from list.<br>Drag recipes to Past trips when done shopping for them.</div>` : ''}
     ${items.length ? `<div class="cartline"><button class="cl-cart ${f === 'cart' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="cart" aria-pressed="${f === 'cart'}" aria-label="Show the ${cnt.cart} item${cnt.cart === 1 ? '' : 's'} in your cart"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18"/><path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25"/><circle cx="18" cy="20" r="2"/><circle cx="8" cy="20" r="2"/></svg><span><b>${cnt.cart}</b> in your cart</span></button><button class="cl-need ${f === 'need' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="need" aria-pressed="${f === 'need'}" aria-label="Show the ${cnt.need} item${cnt.need === 1 ? '' : 's'} you still need"><span><b>${cnt.need}</b> still needed</span></button>${cnt.have ? `<button class="cl-home ${f === 'have' ? 'on' : ''}" data-act="filter" data-tg="1" data-f="have" aria-pressed="${f === 'have'}" aria-label="Show the ${cnt.have} item${cnt.have === 1 ? '' : 's'} you have at home">${ICON_HOME}<span><b>${cnt.have}</b> at home</span></button>` : ''}</div>
     <div class="bar"><i style="width:${pct}%"></i></div>` : ''}
   </div>` : ''}
@@ -1303,7 +1314,7 @@ function renderRecipe(id){
   </div></div>
   <div class="layout">
     <div class="card panel ing-col${choosing === r.id ? ' choosing' : ''}"><div class="inghead"><h3>Ingredients</h3>${choosing === r.id ? `<button class="linkbtn addall" data-act="choosedone">Done</button>` : ''}</div>${ings || '<div class="muted">No ingredients yet.</div>'}</div>
-    <div><h3 style="font-size:19px;margin:0 4px 10px">Steps</h3>${p.total ? `<div class="stepprog"><div class="prog-line"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div><div class="bar"><i style="width:${pct}%"></i></div></div>` : ''}${steps || '<div class="card empty">No steps yet.</div>'}
+    <div><h3 style="font-size:20px;margin:0 4px 10px">Steps</h3>${p.total ? `<div class="stepprog"><div class="prog-line"><b>${p.total && p.done === p.total ? 'All done — enjoy!' : `${p.done} of ${p.total} steps`}</b>${p.total && p.done < p.total ? `<button class="mc" data-act="markall" data-id="${esc(r.id)}">Mark complete</button>` : (P().cook[r.id] || {}).before ? `<button class="mc undo" data-act="unmark" data-id="${esc(r.id)}" title="Go back to where you were"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>Undo</button>` : `<span class="muted">${pct}%</span>`}</div><div class="bar"><i style="width:${pct}%"></i></div></div>` : ''}${steps || '<div class="card empty">No steps yet.</div>'}
     ${notes}${p.total && p.done === p.total ? finCard(r) : ''}
 </div>
   </div>
@@ -2273,6 +2284,7 @@ document.addEventListener('click', async e => {
   if(a === 'delopen'){ delOpen = true; render(); setTimeout(() => { const w = $('#del-word'); if(w) w.focus(); }, 50); return; }
   if(a === 'delclose'){ if(e.target.closest('[data-stop]') && el.classList.contains('modal')) return; delOpen = false; render(); return; }
   if(a === 'delconfirm'){ if((($('#del-word') || {}).value || '').trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm'); return; } el.disabled = true; deleteAccount(); return; }
+  if(a === 'go' && el.classList.contains('tab') && route().v === el.dataset.h){ window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; adminErr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }

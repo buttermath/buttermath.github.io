@@ -144,6 +144,8 @@ export const MAYBE_SAME = [['olive oil','virgin olive oil'], ['vegetable oil','n
   ['flour','all purpose flour'], ['sugar','granulated sugar'], ['parmesan','parmigiano reggiano','parmigiano'], ['onion','yellow onion','white onion'],
   ['soy sauce','tamari'], ['pepper','black pepper']];
 export const maybeSame = (a, b) => a !== b && MAYBE_SAME.some(g => g.includes(a) && g.includes(b));
+const MODW = '(?:heaping|heaped|scant|level|rounded|generous|(?:lightly |firmly )?packed)';
+const MODQ = new RegExp('^([\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?)\\s+' + MODW + '\\s+(?=(?:cups?|c\\.|tablespoons?|tbsps?|tbs|teaspoons?|tsps?|T\\.?|t\\.?)(?![A-Za-z]))', 'i');
 export function splitIngredient(line){
   let s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
@@ -152,6 +154,8 @@ export function splitIngredient(line){
   s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*(?:\s*(?:-|–|to)\s*[\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/.½¼¾⅓⅔⅛⅜⅝⅞]*)?)\s+((?:large|medium|small)\s+)?garlic\s+(cloves?)(?![A-Za-z])/i, (m, n, z, c) => n + ' ' + (z || '') + c.toLowerCase() + ' garlic');
   // "1 - 14 oz can of tomatoes" is one 14 oz can, not 1 to 14 cans: a weight or volume right before a container is the container's size
   s = s.replace(/^(\d+)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(oz|ounces?|fl\.? ?oz|g|grams?|kg|ml|l|lbs?|pounds?)\.?\s+(cans?|jars?|packages?|pkgs?|bags?|box(?:es)?|bottles?|containers?|cartons?|tubs?)(?![A-Za-z])/i, (m, n, z, u, c) => +z > +n ? n + ' (' + z + ' ' + u + ') ' + c : m);
+  // "1 heaping cup flour" is 1 cup of flour; the heaping is how to fill the cup, so it stays on the recipe but not in the amount
+  s = s.replace(MODQ, '$1 ');
   s = s.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*T\.?(?=\s)/, '$1 Tbsp').replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞][\d\/ ½¼¾⅓⅔⅛⅜⅝⅞]*?)\s*t\.?(?=\s)/, '$1 tsp'); name = s;
   const m = s.match(LEAD);
   if(m && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m[1])){ qty = m[1].trim(); name = s.slice(m[1].length);
@@ -334,9 +338,15 @@ export function scaleQty(q, f, o = {}){
 }
 export function scaleLine(line, f){
   if(!f || Math.abs(f - 1) < 1e-9) return line;
-  const out = []; for(const part of ingParts(line)){ const p = splitIngredient(part);
-    if(!p.qty){ out.push(part.replace(BULLET, '').trim()); continue; }
+  const out = []; for(const raw of ingParts(line)){ const part = prettyFractions(raw.replace(BULLET, '').trim()), p = splitIngredient(part);
+    if(!p.qty){ out.push(part); continue; }
+    const mod = (part.match(new RegExp('^[\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?\\s+(' + MODW + ')\\s+(?=[A-Za-z])', 'i')) || [])[1];
     let q = scaleQty(p.qty, f, {key: p.key}), rest = String(p.rest || '').trimStart(); if(q == null) return null;
+    if(mod && MODQ.test(part)) q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+(?:–[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+)?)/, '$1 ' + mod.toLowerCase());
+    // a counted thing changes between one and many: "2 lemons" at ½× is "1 lemon", "1 red bell pepper" at 2× is "2 red bell peppers"
+    if(/^[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+(?: (?:extra[- ])?(?:large|medium|small|jumbo|whole))?$/i.test(q)) rest = countWord(rest, leadNum(q) > 1);
+    // the same for a counted unit: "4 slices" at ¼× is "1 slice", "1 bunch" at 2× is "2 bunches"
+    else q = q.replace(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚–]+ (?:[a-z]+ )?)([a-z]+)(?=$| \+)/i, (m, a, u) => CUNIT.test(u) ? a + plWord(u, leadNum(q) > 1) : m);
     // "1 cup whole + 2 Tbsp" reads better in a recipe as "1 cup + 2 Tbsp whole milk"
     const dm = q.match(/^(.*?) ((?:extra[- ])?large|medium|small|jumbo|whole)( \+ .*)$/i); if(dm){ q = dm[1] + dm[3]; rest = dm[2] + ' ' + rest; }
     out.push((q + ' ' + rest).trim()); }
@@ -349,3 +359,26 @@ export function scaleYield(y, f){
   return m[1] + nice(+m[2] * f) + (m[4] ? m[3] + nice(+m[4] * f) : '') + m[5];
 }
 export function yieldCount(y){ const m = String(y || '').match(/^\D*?(\d+)(?!\s*(?:-|–|to)\s*\d)(?![\d.\/])/); return m ? +m[1] : 0; }
+
+const leadNum = q => { const m = String(q).match(/(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)(?=\s|$)(?!.*–)/) || String(q).match(/–(\d*)([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]?)/); return m ? (m[1] ? +m[1] : 0) + (m[2] ? FV[m[2]] : 0) : 0; };
+// The word that's counted: the first word when it's a bunch, sprig, slice and so on ("2 bunches cilantro"), otherwise the last word of the name
+// before a comma or note ("2 red bell peppers, sliced"). Words that are the same either way are left alone.
+const CUNIT = /^(cups?|cloves?|cans?|packages?|sticks?|pinch|pinches|dash|dashes|bunch|bunches|heads?|slices?|sprigs?|quarts?|pints?|containers?|jars?|bags?|box|boxes|bars?|envelopes?|bottles?|cartons?|tubs?)$/i;
+const COUNTED = /^(bunch|bunches|sprigs?|slices?|pieces?|pinch|pinches|handfuls?|stalks?|ribs?|leaf|leaves|sheets?|fillets?|filets?|strips?|cubes?|heads?|cloves?|ears?|links?|loaf|loaves|wedges?|knobs?|dashes|dash|drops?)$/i;
+const SAME = /^(zucchini|fish|deer|sheep|asparagus|hummus|couscous|molasses|swiss|grits|oats|greens|series|species|chives|lettuce|garlic|ginger|celery|parsley|cilantro|basil|rice|flour|sugar|salt|butter|cheese|bread|broccoli|spinach|kale|corn|tofu|feta|ricotta|zest|juice|oil|water|milk|cream)$/i;
+const IRR = [['leaf', 'leaves'], ['loaf', 'loaves'], ['knife', 'knives'], ['half', 'halves'], ['potato', 'potatoes'], ['tomato', 'tomatoes'], ['mango', 'mangoes']];
+function plWord(w, many){
+  const lo = w.toLowerCase(), keep = x => w[0] === w[0].toUpperCase() ? x.charAt(0).toUpperCase() + x.slice(1) : x;
+  if(SAME.test(lo)) return w;
+  for(const [one, more] of IRR){ if(lo === one) return many ? keep(more) : w; if(lo === more) return many ? w : keep(one); }
+  if(many){ if(/s$/.test(lo)) return w; if(/[^aeiou]y$/.test(lo)) return w.slice(0, -1) + 'ies'; if(/(ch|sh|x|z)$/.test(lo)) return w + 'es'; return w + 's'; }
+  if(!/s$/.test(lo) || /(ss|us|is)$/.test(lo)) return w;
+  if(/ies$/.test(lo)) return w.slice(0, -3) + 'y'; if(/(ches|shes|xes|zes)$/.test(lo)) return w.slice(0, -2); return w.slice(0, -1);
+}
+function countWord(rest, many){
+  const m = String(rest).match(/^(\S+)(\s.*)?$/); if(!m) return rest;
+  if(COUNTED.test(m[1])) return plWord(m[1], many) + (m[2] || '');
+  const cut = rest.search(/\s*(?:[,(;]|\s[-–]\s|\s(?:for|or|to|plus|about)\s)/), head = cut < 0 ? rest : rest.slice(0, cut), tail = cut < 0 ? '' : rest.slice(cut);
+  const w = head.match(/^(.*?)([A-Za-z]+)$/); if(!w) return rest;
+  return w[1] + plWord(w[2], many) + tail;
+}

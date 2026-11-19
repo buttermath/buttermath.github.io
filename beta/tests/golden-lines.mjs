@@ -234,6 +234,14 @@ export const LINES = [
   ['2 tsp of salt', 'Salt', '2 tsp'],
   ['1/2 cup of sugar', 'Sugar', '½ cup'],
   ['1 cup (240ml) of milk', 'Milk', '1 cup (240ml)'],
+  // ---- a can size written with a dash, and in-between sizes (reported from the live site, Nov 19, 2026)
+  ['1 - 14 oz can of tomato purée', 'Tomato purée', '1 (14 oz) can'],
+  ['1 - 28 oz can of fire roasted tomatoes', 'Fire roasted tomatoes', '1 (28 oz) can'],
+  ['1-15 oz can black beans', 'Black beans', '1 (15 oz) can'],
+  ['2 - 14.5 oz cans diced tomatoes', 'Diced tomatoes', '2 (14.5 oz) cans'],
+  ['1–2 cans chickpeas', 'Chickpeas', '1–2 cans'],
+  ['1 medium-small sweet potato (about 8 ounces), peeled, cut into 1-inch pieces', 'Sweet potato', '1 medium-small'],
+  ['2 small-medium onions', 'Onions', '2 small-medium'],
   // ---- no amount
   ['Salt and pepper, to taste', 'Salt and pepper', ''],
   ['Fresh parsley, for garnish', 'Fresh parsley', ''],

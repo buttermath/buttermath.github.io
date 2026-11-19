@@ -1191,3 +1191,23 @@ button.item.homerow{width:100%;text-align:left;font:inherit;color:inherit;border
 .tundo.tshow{display:inline-flex;align-items:center;gap:4px}.tundo.tshow .xi{width:16px;height:16px}
 .cartline .cl-home .xi{width:20px;height:20px}
 .btn.dark.fab{box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}
+
+/* Recipe page header on wide screens (Nov 18): even padding. Edit and ⋯ sit in the top corner, the card is as tall as its text, and the photo fills the left side */
+@media(min-width:900px){
+.hero .ttlrow{flex-direction:row}.hero .ttlrow h2{padding-right:92px}
+.hero .ttlbtns{position:absolute;top:-4px;right:-6px;margin:0}
+.hero .art.photo{min-height:260px}.hero .art.drawn{min-height:260px}
+}
+
+/* Phantom check on the current first step (Nov 18): a soft green check fades in and out twice to show that tapping a step checks it off */
+.step .num{position:relative}
+.ghostchk{position:absolute;inset:-2px;border-radius:50%;background:var(--green);display:grid;place-items:center;opacity:0;animation:ghostchk 1.6s ease-in-out .9s 2;pointer-events:none}
+.ghostchk svg{width:14px;height:14px}
+@keyframes ghostchk{0%{opacity:0;transform:scale(.7)}35%{opacity:.85;transform:scale(1)}65%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.ghostchk{display:none}}
+
+/* Choosing ingredients (Nov 18): the ingredient list gets the current-step highlight, and no step is highlighted */
+.ing-col.choosing{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+
+/* No sideways slide (Nov 18): a two-finger sideways swipe on a trackpad no longer drags the page left and right */
+html,body{overscroll-behavior-x:none}

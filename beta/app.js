@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=16';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart } from './parse.js?v=17';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -453,9 +453,10 @@ function fixSplit(k){ let ch = false; const items = k.shopping.items, marks = k.
 // It's renamed (or merged into the same item already there) so its amount still adds up from the recipes.
 function fixPrep(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(it.custom || !(it.recipes || []).length) continue;
-    const p = splitIngredient(it.name), ok = (it.key || '') ; if(!p.key || p.key === ok) continue;
-    const rids = it.recipes.filter(x => R(x)), has = key => rids.some(rid => ingLines(D(R(rid))).some(l => splitIngredient(l).key === key));
-    if(has(ok) || !has(p.key)) continue;
+    // also tried with an amount in front: an item saved as "Garlic cloves" is now Garlic, counted in cloves
+    const ok = it.key || '', rids = it.recipes.filter(x => R(x)), has = key => rids.some(rid => ingLines(D(R(rid))).some(l => splitIngredient(l).key === key));
+    if(has(ok)) continue;
+    const p = [splitIngredient(it.name), splitIngredient('1 ' + it.name)].find(x => x.key && x.key !== ok && has(x.key)); if(!p) continue;
     const dup = items.find(x => x !== it && (x.key || splitIngredient(x.name).key) === p.key);
     if(dup){ dup.recipes = [...new Set([...(dup.recipes || []), ...it.recipes])]; items.splice(items.indexOf(it), 1); fixItem(dup); }
     else { it.name = p.name; it.key = p.key; fixItem(it); }

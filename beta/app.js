@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=19';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=20';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -1585,7 +1585,7 @@ function reviewCard(rv){ if(!rv.url && !rv.warn) return ''; return `<div class="
 function stepLines(t){ return String(t || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !/:$/.test(l)); }
 function stepCheck(t, fromSite){
   const ls = stepLines(t), long = ls.some(l => l.length > 450);
-  if(fromSite && (ls.length <= 3 || long)) return 'Review all recipe steps before saving to ensure no steps are missing or combined.';
+  if(fromSite && (ls.length <= 3 || long)) return 'Review all recipe steps to ensure no steps are missing or are combined into one step by mistake.';
   if(long) return 'A few steps look combined. Give each step its own line.';
   return '';
 }

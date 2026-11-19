@@ -2203,10 +2203,7 @@ document.addEventListener('click', async e => {
   if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty); else saveItemList(iid, name, qty); return; }
   if(a === 'homemode'){ homeMode = true; render(); window.scrollTo({top: 0}); return; }
   if(a === 'homedone'){ homeMode = false; render(); const n = allItems().filter(i => P().shop[i.id] === 'have').length;
-    if(n){ toast(`${n} item${n === 1 ? '' : 's'} at home`); const tEl = $('#toast'), sb2 = document.createElement('button'); sb2.className = 'tundo tshow'; sb2.setAttribute('aria-label', 'Show what you have at home');
-      sb2.innerHTML = '<svg class="xi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>Show';
-      sb2.onclick = () => { tEl.classList.remove('show'); ui.filter = 'have'; saveUi(); render(); const c = document.querySelector('.cartline'); if(c) c.scrollIntoView({behavior: 'smooth', block: 'center'}); };
-      tEl.appendChild(sb2); clearTimeout(toastT); toastT = setTimeout(() => tEl.classList.remove('show'), 5000); }
+    if(n){ toast(`${n} item${n === 1 ? '' : 's'} at home`); const pill = document.querySelector('.cl-home'); if(pill){ pill.scrollIntoView({behavior: 'smooth', block: 'center'}); pill.classList.add('flash'); setTimeout(() => pill.classList.remove('flash'), 2600); } }
     return; }
   if(a === 'have'){ const v = shop[id] === 'have' ? '' : 'have'; mutate(k => { k.progress.shop[id] = v; }); if(!v){ const it = allItems().find(i => i.id === id); toast(`Removed ${it ? it.name : '1 item'} from At home`); } return; }
   if(a === 'active'){ const v = !isActive(id); mutate(k => { k.progress.active[id] = v; }); return; }

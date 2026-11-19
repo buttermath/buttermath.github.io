@@ -1082,3 +1082,19 @@ textarea.tin{min-height:88px}
 .seg button{border:1.5px solid transparent}
 .seg button.on{background:#fff;border-color:var(--ink);color:var(--ink);font-weight:700;box-shadow:none}
 .seg .fc{color:var(--muted)}
+/* Design system rollout, step 5 (Nov 18): pop-ups and messages.
+   Sheets get an ✕ top-right. Sheets, dialogs, and menus use the soft shadow. Toasts are a black pill at the bottom. */
+.asksheet .pickhead{gap:12px;margin-bottom:4px}
+.asksheet .pickhead .askt{margin:0 4px;min-width:0}
+.asksheet .pickhead .ibtn{flex:none;margin:-4px -4px 0 0}
+.asksheet{box-shadow:0 -8px 24px rgba(0,0,0,.12),0 -2px 6px rgba(0,0,0,.08)}
+@media(min-width:720px){.asksheet{box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}}
+.modal .card{box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);border-radius:16px}
+.modal .row{gap:8px;flex-wrap:wrap}
+.umenu,.moremenu,.fmenu{border:2px solid var(--ink);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}
+.umenu button,.umenu a.mlink,.moremenu button,.fmenu button{min-height:44px}
+.umenu .ic,.umenu .out .ic{box-shadow:none}
+#toast{top:auto;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,140px);border-radius:999px;padding:11px 20px;font-size:14px;font-weight:500;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}
+#toast.show{transform:translate(-50%,0)}
+.tundo{color:var(--logo-coral);font-weight:700}
+.mnote{border:0;border-radius:12px}

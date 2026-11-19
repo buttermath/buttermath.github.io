@@ -1007,3 +1007,29 @@ html:has(.alist),body:has(.alist){overflow:hidden;overscroll-behavior:none}.moda
 @media(max-width:600px){.ing,.step p{font-size:16px}}
 .tour h3,.modal h3,.panel h3,.section h3,.stephead,.askt,.lp-card h3,.lp-steps h3{font-size:20px}
 .ttags i{color:var(--muted)}
+/* Design system rollout, step 2 (Nov 18): buttons.
+   Primary = red with the black sticker shadow, one per screen. Secondary = black. Outline = white with a gray edge (also the plain .btn).
+   Quiet = sand. Text link = dark red. Danger = red outline. Icon buttons are 44px. Only the primary gets a shadow. */
+.btn,.arow .btn,.fbtns .btn,.btn.sm,.btn.big,.btn.rmfr,.lp-ctas .btn,.lp-final .btn{font-size:15px;font-weight:500}
+.btn,.btn.outline,.lp-signin{background:#fff;border:1.5px solid var(--line-dark);color:var(--ink)}
+.btn:hover,.btn.outline:hover,.lp-signin:hover{border-color:var(--ink)}
+.btn.primary,.btn.lp-red,.selbar .btn.primary,.btn.primary.mealfab,a.btn.primary{background:var(--red);border:1.5px solid var(--ink);color:#fff;box-shadow:0 4px 0 var(--ink)}
+.btn.primary:hover,.btn.lp-red:hover,.btn.primary.mealfab:hover{background:var(--red-dark);border-color:var(--ink)}
+.btn.primary:active,.btn.lp-red:active{transform:translateY(2px);box-shadow:0 2px 0 var(--ink)}
+.btn.primary:disabled,.btn.primary[disabled]{box-shadow:0 2px 0 var(--ink);transform:none}
+.btn.dark,.btn.on,a.btn.dark{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:none}
+.btn.dark:hover{background:var(--ink);border-color:var(--ink);opacity:.88}
+.btn.quiet,.btn.ghost{background:var(--sand);border-color:var(--sand);color:var(--ink)}
+.btn.quiet:hover,.btn.ghost:hover{border-color:var(--line-dark)}
+.btn.dangerbtn,.btn.outline.danger{background:#fff;border:1.5px solid var(--red);color:var(--red-dark);font-weight:500}
+.btn.dangerbtn:hover,.btn.outline.danger:hover{background:var(--blush);border-color:var(--red-dark)}
+.btn.orig{background:#fff;border:1.5px solid var(--line-dark);color:var(--ink);font-weight:500}
+.btn.copied,.btn.copied:hover{background:var(--green);border-color:var(--green);color:#fff;box-shadow:none}
+.btn.rmfr{background:transparent;border-color:var(--muted);color:#fff}
+.btn.wake.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.linkbtn,.lp-small .linkbtn,.frmore a,.frmore .linkbtn,.mathbtn,.mnote .linkbtn{color:var(--red-dark)}
+.linkbtn:hover{color:var(--red)}
+.ibtn,.pickhead .ibtn{width:44px;height:44px}
+.ibtn.editpill{width:auto;height:44px}
+.savebtn,.picbtn,.copyic,.tilex,.herox,.heroedit,.umenu .ic,.sortp{box-shadow:none}
+.totop{box-shadow:0 8px 24px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08)}

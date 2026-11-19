@@ -5,6 +5,7 @@
 import { splitIngredient } from '../parse.js';
 
 export const LINES = [
+  ['2 c flour', 'Flour', '2 c'],
   // ---- baking blogs (grams in parentheses, "and" fractions, descriptors after commas)
   ['2 and 1/4 cups (281g) all-purpose flour (spooned & leveled)', 'All-purpose flour', '2¼ cups (281g)'],
   ['1 teaspoon baking soda', 'Baking soda', '1 teaspoon'],

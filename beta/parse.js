@@ -158,6 +158,7 @@ export function splitIngredient(line){
     // "1 cup plus 2 tablespoons flour" is one amount: 1 cup + 2 tablespoons
     const pl = name.match(/^(?:plus|\+)\s+/i), m2 = pl && name.slice(pl[0].length).match(LEAD);
     if(m2 && /\d|[½¼¾⅓⅔⅛⅜⅝⅞]/.test(m2[1]) && /[a-z]/i.test(m2[1].replace(/^(about|approx\.?)\s*/i, ''))){ qty = qty + ' + ' + m2[1].trim(); name = name.slice(pl[0].length + m2[1].length); } }
+  const rest = name;
   // "1 teaspoon of cinnamon": the "of" belongs to neither the amount nor the name
   qty = qty.replace(/\s+of$/i, '');
   name = name.replace(/^\s*(?:plus|\+)\s+more\s+(?:for\s+[a-z]+\s+)?/i, '');
@@ -169,7 +170,8 @@ export function splitIngredient(line){
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();
-  return {qty, name, key: SAME_KEY[key] || key};
+  // rest: the line after its amount, used to show the line at another recipe size. Not enumerable, so the result's shape is unchanged.
+  return Object.defineProperty({qty, name, key: SAME_KEY[key] || key}, 'rest', {value: rest});
 }
 
 // "2 heirloom tomatoes + 4 roma tomatoes" is two things to buy, so it becomes two shopping-list items.
@@ -261,13 +263,15 @@ function parsePart(p){
   return {n, n2, unit, desc, pm, size: !pm && pr && box ? pr.replace(/\s+/g, ' ').trim() : ''};
 }
 export function addQty(a, b, o = {}){
-  if(!a) return b || ''; if(!b) return a;
+  const mul = o.mul && Math.abs(o.mul - 1) > 1e-9 ? o.mul : 0;
+  if(!a) return b || ''; if(!b && !mul) return a;
   const split = t => { const out = []; let d = 0, cur = ''; const s = String(t).replace(/\s*\(about [^()]*\)/g, '');
     for(let i = 0; i < s.length; i++){ const ch = s[i]; if(ch === '(') d++; else if(ch === ')') d = Math.max(0, d - 1);
       if(!d && s.startsWith(' + ', i)){ out.push(cur); cur = ''; i += 2; continue; } cur += ch; } out.push(cur); return out; };
-  const parts = split(a).concat(split(b));
+  const parts = b ? split(a).concat(split(b)) : split(a);
   const sums = new Map(), text = [];
   parts.forEach(p => { const x = parsePart(p); if(!x){ if(p.trim()) text.push(p.trim()); return; }
+    if(mul){ x.n *= mul; if(x.n2 != null) x.n2 *= mul; if(x.pm) x.pm = {u: x.pm.u, v: x.pm.v * mul}; }
     // a size in parentheses ("1 (15 oz) can") is part of what you buy, so 15 oz and 28 oz cans are counted separately
     const g = (x.unit ? x.unit + '|' + x.desc : '|' + x.desc) + (x.size ? '|' + x.size : ''), s = sums.get(g) || {n:0, hi:0, c:0, orig:p.trim(), unit:x.unit, desc:x.desc, size:x.size, pv:0, pu:null, pok:true};
     s.n += x.n; s.hi += x.n2 != null ? x.n2 : x.n; if(x.n2 != null) s.ranged = true; s.c++; if(!s.desc) s.desc = x.desc;
@@ -286,7 +290,8 @@ export function addQty(a, b, o = {}){
   const metric = (t, k) => k === 'm' ? (t >= 1000 ? trim(t / 1000) + ' kg' : (t >= 10 ? Math.round(t) : trim(t)) + 'g') : (t >= 1000 ? trim(t / 1000) + ' L' : (t >= 10 ? Math.round(t) : trim(t)) + ' ml');
   const pmTail = arr => { const u = arr[0].pu; if(!u || arr.some(s => !s.pok || s.pu !== u)) return ''; const v = arr.reduce((n, s) => n + s.pv, 0); return ` (${v >= 10 ? Math.round(v) : trim(v)}${u === 'g' ? 'g' : ' ml'})`; };
   const isButter = /(^| )butter$/.test(o.key || '') && !/(peanut|almond|cashew|apple|sunflower|cocoa|seed|nut) butter$/.test(o.key || '');
-  const spoons = t => { const tb = Math.floor(t / 3 + 1e-9), ts = t - tb * 3; return [tb ? tb + ' Tbsp' : '', ts > 1e-6 ? nice(ts) + ' tsp' : ''].filter(Boolean).join(' + ') || '0 tsp'; };
+  // At a new recipe size, spoon amounts go to the nearest ⅛ tsp, the smallest measuring spoon (off by 1/16 tsp at most)
+  const spoons = t => { if(mul) t = Math.round(t * 8) / 8; const tb = Math.floor(t / 3 + 1e-9), ts = t - tb * 3; return [tb ? tb + ' Tbsp' : '', ts > 1e-6 ? nice(ts) + ' tsp' : ''].filter(Boolean).join(' + ') || '0 tsp'; };
   const cups = t => {
     const w = Math.floor(t / 48 + 1e-9), rem = t - w * 48;
     let best = null; for(const f of [0, 1/4, 1/3, 1/2, 2/3, 3/4]){ const r = rem - f * 48; if(r < -1e-6) continue;
@@ -308,12 +313,39 @@ export function addQty(a, b, o = {}){
     const usStr = us === 'w' ? pounds(Math.round(back * 8) / 8, back) : cups(Math.round(back * 4) / 4);
     merged.set(A[0], `${metric(all, me)} (about ${usStr})`); A.slice(1).concat(B).forEach(s => merged.set(s, null)); byFam.delete(us); byFam.delete(me); });
   byFam.forEach(arr => {
-    if(arr.reduce((n, s) => n + s.c, 0) < 2) return;
+    if(!mul && arr.reduce((n, s) => n + s.c, 0) < 2) return;
     const kind = FAM[arr[0].unit][0], used = arr.map(s => s.unit), dd = (arr.find(s => s.desc) || {}).desc, d = dd ? ' ' + dd : '';
     const t = arr.reduce((n, s) => n + s.n * FAM[s.unit][1], 0), top = Math.max(...used.map(u => FAM[u][1]));
     const str = kind === 'm' || kind === 'l' ? metric(t, kind) : kind === 'w' ? pounds(t, top) : used.includes('stick') || (isButter && t >= 24) ? sticks(t) : top >= 48 ? cups(t) : used.includes('fl oz') ? floz(t) : spoons(t);
     merged.set(arr[0], (str + (kind === 'm' || kind === 'l' ? '' : pmTail(arr))).replace(/^([^+]*?)( \+ |$)/, (m, a, b) => a + d + b)); arr.slice(1).forEach(s => merged.set(s, null));
   });
-  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 ? s.orig : s.ranged ? nice(s.n) + '–' + nice(s.hi) + (s.unit ? ' ' + plural(s.unit, s.hi) : '') + (s.desc ? ' ' + s.desc : '') : nice(s.n) + (s.size ? ' ' + s.size : '') + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '') + pmTail([s])).filter(x => x !== null);
+  if(mul && text.length) return null;
+  const out = groups.map(s => merged.has(s) ? merged.get(s) : s.c === 1 && !mul ? s.orig : s.ranged ? nice(s.n) + '–' + nice(s.hi) + (s.unit ? ' ' + plural(s.unit, s.hi) : '') + (s.desc ? ' ' + s.desc : '') : nice(s.n) + (s.size ? ' ' + s.size : '') + (s.unit ? ' ' + plural(s.unit, s.n) : '') + (s.desc ? ' ' + s.desc : '') + pmTail([s])).filter(x => x !== null);
   return out.concat(text).join(' + ');
 }
+
+// Scaling a recipe (½×, 2×, or a new serving size). Amounts are multiplied exactly and written the way you'd measure them,
+// within the same kind of unit only (6 tsp is 2 Tbsp, 4 Tbsp is ¼ cup). Cups never turn into grams.
+// Returns null when an amount can't be read, so nothing is ever shown scaled when it isn't.
+export function scaleQty(q, f, o = {}){
+  if(!q || !f || Math.abs(f - 1) < 1e-9) return q;
+  const m = String(q).match(/^((?:about|approx\.?)\s+)(.+)$/i); if(m){ const x = scaleQty(m[2], f, o); return x == null ? null : m[1] + x; }
+  return addQty(q, '', Object.assign({}, o, {mul: f}));
+}
+export function scaleLine(line, f){
+  if(!f || Math.abs(f - 1) < 1e-9) return line;
+  const out = []; for(const part of ingParts(line)){ const p = splitIngredient(part);
+    if(!p.qty){ out.push(part.replace(BULLET, '').trim()); continue; }
+    let q = scaleQty(p.qty, f, {key: p.key}), rest = String(p.rest || '').trimStart(); if(q == null) return null;
+    // "1 cup whole + 2 Tbsp" reads better in a recipe as "1 cup + 2 Tbsp whole milk"
+    const dm = q.match(/^(.*?) ((?:extra[- ])?large|medium|small|jumbo|whole)( \+ .*)$/i); if(dm){ q = dm[1] + dm[3]; rest = dm[2] + ' ' + rest; }
+    out.push((q + ' ' + rest).trim()); }
+  return out.join(' + ');
+}
+// "Serves 4" at 2× is "Serves 8"; "4–6 servings" at ½× is "2–3 servings".
+export function scaleYield(y, f){
+  if(!y || !f || Math.abs(f - 1) < 1e-9) return y;
+  const m = String(y).match(/^(\D*?)(\d+(?:\.\d+)?)(?:(\s*(?:-|–|to)\s*)(\d+(?:\.\d+)?))?(.*)$/); if(!m) return y;
+  return m[1] + nice(+m[2] * f) + (m[4] ? m[3] + nice(+m[4] * f) : '') + m[5];
+}
+export function yieldCount(y){ const m = String(y || '').match(/^\D*?(\d+)(?!\s*(?:-|–|to)\s*\d)(?![\d.\/])/); return m ? +m[1] : 0; }

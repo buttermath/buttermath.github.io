@@ -9,6 +9,8 @@ const sum = (key, ...q) => q.reduce((a, b) => addQty(a, b, {key}), '');
 
 export const HAND = [
   // [what it is, ingredient key, amounts..., expected total]
+  ['cinnamon with "of" (reported line)', 'cinnamon', '1 teaspoon', '1 teaspoon', '2 tsp'],
+  ['flour with "of" plus cups', 'flour', '1 cup', '1½ cups', '2½ cups'],
   ['two pies of butter', 'unsalted butter', '1 cup (2 sticks; 226g)', '1 cup (2 sticks; 226g)', '4 sticks (452g)'],
   ['cookies + cake butter', 'unsalted butter', '¾ cup (170g)', '½ cup (113g)', '2 sticks + 4 Tbsp (283g)'],
   ['butter Tbsp + sticks', 'unsalted butter', '6 Tbsp', '1 stick', '1 stick + 6 Tbsp'],

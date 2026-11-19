@@ -886,25 +886,28 @@ function rebuildLine(line, name, qty){
   return ((qty ? qty + ' ' : '') + rest).trim();
 }
 // An item added up from 2+ recipes: each recipe's own line, so each amount can be edited on its own.
+// Also used when one recipe lists the ingredient twice (say, butter in the crust and in the filling).
 function itemRecipeParts(it){
-  const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || rs.length < 2) return null;
+  const rs = (it.recipes || []).filter(x => R(x)); if(it.custom || !rs.length) return null;
   const key = it.key || splitIngredient(it.name).key, parts = [];
   for(const rid of rs){ const hits = []; (D(R(rid)).ingredients || []).forEach((g, gi) => (g.items || []).forEach((l, li) => { if(splitIngredient(l).key === key) hits.push({rid, gi, li, l}); }));
-    if(hits.length !== 1) return null; parts.push(hits[0]); }
-  return parts;
+    if(!hits.length) return null; hits.forEach((h, n) => { h.many = hits.length > 1; h.n = n + 1; }); parts.push(...hits); }
+  return parts.length > 1 ? parts : null;
 }
+// "Blueberry Pie", or "Blueberry Pie · Crust" when that recipe lists it more than once
+function partLabel(x){ const d = D(R(x.rid)), nm = d.short || d.title; if(!x.many) return nm; const g = ((d.ingredients || [])[x.gi] || {}).group; return nm + ' · ' + (g ? g : 'line ' + x.n); }
 const joinNames = nm => nm.length < 3 ? nm.join(' and ') : nm.slice(0, -1).join(', ') + ', and ' + nm[nm.length - 1];
 function renderEditItem(){
   const it = allItems().find(i => i.id === editItem.id); if(!it){ editItem = null; return ''; }
   const head = t => `<div class="sheetbg" data-act="itemeditclose"></div><div class="asksheet" role="dialog" aria-label="${t}"><div class="pickhead"><div class="askt">${t}</div><button class="ibtn" data-act="itemeditclose" aria-label="Close">${ICON_X}</button></div>`;
-  if(editItem.step === 'askmulti'){ const ch = editItem.parts.filter(x => x.nq !== x.oq), nm = joinNames(ch.map(x => `<b>${esc(D(R(x.rid)).short || D(R(x.rid)).title)}</b>`));
-    return head(ch.length > 1 ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${ch.map(x => `${esc(D(R(x.rid)).short || D(R(x.rid)).title)}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`).join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${ch.length > 1 ? 'they are' : 'it is'} right next time?</p>
-    <button class="askopt main" data-act="itemsave" data-to="recipe"><b>${ch.length > 1 ? 'Update the recipes too' : 'Update the recipe too'}</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>${ch.length > 1 ? 'The recipes stay' : 'The recipe stays'} as ${ch.length > 1 ? 'they are' : 'it is'}</span></button></div>`; }
+  if(editItem.step === 'askmulti'){ const ch = editItem.parts.filter(x => x.nq !== x.oq), rids = [...new Set(ch.map(x => x.rid))], many = rids.length > 1, nm = joinNames(rids.map(x => `<b>${esc(D(R(x)).short || D(R(x)).title)}</b>`));
+    return head(many ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${ch.map(x => `${esc(partLabel(x))}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`).join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${many ? 'they are' : 'it is'} right next time?</p>
+    <button class="askopt main" data-act="itemsave" data-to="recipe"><b>${many ? 'Update the recipes too' : 'Update the recipe too'}</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>${many ? 'The recipes stay' : 'The recipe stays'} as ${many ? 'they are' : 'it is'}</span></button></div>`; }
   if(editItem.step === 'ask'){ const r = R(editItem.rid);
     return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
   const parts = itemRecipeParts(it);
-  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><p class="frhint">Your list adds this up from ${parts.length} recipes${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change the amount for each recipe:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(D(R(x.rid)).short || D(R(x.rid)).title)}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(splitIngredient(x.l).qty)}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
+  if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(splitIngredient(x.l).qty)}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
   const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
   return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button></form></div>`;
 }
@@ -920,7 +923,7 @@ async function saveItemParts(toRecipes){
   for(const x of ch){ const r = R(x.rid); if(!r) continue; const nl = rebuildLine(x.l, splitIngredient(x.l).name, x.nq); if(!nl) continue;
     const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = nl;
     const {error} = await sb.from('recipes').update({data}).eq('id', x.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
-    r.data = data; done.push(D(r).short || D(r).title); }
+    r.data = data; const dn = D(r).short || D(r).title; if(!done.includes(dn)) done.push(dn); }
   mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; fixItem(y); });
   editItem = null; render(); toast(`Updated ${joinNames(done)} and your list`);
 }

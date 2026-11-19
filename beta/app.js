@@ -1497,6 +1497,24 @@ async function uploadPhoto(recipeId, blob){
   if(error) throw error;
   return {path, url: sb.storage.from('photos').getPublicUrl(path).data.publicUrl};
 }
+// The recipe editor runs the same amount check as the shopping list, on every ingredient line you add or change.
+function recipeAmtWarns(old, ingredients){
+  const oldQ = new Map(), dup = new Set();
+  (old.ingredients || []).forEach(g => (g.items || []).forEach(l => { const p = splitIngredient(l); if(!p.key) return; if(oldQ.has(p.key)) dup.add(p.key); oldQ.set(p.key, p.qty || ''); }));
+  const was = new Set((old.ingredients || []).flatMap(g => g.items || []));
+  const out = [];
+  ingredients.forEach(g => (g.items || []).forEach(l => { if(was.has(l)) return; const p = splitIngredient(l); if(!p.key || !p.qty) return;
+    const oq = dup.has(p.key) ? '' : (oldQ.get(p.key) || ''); if(p.qty === oq) return;
+    const sc = oq ? scaleParen(oq, p.qty) : p.qty; let w = checkAmt(oq, sc);
+    if(!w && sc !== p.qty) w = {msg: `The recipe had ${oq}. ${sc.replace(/\s*\([^)]*\)\s*$/, '')} would be ${(sc.match(/\(([^)]*)\)\s*$/) || [])[1]}.`, fix: sc};
+    if(w){ const fixLine = w.fix ? rebuildLine(l, p.name, w.fix) : null; out.push({line: l, name: p.name, msg: w.msg, fix: w.fix && fixLine ? w.fix : '', fixLine}); } }));
+  return out;
+}
+let amtWarnPend = null;
+function showAmtWarns(ws, id){
+  amtWarnPend = {ws, id}; const fx = ws.filter(w => w.fixLine);
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card" data-stop><h3>${ws.length > 1 ? 'Check these amounts' : 'Check this amount'}</h3>${ws.map(w => `<p class="frp amtwarn"><b>${esc(w.name.charAt(0).toUpperCase() + w.name.slice(1))}:</b> ${esc(w.msg)}${w.fix ? ` Suggested: <b>${esc(w.fix)}</b>.` : ''}</p>`).join('')}<div class="row"><button class="btn quiet" data-act="mclose">Go back</button><button class="btn" data-act="amtsaveas">Save anyway</button>${fx.length ? `<button class="btn primary" data-act="amtsavefix">Fix and save</button>` : ''}</div></div></div>`;
+}
 async function saveForm(id){
   const f = form, existing = id ? R(id) : null, old = existing ? D(existing) : {};
   const val = s => (($(s) || {}).value || '').trim();
@@ -1504,6 +1522,8 @@ async function saveForm(id){
   if(!title){ f.err = 'Add a recipe title.'; render(); return; }
   if(!val('#f-ing')){ f.err = 'Add the ingredients (paste the recipe and tap Download into form).'; render(); return; }
   const ingredients = ingTextToGroups(val('#f-ing'));
+  if(f.amtFix){ const fx = f.amtFix; ingredients.forEach(g => { g.items = (g.items || []).map(l => fx[l] || l); }); }
+  if(!f.amtChecked){ const ws = recipeAmtWarns(old, ingredients); if(ws.length){ showAmtWarns(ws, id); return; } }
   const steps = stepTextToSections(val('#f-steps'), old.steps);
   const link = val('#f-link');
   const data = Object.assign({}, old, {
@@ -2421,6 +2441,9 @@ document.addEventListener('click', async e => {
   if(a === 'untimer'){ timers = timers.filter(t => t.id !== id); drawTimers(); return; }
   if(a === 'jump'){ const s = document.getElementById('s-' + el.dataset.k); if(s) s.scrollIntoView({behavior:'smooth', block:'center'}); return; }
   if(a === 'mclose'){ if(e.target.closest('[data-stop]') && el.classList.contains('modal')) return; $('#modalRoot').innerHTML = ''; return; }
+  if((a === 'amtsaveas' || a === 'amtsavefix') && amtWarnPend && form){ const {ws, id: fid} = amtWarnPend; amtWarnPend = null; $('#modalRoot').innerHTML = '';
+    form.amtChecked = true; if(a === 'amtsavefix'){ form.amtFix = {}; ws.forEach(w => { if(w.fixLine) form.amtFix[w.line] = w.fixLine; }); }
+    saveForm(fid); return; }
   if(a === 'mok'){ $('#modalRoot').innerHTML = ''; const fn = confirmFn; confirmFn = null; if(fn) fn(); return; }
   if(a === 'signout'){ await flush(); try{ sessionStorage.removeItem('mb-in'); }catch(err){} gate = 'gate'; await sb.auth.signOut(); location.hash = ''; return; }
   if(a === 'enter'){ enterKitchen(); return; }

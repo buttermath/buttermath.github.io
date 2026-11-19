@@ -1266,3 +1266,5 @@ body:has(.totop.show) .stepfab{bottom:calc(78px + var(--navlift,0px) + env(safe-
 #fab.stepfab.idle{opacity:0;pointer-events:none}
 /* ingredient circles sit centered between the paper's edge and the red margin line; the text stays where it was */
 .ing-col .ing .box{margin-left:-9px;margin-right:9px}
+.ing-col .ing .pk{margin-left:-9px;margin-right:9px}
+.ing-col .ing.pick.ro{padding-left:2px}

@@ -89,5 +89,17 @@ check('can sizes kept apart', sum('1 (15 oz) can', '1 (28 oz) can'), '1 (15 oz) 
 check('same can size', sum('1 (15 oz) can', '1 (15 oz) can'), '2 (15 oz) cans');
 check('weight and volume never mixed', sum('100g', '1 cup'), '100g + 1 cup');
 
+// Same thing at the store, so one list line (Combine similar items, Nov 19)
+const key = l => splitIngredient(l).key;
+for(const [a, b] of [['2 tbsp rice wine vinegar', '1 tbsp rice vinegar'], ['3 scallions', '2 green onions'], ["1 cup confectioners' sugar", '1 cup powdered sugar'],
+  ['1 can garbanzo beans', '1 can chickpeas'], ['1 tsp bicarbonate of soda', '1 tsp baking soda'], ['1 tbsp corn starch', '1 tbsp cornstarch'],
+  ['1 cup heavy whipping cream', '1 cup heavy cream'], ['2 cups plain flour', '2 cups all-purpose flour'], ['1 cup white sugar', '1 cup granulated sugar'],
+  ['1 courgette', '1 zucchini'], ['1 aubergine', '1 eggplant'], ['1 cup parmesan cheese', '1 cup parmesan']])
+  check('same item: ' + a.replace(/^[^a-z]+/i, '') + ' = ' + b.replace(/^[^a-z]+/i, ''), key(a), key(b));
+// Different things never share a line on their own (the list asks first for some of these)
+for(const [a, b] of [['1 tsp kosher salt', '1 tsp salt'], ['2 tbsp unsalted butter', '2 tbsp butter'], ['1 cup brown sugar', '1 cup sugar'],
+  ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro']])
+  check('kept apart: ' + a.replace(/^[^a-z]+/i, '') + ' / ' + b.replace(/^[^a-z]+/i, ''), key(a) === key(b), false);
+
 console.log(failed ? `\n${failed} FAILED. Do not ship.\n` : '\nAll checks passed.\n');
 process.exit(failed ? 1 : 0);

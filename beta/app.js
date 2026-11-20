@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=25';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=26';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -430,8 +430,28 @@ function qtyFromRecipes(it){
   const live = rs.filter(onListRid); if(live.length) rs = live;
   const key = it.key || splitIngredient(it.name).key, ks = ikeys(it); let q = '';
   rs.forEach(x => eachPart(D(R(x)), (l, gi, li, pi) => { const p = splitIngredient(l); if(!p.key || !ks.includes(p.key)) return;
-    const o = (it.pq || {})[pqKey(x, gi, li, pi)], sq = p.qty ? scaleQty(p.qty, scaleOf(x), {key: p.key}) : '', v = o && o.base === l ? o.q : sq == null ? p.qty : sq; if(v) q = addQty(q, v, {key}); }));
+    const o = (it.pq || {})[pqKey(x, gi, li, pi)], sq = p.qty ? scaleQty(p.qty, scaleOf(x), {key: p.key}) : '', v = o && o.base === l ? o.q : sq == null ? p.qty : sq; if(v && !isZeroQ(v)) q = addQty(q, v, {key}); }));
   return q;
+}
+// "0 eggs" adds nothing, so it never shows up as an amount
+const isZeroQ = q => /^0+(?:\.0*)?(?:\s|$)/.test(String(q || '').trim());
+// A plain count ("6", "1½") as a number; null for anything with a unit ("2 cups", "1 stick + 3 Tbsp")
+const CFRAC = {'½': .5, '¼': .25, '¾': .75, '⅓': 1/3, '⅔': 2/3, '⅛': .125, '⅜': .375, '⅝': .625, '⅞': .875};
+const countOf = q => { const m = String(q || '').trim().match(/^(\d+(?:\.\d+)?)?\s*([½¼¾⅓⅔⅛⅜⅝⅞])?$/); return m && (m[1] || m[2]) ? (+m[1] || 0) + (CFRAC[m[2]] || 0) : null; };
+// "Egg" to "Eggs", "Cherry" to "Cherries", "Bay leaf" to "Bay leaves". Only used when the new name reads as the same item.
+function plural(name){ const n = /[^aeiou]y$/i.test(name) ? name.slice(0, -1) + 'ies' : /(?:lea|loa)f$/i.test(name) ? name.slice(0, -1) + 'ves' : /[^aeiou]o$/i.test(name) ? name + 'es' : /(?:s|x|z|ch|sh)$/i.test(name) || !/[a-z]$/i.test(name) ? name : name + 's';
+  return splitIngredient('2 ' + n).key === splitIngredient('2 ' + name).key ? n : name; }
+// The name on the list follows the recipe lines: a line with an amount names it ("Salt", not "Salt to taste"),
+// and a plain count reads one or many ("Eggs 6", "Egg 1"). A name you typed yourself is never changed.
+function nameFromRecipes(it, q){
+  const key = it.key || splitIngredient(it.name).key, lines = [];
+  (it.recipes || []).forEach(x => { const r = R(x); if(r) eachPart(D(r), l => { const p = splitIngredient(l); if(p.key === key) lines.push({name: p.name.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim(), q: p.qty}); }); });
+  const cur = String(it.name || '').toLowerCase(); if(!lines.some(l => l.name.toLowerCase() === cur)) return null;
+  const withQ = lines.filter(l => l.q && !isZeroQ(l.q)), pool = withQ.length ? withQ : lines, t = countOf(q);
+  const fits = l => t == null || (countOf(l.q) != null && (countOf(l.q) > 1) === (t > 1));
+  const keep = pool.find(l => l.name.toLowerCase() === cur && fits(l)); if(keep) return it.name;
+  const other = pool.find(fits); if(other) return other.name;
+  return t > 1 ? plural(pool[0].name) : pool[0].name;
 }
 // A list-only change to one recipe's amount ("Just this list"). It's kept with the recipe line it replaced, and dropped if that line changes.
 const partQ = (it, x) => { const o = (it.pq || {})[pqKey(x.rid, x.gi, x.li, x.pi)]; return o && o.base === x.l ? o.q : splitIngredient(x.l).qty; };
@@ -483,6 +503,7 @@ function reportHref(it){
   return `mailto:${FB_EMAIL}?subject=${encodeURIComponent('Wrong amount: ' + it.name)}&body=${encodeURIComponent(body)}`;
 }
 function fixItem(it){ let ch = false; const q = it.qtyEdit ? null : qtyFromRecipes(it); if(q !== null && q !== (it.qty || '')){ it.qty = q; ch = true; }
+  const nn = q === null ? null : nameFromRecipes(it, q); if(nn && nn !== it.name){ it.name = nn; ch = true; }
   const n = String(it.name || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim(); if(n && n !== it.name){ it.name = n; ch = true; } return ch; }
 // A recipe that's finished or archived no longer counts toward items it shares with recipes still on the list.
 function pruneDone(k){ const pr = k.progress, on = x => pr.active[x] !== false && !(pr.done || {})[x] && !(pr.archived || {})[x]; let ch = false;

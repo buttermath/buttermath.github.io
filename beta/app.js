@@ -177,7 +177,7 @@ function renderLanding(member){
   const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
   const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
   const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;
-  const step = (n, h, p) => `<li><span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
+  const step = (n, h, p, img, alt) => `<li>${img ? `<figure class="lp-shot"><img src="/landing/${img}" alt="${alt}" width="600" height="923" loading="lazy" decoding="async"></figure>` : ''}<span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
   const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
   return `<div class="lp">
@@ -188,15 +188,15 @@ function renderLanding(member){
       <p class="lp-lede">Pick your recipes. Get one shopping list, sorted by aisle, with every amount added up.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
-    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 1¼ cups">
+    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>
         <div class="lp-chips"><span class="lp-chip" style="--c:#0072B2;background:#E6F1F8"><i></i>Blueberry pie</span><span class="lp-chip" style="--c:#D55E00;background:#FBEFE6"><i></i>Lemon bars</span></div>
         <span class="lp-aisle">Dairy &amp; eggs</span>
         <div class="lp-items">
-          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>1¼ cups</small>
-            <div class="lp-math"><span class="lp-mrow"><b>½ cup</b><em><i style="--c:#0072B2"></i>Blueberry pie</em></span><span class="lp-mrow"><b>¾ cup</b><em><i style="--c:#D55E00"></i>Lemon bars</em></span><span class="lp-mrow lp-tot"><em>Total</em><b>1¼ cups</b></span></div></div></div>
+          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>2 sticks + 4 Tbsp</small>
+            <div class="lp-math"><span class="lp-mrow"><b>½ cup</b><em><i style="--c:#0072B2"></i>Blueberry pie</em></span><span class="lp-mrow"><b>¾ cup</b><em><i style="--c:#D55E00"></i>Lemon bars</em></span><span class="lp-mrow lp-tot"><em>Total</em><b>2 sticks + 4 Tbsp</b></span></div></div></div>
           <div class="lp-item done"><span class="lp-ck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><div><b>Eggs</b><small>5 large</small></div></div>
         </div>
       </div>
@@ -226,9 +226,9 @@ function renderLanding(member){
     <span class="lp-eyebrow">How it works</span>
     <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
     <ol class="lp-three lp-steps">
-      ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.')}
-      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.')}
-      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.')}
+      ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Recipes page, with an Add a recipe button and a Blueberry Pie recipe')}
+      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Lemon Bars recipe with the choices Add all 5 ingredients and Select specific ingredients')}
+      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with lemons checked off and butter added up from two recipes')}
     </ol>
     <p class="lp-after">Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</p>
   </section>

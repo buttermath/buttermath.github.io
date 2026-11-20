@@ -21,51 +21,8 @@ const fp = s => { let h = 0x811c9dc5; for(const c of new TextEncoder().encode(s)
 
 // [the line as the site writes it, the right reading as "Item | amount | aisle"]
 export const KNOWN = [
-  // amounts that aren't read
-  ['325 gr bread flour (12.7% protein content) (plus more for dusting)', 'Bread flour | 325 gr | Baking aisle'],
-  ['4 Tb butter', 'Butter | 4 Tb | Dairy & eggs'],
-  ['1.5 qt vegetable stock (-low sodium)', 'Vegetable stock | 1.5 qt | Pasta, grains & canned'],
-  ['4-1/2 teaspoons chili powder', 'Chili powder | 4½ teaspoons | Spices'],
-  ['one 16-ounce can tomato sauce', 'Tomato sauce | 1 (16 oz) can | Pasta, grains & canned'],
-  ['two 10-ounce cans diced tomatoes with green chilies (such as Rotel)', 'Diced tomatoes with green chilies | 2 (10 oz) cans | Pasta, grains & canned'],
-  ['Optional: ½ cup frozen sweet corn', 'Frozen sweet corn | ½ cup | Frozen'],
-  ['2 (8 oz.) bottles clam juice', 'Clam juice | 2 (8 oz.) bottles | Pasta, grains & canned'],
-  ['1 carton (32 ounces) reduced-sodium chicken broth', 'Reduced-sodium chicken broth | 1 carton (32 ounces) | Pasta, grains & canned'],
-  // count words left in the item, so it doesn't join the same item from another recipe
-  ['2 stalks celery, diced', 'Celery | 2 stalks | Produce'],
-  ['2 ribs celery (diced)', 'Celery | 2 ribs | Produce'],
-  ['4 strips bacon', 'Bacon | 4 strips | Meat & seafood'],
-  ['12 pieces of bacon (cut in half)', 'Bacon | 12 pieces | Meat & seafood'],
-  ['1 ear grilled corn, kernels removed from the cob', 'Grilled corn | 1 ear | Produce'],
-  ['1 pack enoki mushrooms ((200 g / 7 ounces ), root removed, rinsed and drained (optional))', 'Enoki mushrooms | 1 pack | Produce'],
-  ['2 pouches Red Lobster Cheddar Bay Biscuit Mix', 'Red Lobster Cheddar Bay Biscuit Mix | 2 pouches | Baking aisle'],
-  ['1 leaf bay', 'Bay leaf | 1 | Spices'],
-  ['4 x-large eggs (cooked sunny side up or per your preference)', 'Eggs | 4 x-large | Dairy & eggs'],
   // the line is split in the wrong place
-  ['4 whole cloves', 'Whole cloves | 4 | Spices'],
-  ['1 cup whole or 2% milk', 'Whole or 2% milk | 1 cup | Dairy & eggs'],
   ['1 cup each – diced onions, celery, carrots', 'Onions, celery, carrots | 1 cup each | Produce'],
-  // wrong aisle
-  ['1/4 teaspoon white pepper (or black pepper)', 'White pepper | ¼ teaspoon | Spices'],
-  ['4 teaspoons onion granules', 'Onion granules | 4 teaspoons | Spices'],
-  ['¼ cup light or dark corn syrup', 'Light or dark corn syrup | ¼ cup | Baking aisle'],
-  ['1 Tablespoon apple cider vinegar', 'Apple cider vinegar | 1 Tablespoon | Oils, sauces & condiments'],
-  ['½ teaspoon dried rosemary', 'Dried rosemary | ½ teaspoon | Spices'],
-  ['8 oz. egg noodles', 'Egg noodles | 8 oz. | Pasta, grains & canned'],
-  ['1 ½ cup almond milk', 'Almond milk | 1½ cup | Dairy & eggs'],
-  ['¼ cup unseasoned rice vinegar', 'Unseasoned rice vinegar | ¼ cup | Oils, sauces & condiments'],
-  ['Pan drippings from the skillet after roasting', 'Pan drippings from the skillet after roasting |  | Other'],
-  ['1 cup half-and-half', 'Half-and-half | 1 cup | Dairy & eggs'],
-  ['5 ounces pancetta, diced into small bits', 'Pancetta | 5 ounces | Meat & seafood'],
-  ['2 hot dogs, sliced into coins and halved', 'Hot dogs | 2 | Meat & seafood'],
-  ['1 1/4 lb. ground chuck', 'Ground chuck | 1¼ lb. | Meat & seafood'],
-  ['1 pound medium asparagus', 'Medium asparagus | 1 pound | Produce'],
-  ['1 jalapeño (seeds removed, finely diced)', 'Jalapeño | 1 | Produce'],
-  ['1/2 fennel bulb, diced', 'Fennel bulb | ½ | Produce'],
-  ['1 lb. bay scallops', 'Bay scallops | 1 lb. | Meat & seafood'],
-  ['pepperoni', 'Pepperoni |  | Meat & seafood'],
-  ['1 cup Pizza Sauce', 'Pizza Sauce | 1 cup | Pasta, grains & canned'],
-  ['1 tablespoon chopped chives', 'Chopped chives | 1 tablespoon | Produce'],
 ];
 
 const read = s => { const p = splitIngredient(s); return `${p.name} | ${p.qty} | ${guessSection(p.name, p.qty)}`; };

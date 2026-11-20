@@ -179,7 +179,8 @@ body.dragging #tripDrop{outline:2px dashed var(--accent);outline-offset:3px;anim
 .items{overflow:hidden}
 .item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);transition:background .15s}
 .item:first-child{border-top:0}
-.check{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line-dark);background:#fff;display:grid;place-items:center;padding:0}
+.check{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line-dark);background:#fff;display:grid;place-items:center;padding:0;position:relative}
+.check::after{content:'';position:absolute;inset:-9px;border-radius:50%}
 .check svg{width:16px;height:16px;opacity:0}
 .item.bought .check{background:var(--green);border-color:var(--green)}
 .item.bought .check svg{opacity:1}

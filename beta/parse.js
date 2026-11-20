@@ -138,7 +138,7 @@ const SAME_KEY = {'rice wine vinegar':'rice vinegar', 'scallion':'green onion', 
   'garbanzo bean':'chickpea', 'chick pea':'chickpea', 'bicarbonate of soda':'baking soda', 'bicarb soda':'baking soda',
   'corn starch':'cornstarch', 'heavy whipping cream':'heavy cream', 'plain flour':'all purpose flour', 'ap flour':'all purpose flour',
   'white sugar':'granulated sugar', 'granulated white sugar':'granulated sugar', 'courgette':'zucchini', 'aubergine':'eggplant',
-  'parmesan cheese':'parmesan'};
+  'parmesan cheese':'parmesan', 'evoo':'virgin olive oil'};
 // Names that might be the same thing. The shopping list asks before putting them on one line.
 export const MAYBE_SAME = [['olive oil','virgin olive oil'], ['vegetable oil','neutral oil','canola oil'], ['salt','kosher salt','sea salt','table salt','fine sea salt'],
   ['butter','unsalted butter','salted butter'], ['brown sugar','light brown sugar','dark brown sugar'], ['heavy cream','whipping cream'],

@@ -180,7 +180,12 @@ function renderLanding(member){
   // How it works steps (Nov 19, 2026): number and title on one line, then the text, then the screenshot in a same-size frame, so the three line up on computers.
   const step = (n, h, p, img, alt) => `<li><div class="lp-sh"><span class="lp-num">${n}</span><h3>${h}</h3></div><p>${p}</p>${img ? `<figure class="lp-shot lp-shot-${n}"><img src="/landing/${img}" alt="${alt}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}</li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
-  const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
+  const card2 = (h, p, ico) => `<div class="lp-card lp-mini">${ico ? `<svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg>` : ''}<h3>${h}</h3><p>${p}</p></div>`;
+  // Lucide icons (link, camera, clipboard, pencil) for the ways to bring recipes in (Nov 19, 2026).
+  const I_LINK = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    I_CAM = '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    I_CLIP = '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/>',
+    I_PEN = '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>';
   return `<div class="lp">
   <section class="lp-hero">
     <div class="lp-copy">
@@ -206,20 +211,20 @@ function renderLanding(member){
   <section class="lp-sec lp-white">
     <span class="lp-eyebrow">Your recipes</span>
     <h2 class="lp-h2">Bring your recipes in wherever they live now.</h2>
-    <div class="lp-three lp-four">
-      ${card2('Paste a link', 'From a recipe site.')}
-      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.')}
-      ${card2('Paste the text', 'From a post, a note, or an email.')}
-      ${card2('Type it in', "Like Grandma's card from the drawer.")}
+    <div class="lp-three lp-four lp-ways">
+      ${card2('Paste a link', 'From a recipe site.', I_LINK)}
+      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.', I_CAM)}
+      ${card2('Paste the text', 'From a post, a note, or an email.', I_CLIP)}
+      ${card2('Type it in', "Like Grandma's card from the drawer.", I_PEN)}
     </div>
   </section>
   <section class="lp-sec">
     <span class="lp-eyebrow">The math</span>
     <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
     <div class="lp-three lp-four">
-      ${card2('Standard measures', 'The same kitchen measures you already use: 3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup.')}
+      ${card2('Standard measures', 'The same kitchen measures you already use: 3&nbsp;tsp is 1&nbsp;Tbsp, and 16&nbsp;Tbsp is 1&nbsp;cup.')}
       ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.')}
-      ${card2('Any size', 'Pick serving sizes from as small as ½ the recipe to 3× the recipe.')}
+      ${card2('Any size', 'Pick serving sizes from as small as ½&nbsp;the recipe to 3×&nbsp;the recipe.')}
       ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
     </div>
   </section>

@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { extname, join, normalize } from 'node:path';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url)); // the repo root, so /beta/ and the shared files load as on the site
 const MOCK = await readFile(fileURLToPath(new URL('./mock-database.js', import.meta.url)), 'utf8');
@@ -28,7 +28,10 @@ let failed = 0, total = 0;
 const check = (label, got, want) => { total++; const ok = JSON.stringify(got) === JSON.stringify(want); if(!ok) failed++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${ok ? '' : `\n      got:      ${JSON.stringify(got)}\n      expected: ${JSON.stringify(want)}`}`); };
 const rec = (title, lines) => ({title, ingredients: [{group: '', items: lines}], steps: [{section: '', items: [{title: '', text: 'Mix everything together and cook until done.', timers: []}]}]});
 
-const browser = await chromium.launch(process.env.CHROME_PATH ? {executablePath: process.env.CHROME_PATH} : {});
+// BROWSER=webkit runs the same checks in Safari's engine (what iPhones use). GitHub runs both.
+const ENGINE = process.env.BROWSER === 'webkit' ? webkit : chromium;
+console.log('Browser: ' + (ENGINE === webkit ? 'WebKit (Safari)' : 'Chromium (Chrome)'));
+const browser = await ENGINE.launch(ENGINE === chromium && process.env.CHROME_PATH ? {executablePath: process.env.CHROME_PATH} : {});
 async function open({seed, mobile} = {}){
   const ctx = await browser.newContext(mobile ? {viewport: {width: 375, height: 740}, isMobile: true, hasTouch: true} : {viewport: {width: 1280, height: 900}});
   const p = await ctx.newPage(); const errors = [];

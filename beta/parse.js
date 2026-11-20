@@ -125,7 +125,7 @@ export function sectionsToStepText(secs){
 }
 
 // ---- shopping ----
-const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','pints?','containers?','jars?','bags?','tins?','packets?','blocks?','bricks?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','large','medium','small','whole'];
+const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tb','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','gr','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','qts?','pints?','containers?','cartons?','bottles?','pouch(?:es)?','jars?','bags?','tins?','packets?','blocks?','bricks?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','x-large','large','medium','small','whole(?!\\s+(?:or\\b|cloves?(?![A-Za-z])(?!\\s+(?:of\\s+)?garlic)))'];
 const Q = '(?:\\d+\\s*['+FRAC+']|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?|['+FRAC+'])';
 const LEAD = new RegExp('^((?:about |approx\\.? )?'+Q+'(?:\\s*(?:-|–|to)\\s*'+Q+')?\\s*(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:of\\s+)?)','i');
 const DESCRIPTORS = /\b(fresh|freshly|chopped|sliced|diced|minced|softened|chilled|cold|ice[- ]cold|cubed|melted|room temperature|at room temperature|divided|optional|packed|lightly|finely|thinly|roughly|large|small|medium|extra|pure|grated|shredded|whole|to taste|for garnish|for serving|plus more|spooned and leveled|beaten|ground)\b/g;
@@ -149,7 +149,9 @@ const MODW = '(?:heaping|heaped|scant|level|rounded|generous|(?:lightly |firmly 
 const MODQ = new RegExp('^([\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?)\\s+' + MODW + '\\s+(?=(?:cups?|c\\.|tablespoons?|tbsps?|tbs|teaspoons?|tsps?|T\\.?|t\\.?)(?![A-Za-z]))', 'i');
 export function splitIngredient(line){
   // ".5 cup oil" is 0.5 cup: a decimal written without the 0 in front
-  let s = prettyFractions(String(line||'').trim().replace(BULLET,'').replace(/^\.(\d)/, '0.$1')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
+  // "4-1/2 teaspoons" (Taste of Home and older cookbooks) is 4½; "one 16-ounce can" is 1 16-ounce can; "Optional: ½ cup corn" is ½ cup corn
+  let s = prettyFractions(String(line||'').trim().replace(BULLET,'').replace(/^optional\s*:\s*/i, '').replace(/^(\S+\s+)leaf bay\b/i, '$1bay leaf').replace(/^\.(\d)/, '0.$1')
+    .replace(/(^|\()(\d+)-(\d+\/\d+)(?=\s)/g, '$1$2 $3').replace(/^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=\d)/i, (m, w) => NUMW[w.toLowerCase()] + ' ')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   // Recipe cards often write T. for tablespoon and t. for teaspoon (capital T is the bigger spoon)
   // "3 garlic cloves" is 3 cloves of garlic, the same item as "2 cloves garlic", so the two add up
@@ -185,10 +187,15 @@ export function splitIngredient(line){
   // "4 roma tomatoes roughly chopped" with no comma: the prep words at the end aren't part of what you buy ("Roma tomatoes")
   { const PREP = '(?:(?:roughly|finely|coarsely|thinly|lightly)\\s+)?(?:chopped|diced|minced|sliced|grated|shredded|crushed|peeled|halved|quartered|cubed|julienned|torn|smashed|trimmed|rinsed|drained|beaten|melted|softened|sifted|toasted)';
     const t = name.replace(new RegExp('\\s+' + PREP + '(?:\\s+(?:and|&)\\s+' + PREP + ')*$', 'i'), ''); if(t && t !== name && /[a-z]/i.test(t)) name = t; }
+  // "2 stalks celery", "12 pieces of bacon": the count word belongs with the amount, so the item is Celery or Bacon
+  if(qty && !/[a-z]/i.test(qty.replace(/\([^)]*\)/g, ''))){ const cw = name.match(/^(stalks?|ribs?|strips?|pieces?|ears?|packs?)\s+(?:of\s+)?(\S.*)$/i); if(cw){ qty += ' ' + cw[1].toLowerCase(); name = cw[2]; } }
+  // "1 Bottle (750 ml Riesling Wine)": when the item is inside the size's parentheses, it's the item
+  if(!name){ const pm = qty.match(/^(.*?)\s*\(\s*\d[\d.,]*\s*[a-z]*\.?\s+([^()]*[a-z][^()]*)\)\s*$/i); if(pm){ qty = pm[1]; name = pm[2].trim(); } }
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   // The key's last word is the same for one or many: tomato/tomatoes, cherry/cherries, bay leaf/bay leaves all share a key
-  const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f') || name.toLowerCase();
+  // Accents don't make a different item (jalapeño, jalapeno), and "whole or 2% milk" is milk
+  const key = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f').replace(/^or /, '') || name.toLowerCase();
   // rest: the line after its amount, used to show the line at another recipe size. Not enumerable, so the result's shape is unchanged.
   return Object.defineProperty({qty, name, key: SAME_KEY[key] || key}, 'rest', {value: rest});
 }
@@ -211,23 +218,25 @@ export function ingReplacePart(line, i, text){ const parts = ingParts(line); if(
 export const SECTIONS = ['Produce','Meat & seafood','Dairy & eggs','Bakery & bread','Baking aisle','Pasta, grains & canned','Oils, sauces & condiments','Spices','Frozen','Supplies','Other'];
 const W = s => new RegExp('\\b(' + s + ')(e?s)?\\b');
 const GUESS = [
-  ['Baking aisle', W('cream of tartar|baking powder|baking soda|flour|sugar|yeast|vanilla|extract|cocoa|chocolate|chocolate chip|chip|candy melt|sprinkle|cornstarch|shortening|confectioner|molasses|honey|maple syrup|oat|pecan|walnut|almond|coconut|gelatin|food coloring|marshmallow|graham cracker|peanut butter')],
-  ['Spices', W('cinnamon|nutmeg|allspice|ground ginger|paprika|cumin|oregano|thyme|chili powder|garlic powder|onion powder|cayenne|clove|cardamom|turmeric|coriander|bay leaf|bay leave|red pepper flake|italian seasoning|black pepper|salt|seasoning|curry powder')],
+  ['Baking aisle', W('cream of tartar|baking powder|baking soda|flour|sugar|yeast|vanilla|extract|cocoa|chocolate|chocolate chip|chip|candy melt|sprinkle|cornstarch|shortening|confectioner|molasses|honey|maple syrup|oat|pecan|walnut|almond|coconut|gelatin|food coloring|marshmallow|graham cracker|peanut butter|corn syrup|raisin|biscuit mix|cake mix|brownie mix|pancake mix|muffin mix')],
+  ['Spices', W('cinnamon|nutmeg|allspice|ground ginger|paprika|cumin|oregano|thyme|chili powder|garlic powder|onion powder|cayenne|clove|cardamom|turmeric|coriander|bay leaf|bay leave|red pepper flake|italian seasoning|black pepper|salt|seasoning|curry powder|white pepper|onion granule|garlic granule|dried rosemary|dried sage|ground sage')],
   ['Frozen', W('frozen|ice cream')],
   ['Dairy & eggs', W('milk|butter|cream|cheese|ricotta|mozzarella|parmesan|cheddar|feta|yogurt|egg|buttermilk|half and half')],
-  ['Meat & seafood', W('chicken|beef|pork|turkey|sausage|bacon|ham|lamb|steak|shrimp|salmon|fish|tuna|cod')],
-  ['Produce', W('apple|banana|berry|berrie|blueberry|blueberrie|strawberry|strawberrie|raspberry|raspberrie|lemon|lime|orange|onion|garlic|shallot|bell pepper|pepper|tomato|tomatoe|potato|potatoe|carrot|celery|zucchini|squash|pumpkin|mushroom|spinach|kale|lettuce|cabbage|broccoli|cauliflower|herb|parsley|cilantro|basil|mint|rosemary|scallion|green onion|avocado|cucumber|corn|ginger|fruit|peach|peache|pear|cherry|cherrie|grape|mango|pineapple|jalapeno')],
-  ['Bakery & bread', W('bread|bun|roll|tortilla|bagel|pita|naan|croissant')],
-  ['Pasta, grains & canned', W('pasta|noodle|spaghetti|lasagna|macaroni|rice|quinoa|couscous|broth|stock|bean|chickpea|lentil|tomato paste|tomato sauce|crushed tomato')],
+  ['Meat & seafood', W('chicken|beef|pork|turkey|sausage|bacon|ham|lamb|steak|shrimp|salmon|fish|tuna|cod|pancetta|prosciutto|hot dog|pepperoni|chuck|scallop|chorizo|salami|meatball|little smokie')],
+  ['Produce', W('apple|banana|berry|berrie|blueberry|blueberrie|strawberry|strawberrie|raspberry|raspberrie|lemon|lime|orange|onion|garlic|shallot|bell pepper|pepper|tomato|tomatoe|potato|potatoe|carrot|celery|zucchini|squash|pumpkin|mushroom|spinach|kale|lettuce|cabbage|broccoli|cauliflower|herb|parsley|cilantro|basil|mint|rosemary|scallion|green onion|avocado|cucumber|corn|ginger|fruit|peach|peache|pear|cherry|cherrie|grape|mango|pineapple|jalapeno|jalapeño|asparagus|fennel|chive|leek|tarragon|poblano|serrano|eggplant|radish|beet|dill')],
+  ['Bakery & bread', W('bread|bun|roll|tortilla|bagel|pita|naan|croissant|breadcrumb|bread crumb|panko')],
+  ['Pasta, grains & canned', W('pasta|noodle|spaghetti|lasagna|macaroni|rice|quinoa|couscous|broth|stock|bean|chickpea|lentil|tomato paste|tomato sauce|crushed tomato|olive')],
   ['Oils, sauces & condiments', W('oil|vinegar|soy sauce|mustard|ketchup|mayo|mayonnaise|hot sauce|worcestershire|sriracha|salsa|dressing|pesto')],
   ['Supplies', W('stick|parchment|foil|plastic wrap|liner|skewer|toothpick|pan|dish')],
 ];
 // Checked before the aisle list, because the list stops at the first word it knows ("tomato" is Produce, "coconut" is Baking aisle).
-const CANNED = /\b(tomato (?:pur[ée]e|paste|sauce)|passata|fire[- ]roasted tomato|crushed tomato|diced tomato|stewed tomato|whole peeled tomato|coconut (?:milk|cream)|canned)/;
+const CANNED = /\b(broth|stock|bouillon|egg noodles?|clam juice|pizza sauce|marinara|pasta sauce|tomato (?:pur[ée]e|paste|sauce)|passata|fire[- ]roasted tomato|crushed tomato|diced tomato|stewed tomato|whole peeled tomato|coconut (?:milk|cream)|canned)/;
 export function guessSection(name, qty){
-  const n = String(name).toLowerCase();
-  // anything named oil ("avocado or grapeseed oil") is with the oils, unless it's packed in oil ("tuna in oil")
-  if(/\boils?\b/.test(n) && !/\b(?:in|packed in) (?:olive )?oil\b|oil[- ]packed/.test(n)) return 'Oils, sauces & condiments';
+  const n = String(name).toLowerCase().replace(/-/g, ' ');
+  if(/\bdrippings\b/.test(n)) return 'Other';
+  if(/\b(?:almond|oat|soy|cashew|rice) milk\b/.test(n)) return 'Dairy & eggs';
+  // anything named oil or vinegar ("avocado or grapeseed oil") is with the oils, unless it's packed in oil ("tuna in oil")
+  if(/\b(?:oils?|vinegars?)\b/.test(n) && !/\b(?:in|packed in) (?:olive )?oil\b|oil[- ]packed/.test(n)) return 'Oils, sauces & condiments';
   if(CANNED.test(n)) return 'Pasta, grains & canned';
   if(/\bgarlic\b/.test(n) && !/\bgarlic (?:powder|salt|granules|flakes)\b|\bgranulated garlic\b/.test(n)) return 'Produce';
   let sec = 'Other'; for(const [s, re] of GUESS) if(re.test(n)){ sec = s; break; }
@@ -238,7 +247,7 @@ export function guessSection(name, qty){
 
 // ---- adding amounts together ("1 large + 2 large" → "3 large") ----
 const FV = {'⅙':1/6,'⅚':5/6,'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
-const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(heads?)$/i,'head'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub|tin|packet|block|brick)s?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
+const UNIT_NORM = [[/^(cups?|c\.?)$/i,'cup'],[/^(tablespoons?|tbsps?|tbs|tbl|tb)\.?$/i,'Tbsp'],[/^(teaspoons?|tsps?)\.?$/i,'tsp'],[/^floz$/i,'fl oz'],[/^(ounces?|oz)\.?$/i,'oz'],[/^(pounds?|lbs?)\.?$/i,'lb'],[/^(grams?|g|gr)$/i,'g'],[/^(kg|kilograms?)$/i,'kg'],[/^(l|liters?|litres?)$/i,'l'],[/^(ml|milliliters?)$/i,'ml'],[/^(cloves?)$/i,'clove'],[/^(heads?)$/i,'head'],[/^(cans?)$/i,'can'],[/^(sticks?)$/i,'stick'],[/^(jar|bag|package|bottle|container|envelope|carton|tub|tin|packet|block|brick|pouch)(?:e?s)?$/i,'$1'],[/^box(es)?$/i,'box'],[/^(large|medium|small|whole)$/i,'$1'],[/^$/,'']];
 function num(s){
   s = s.trim(); let m;
   if((m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])$/))) return +m[1] + FV[m[2]];
@@ -256,7 +265,7 @@ function nice(n){
   if(Math.abs(best[0] - frac) > .03) return String(Math.round(n * 100) / 100);
   return (w ? String(w) : '') + best[1] || '0';
 }
-const QDESC = /\s+((?:extra[- ])?large|medium|small|jumbo|whole|(?:small|medium|large)-(?:small|medium|large))$/i;
+const QDESC = /\s+((?:extra[- ]|x-)?large|medium|small|jumbo|whole|(?:small|medium|large)-(?:small|medium|large))$/i;
 const QN = '(\\d+\\s*[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?|[½¼¾⅓⅔⅛⅜⅝⅞⅙⅚])';
 const PART = new RegExp('^' + QN + '(?:\\s*(?:-|–|to)\\s*' + QN + ')?\\s*(\\([^)]*\\))?\\s*([A-Za-z.]*)\\s*(\\([^)]*\\))?$');
 // A weight or volume written in parentheses, like "(200g)" or "(240 ml)". Totals keep it when every part has one.

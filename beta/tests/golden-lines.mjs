@@ -255,6 +255,11 @@ export const LINES = [
   ['2 Tbsp butter melted', 'Butter', '2 Tbsp'],
   ['1 (28 oz) can crushed tomatoes', 'Crushed tomatoes', '1 (28 oz) can'],
   ['½ cup sliced almonds', 'Sliced almonds', '½ cup'],
+  // ---- can size written "15-oz." (reported from the live site, Nov 19, 2026)
+  ['1 15-oz. can tomato sauce', 'Tomato sauce', '1 (15 oz) can'],
+  ['1 15-oz can tomato sauce', 'Tomato sauce', '1 (15 oz) can'],
+  ['1 15.5-ounce can chickpeas', 'Chickpeas', '1 (15.5 oz) can'],
+  ['2 15 oz cans black beans', 'Black beans', '2 (15 oz) cans'],
   // ---- no amount
   ['Salt and pepper, to taste', 'Salt and pepper', ''],
   ['Fresh parsley, for garnish', 'Fresh parsley', ''],

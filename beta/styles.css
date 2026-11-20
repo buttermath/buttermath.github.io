@@ -1352,3 +1352,7 @@ button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 .lp-after{margin:26px 0 0;color:var(--muted);font-size:15px;line-height:1.5}.lp-after b{color:var(--ink)}
 /* Nov 19: the step hint waits until the current step is on screen */
 .ghostchk.wait{animation:none;opacity:0}
+/* Nov 19 landing page: a real screenshot above each How it works step, framed like the phone screenshots in social posts */
+.lp-shot{margin:0 0 6px;max-width:280px;max-height:360px;overflow:hidden;border:2px solid var(--ink);border-radius:22px;box-shadow:6px 6px 0 var(--ink);background:#fff}
+.lp-shot img{display:block;width:100%;height:auto}
+@media(max-width:760px){.lp-shot{max-width:300px;margin-inline:auto}}

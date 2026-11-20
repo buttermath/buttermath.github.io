@@ -2038,7 +2038,9 @@ async function downloadBackup(){
   const {data, error} = await sb.rpc('admin_backup');
   if(error){ console.error(error); toast("Couldn't create the backup"); return; }
   const files = [{name: 'backup.json', data: new TextEncoder().encode(JSON.stringify(data, null, 2))}];
-  const pics = []; (function walk(o){ if(!o || typeof o !== 'object') return; if(typeof o.photo === 'string' && /^https?:/.test(o.photo)) pics.push({url: o.photo, path: o.photoPath}); Object.values(o).forEach(walk); })(data);
+  // Photos of sent recipes that were already saved or dismissed are skipped: nobody sees them again, and the sender may have replaced that photo since.
+  // The sent-recipe records themselves stay in backup.json.
+  const pics = []; (function walk(o){ if(!o || typeof o !== 'object') return; if(typeof o.photo === 'string' && /^https?:/.test(o.photo)) pics.push({url: o.photo, path: o.photoPath}); Object.values(o).forEach(walk); })(Object.assign({}, data, {recipe_shares: ((data && data.recipe_shares) || []).filter(s => !s.dismissed)}));
   const seen = new Set(); let ok = 0, bad = 0;
   for(const p of pics){ const name = 'photos/' + (p.path || p.url.split('/photos/').pop().split('?')[0]); if(seen.has(name)) continue; seen.add(name);
     toast(`Saving photos… ${ok + bad + 1} of ${pics.length}`);

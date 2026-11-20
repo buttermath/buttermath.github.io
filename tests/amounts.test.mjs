@@ -101,6 +101,20 @@ for(const [a, b] of [['1 tsp kosher salt', '1 tsp salt'], ['2 tbsp unsalted butt
   ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro']])
   check('kept apart: ' + a.replace(/^[^a-z]+/i, '') + ' / ' + b.replace(/^[^a-z]+/i, ''), key(a) === key(b), false);
 
+// One and many are the same item (stress test, Nov 20): "1 tomato" + "2 tomatoes" is one line of 3
+for(const [a, b] of [['1 tomato', '2 tomatoes'], ['1 potato', '3 potatoes'], ['1 cherry', '5 cherries'], ['1 bay leaf', '2 bay leaves'],
+  ['1 mango', '2 mangoes'], ['1 strawberry', '4 strawberries'], ['1 cookie', '2 cookies'], ['1 olive', '10 olives'], ['1 sweet potato', '2 sweet potatoes'],
+  ['1 cup cherry tomatoes', '2 cups cherry tomatoes'], ['1 avocado', '2 avocados']])
+  check('same item: ' + a.replace(/^[^a-z]+/i, '') + ' = ' + b.replace(/^[^a-z]+/i, ''), key(a), key(b));
+check('1 tomato + 2 tomatoes', addQty(splitIngredient('1 tomato').qty, splitIngredient('2 tomatoes').qty, {key: key('2 tomatoes')}), '3');
+// Pinches and juice stay their own lines (Hayley, Nov 20)
+for(const [a, b] of [['a pinch of salt', '1 tsp salt'], ['juice of 1 lemon', '1 lemon'], ['juice of 1 lime', '2 limes']])
+  check('kept apart: ' + a + ' / ' + b, key(a) === key(b), false);
+// A decimal without the 0 in front (stress test, Nov 20)
+check('".5 cup oil" is ½ cup', JSON.stringify(splitIngredient('.5 cup oil')), '{"qty":"0.5 cup","name":"Oil","key":"oil"}');
+check('".5 cup" adds up', addQty(splitIngredient('.5 cup milk').qty, '1 cup', {key: 'milk'}), '1½ cups');
+check('".25 tsp" adds up', addQty(splitIngredient('- .25 tsp salt').qty, '¾ tsp', {key: 'salt'}), '1 tsp');
+
 // Scaling a recipe (½×, 1½×, 2×, 3×, or a serving size). Checked by hand, Nov 19.
 console.log('\nScaling a recipe');
 for(const [line, f, want] of [

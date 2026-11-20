@@ -1485,3 +1485,6 @@ button.rtag.add::after{inset:-7px 0;border-radius:99px}
 /* Photo buttons: the file picker inside is what keyboard users land on, so the round button shows the focus ring (Nov 20, 2026). */
 .heroedit:focus-within,.picbtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .heroedit .vh,.picbtn .vh{pointer-events:none}
+/* "Add a photo of your finished recipe" works from the keyboard too (Nov 20, 2026). */
+.madeit:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.madeit .vh{pointer-events:none}

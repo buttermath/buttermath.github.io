@@ -198,7 +198,7 @@ function renderLanding(member){
       <p class="lp-lede">Get your recipes onto one shopping list. Butter Math sorts the list by grocery aisle and organizes your ingredients with accurate measurements.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
-    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">
+    <div class="lp-phone lp-anim" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>

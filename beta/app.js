@@ -1976,16 +1976,40 @@ function enterKitchen(){
   go();
 }
 let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null, adminFr = null, adminErr = null, admSort = 'new', admQ = '';
+// Admin sections fold up (Nov 20, 2026). Errors opens on its own when there are new ones.
+let admOpen = (() => { try{ return JSON.parse(localStorage.getItem('bm-admopen') || '{}'); }catch(e){ return {}; } })();
+const admTop = (key, title, def, force) => `<details class="card panel admbox ${key}" data-adm="${key}"${force || (admOpen[key] ?? def) ? ' open' : ''}><summary><h3>${title}</h3>${ICON_CHEV}</summary><div class="admb">`;
+// New errors are highlighted until Hayley opens them, or taps Mark all read. What she's read is saved to her account, so it carries across devices.
+const errKey = x => String(x.id ?? (x.at + '|' + x.msg));
+const errNew = x => new Date(x.at).getTime() > (P().errSeenAt || 0) && !(P().errSeen || {})[errKey(x)];
 function renderErrors(){
-  const e = adminErr, head = n => `<div class="card panel errs"><h3>Errors${n !== '' ? ` <small>${n}</small>` : ''}</h3>`;
-  if(!e) return head('') + `<div class="muted">Checking…</div></div>`;
-  if(e.err) return head('') + `<div class="muted">Couldn't load the error log right now.</div></div>`;
-  if(!e.length) return head(0) + `<div class="muted">No errors logged yet.</div></div>`;
+  const e = adminErr, nn = Array.isArray(e) ? e.filter(errNew).length : 0;
+  const head = n => admTop('errs', `Errors${n !== '' ? ` <small>${n}</small>` : ''}<span class="newpill"${nn ? '' : ' hidden'}>${nn} new</span>`, false, nn > 0);
+  if(!e) return head('') + `<div class="muted">Checking…</div></div></details>`;
+  if(e.err) return head('') + `<div class="muted">Couldn't load the error log right now.</div></div></details>`;
+  if(!e.length) return head(0) + `<div class="muted">No errors logged yet.</div></div></details>`;
   const dev = ua => { ua = ua || ''; const d = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other'; const b = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : ''; return d + (b ? ' · ' + b : ''); };
   const when = t => new Date(t).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
   const lbl = {shown:'Shown to member', error:'Error', crash:'Crash', amount:'Amount not understood'};
-  return head(e.length) + `<p class="muted errnote">The last 50 problems members ran into, newest first. Tap one for details.</p><div class="errlist">${e.map(x => `<details class="errrow"><summary><b>${esc(x.msg)}</b><small>${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div>`;
+  return head(e.length) + `<div class="errtop"><p class="muted errnote">The last 50 problems members ran into, newest first. New ones are highlighted until you open them.</p><button class="btn sm" data-act="errall"${nn ? '' : ' hidden'}>Mark all read</button></div><div class="errlist">${e.map(x => `<details class="errrow${errNew(x) ? ' new' : ''}" data-ek="${esc(errKey(x))}"><summary><b><i class="edot" aria-hidden="true"></i>${esc(x.msg)}</b><small>${errNew(x) ? '<span class="vh">New. </span>' : ''}${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div></details>`;
 }
+function errRead(key){
+  const keep = new Set((Array.isArray(adminErr) ? adminErr : []).map(errKey));
+  mutate(k => { const s = {}; Object.keys(k.progress.errSeen || {}).forEach(x => { if(keep.has(x)) s[x] = 1; }); s[key] = 1; k.progress.errSeen = s; }, true);
+  errPill();
+}
+function errPill(){
+  const nn = Array.isArray(adminErr) ? adminErr.filter(errNew).length : 0;
+  document.querySelectorAll('.errrow.new').forEach(r => { if(!errNew((adminErr || []).find(x => errKey(x) === r.dataset.ek) || {at: 0})){ r.classList.remove('new'); r.querySelector('.vh')?.remove(); } });
+  const p = document.querySelector('.errs .newpill'); if(p){ p.textContent = nn + ' new'; p.hidden = !nn; }
+  const b = document.querySelector('[data-act="errall"]'); if(b) b.hidden = !nn;
+}
+document.addEventListener('toggle', ev => { const d = ev.target; if(!(d instanceof HTMLDetailsElement)) return;
+  if(d.open && d.classList.contains('errrow') && d.classList.contains('new')) errRead(d.dataset.ek);
+}, true);
+// Only Hayley's own taps are remembered, so Errors still opens on its own the next time something new comes in.
+document.addEventListener('click', ev => { const sm = ev.target.closest && ev.target.closest('.admbox>summary'); if(!sm) return; const d = sm.parentElement;
+  admOpen[d.dataset.adm] = !d.open; try{ localStorage.setItem('bm-admopen', JSON.stringify(admOpen)); }catch(e){} }, true);
 function renderAdmin(){
   const back = `${backBtn()}<h2 class="ptitle">Admin</h2>`;
   if(!isAdmin) return back + `<div class="card empty">This page is only for the site administrator.</div>`;
@@ -2008,17 +2032,17 @@ function renderAdmin(){
   const q = admQ.trim().toLowerCase();
   const friendLine = u => { const f = fr(u); if(!adminFr) return ''; if(!f) return ' · 0 friends';
     return ` · ${f.friends} friend${f.friends == 1 ? '' : 's'}${f.pending ? ` (${f.pending} waiting)` : ''}${f.shared ? ` · ${f.shared} recipe${f.shared == 1 ? '' : 's'} sent` : ''}`; };
-  return back + renderHealth() + renderErrors() + `<div class="card panel"><h3>Members <small>${adminData.length}</small></h3>
+  return back + renderHealth() + renderErrors() + admTop('members', `Members <small>${adminData.length}</small>`, true) + `
     ${using !== null ? `<div class="muted afr">${using} of ${adminData.length} member${adminData.length === 1 ? ' has' : 's have'} at least one friend.</div>` : ''}
     <div class="atools"><input class="tin" id="adm-q" data-keep type="search" placeholder="Search members" value="${esc(admQ)}" autocomplete="off" aria-label="Search members">
     <select class="tin" id="adm-sort" aria-label="Sort members">${[['new', 'Newest joined'], ['old', 'Oldest joined'], ['az', 'A–Z'], ['active', 'Last signed in'], ['friends', 'Most friends']].map(([k, l]) => `<option value="${k}"${admSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
     <div class="atable ascroll">${list.map(u => { const s = (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase(); return `<div class="arow amem" data-s="${esc(s)}"${q && !s.includes(q) ? ' hidden' : ''}><div class="amtop"><b>${esc(u.name || '—')}</b><span class="muted">${esc(u.email)}</span></div><div class="muted">Joined ${fmtD(u.created_at)} · Last in ${fmtD(u.last_sign_in_at)}</div><div class="muted">${u.recipes} recipe${u.recipes == 1 ? '' : 's'}${friendLine(u)}</div></div>`; }).join('')}
-    <div class="muted anone"${q && !list.some(u => (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase().includes(q)) ? '' : ' hidden'}>No members match.</div></div></div>`;
+    <div class="muted anone"${q && !list.some(u => (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase().includes(q)) ? '' : ' hidden'}>No members match.</div></div></div></details>`;
 }
 function renderHealth(){
   const u = adminUsage;
-  if(!u) return `<div class="card panel health"><h3>Site health</h3><div class="muted">Checking…</div></div>`;
-  if(u.err) return `<div class="card panel health"><h3>Site health</h3><div class="muted">Couldn't check usage right now.</div></div>`;
+  if(!u) return admTop('health', 'Site health', true) + `<div class="muted">Checking…</div></div></details>`;
+  if(u.err) return admTop('health', 'Site health', true) + `<div class="muted">Couldn't check usage right now.</div></div></details>`;
   const MB = 1024 * 1024, mb = b => (b / MB < 10 ? (b / MB).toFixed(1) : Math.round(b / MB)) + ' MB';
   const rows = [
     ['Recipes & lists', u.db_bytes, 500 * MB, mb(u.db_bytes) + ' of 500 MB'],
@@ -2028,12 +2052,12 @@ function renderHealth(){
   const days = u.last_active ? Math.floor((Date.now() - new Date(u.last_active)) / 864e5) : null;
   const worst = Math.max(...rows.map(r => r[1] / r[2]));
   const warn = worst >= .8 ? `<div class="hwarn red">Something is close to the free limit. Time to clean up or upgrade Supabase.</div>` : worst >= .6 ? `<div class="hwarn">Getting fuller. Keep an eye on it.</div>` : `<div class="hok">✓ Everything's well within the free limits.</div>`;
-  return `<div class="card panel health"><h3>Site health</h3>${warn}
+  return admTop('health', 'Site health', true) + `${warn}
     ${rows.map(([n, v, max, label]) => { const p = Math.min(100, v / max * 100); return `<div class="hrow"><div class="hlbl"><span>${n}</span><span class="muted">${label}</span></div><div class="hbar ${p >= 80 ? 'red' : p >= 60 ? 'amber' : ''}"><i style="width:${Math.max(p, 1.5)}%"></i></div></div>`; }).join('')}
     <div class="muted" style="font-size:14px;margin-top:6px">Last sign-in: ${days === null ? '—' : days === 0 ? 'today' : days + ' day' + (days === 1 ? '' : 's') + ' ago'}. Supabase pauses free sites after 7 quiet days.</div>
     ${(() => { const lb = P().lastBackup, bd = lb ? Math.floor((Date.now() - lb) / 864e5) : null, late = bd === null || bd > 14; return `<div class="hbk${late ? ' late' : ''}">Last backup: ${bd === null ? 'none recorded yet' : (bd === 0 ? 'today' : bd === 1 ? 'yesterday' : bd + ' days ago') + ' (' + new Date(lb).toLocaleDateString(undefined, {month: 'long', day: 'numeric'}) + ')'}${bd !== null && bd > 14 ? '. Overdue. Download a new one.' : bd === null ? '. Download one now.' : ''}</div>`; })()}
     <div class="row" style="margin-top:12px"><button class="btn" data-act="backup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download backup</button><label class="btn" id="f-restorelbl"><input type="file" id="f-restore" accept=".zip,.json,application/zip,application/json" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Restore from backup</label></div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos, and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos, and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div></details>`;
 }
 const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
@@ -2431,6 +2455,7 @@ document.addEventListener('click', async e => {
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; adminErr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }
+  if(a === 'errall'){ const t = Math.max(...(adminErr || []).map(x => new Date(x.at).getTime()), Date.now()); mutate(k => { k.progress.errSeenAt = t; k.progress.errSeen = {}; }, true); errPill(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
   if(a === 'fcatpick'){ const t = el.dataset.t; fCat = fCat.includes(t) ? fCat.filter(x => x !== t) : fCat.concat(t); render(); return; }
   if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }

@@ -177,7 +177,7 @@ function renderLanding(member){
   const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
   const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
   const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;
-  const step = (n, h, p, img, alt) => `<li>${img ? `<figure class="lp-shot"><img src="/landing/${img}" alt="${alt}" width="600" height="923" loading="lazy" decoding="async"></figure>` : ''}<span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
+  const step = (n, h, p, img, alt) => `<li>${img ? `<figure class="lp-shot"><img src="/landing/${img}" alt="${alt}" width="600" height="923" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}<span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
   const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
   return `<div class="lp">
@@ -226,9 +226,9 @@ function renderLanding(member){
     <span class="lp-eyebrow">How it works</span>
     <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
     <ol class="lp-three lp-steps">
-      ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Recipes page, with an Add a recipe button and a Blueberry Pie recipe')}
-      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Lemon Bars recipe with the choices Add all 5 ingredients and Select specific ingredients')}
-      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with lemons checked off and butter added up from two recipes')}
+      ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Add a recipe form, with a box for a recipe link and a Chocolate Chip Cookies recipe filled in')}
+      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'The Add from a recipe sheet, with Blueberry Pie picked')}
+      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
     </ol>
     <p class="lp-after">Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</p>
   </section>

@@ -223,8 +223,8 @@ function renderLanding(member){
     <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
     <div class="lp-three lp-four">
       ${card2('Standard measures', 'The same kitchen measures you already use: 3&nbsp;tsp is 1&nbsp;Tbsp, and 16&nbsp;Tbsp is 1&nbsp;cup.')}
-      ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.')}
-      ${card2('Any size', 'Pick serving sizes from as small as ½&nbsp;the recipe to 3×&nbsp;the recipe.')}
+      ${card2('Math you can trust', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.')}
+      ${card2('Halve, double, or triple', 'Pick serving sizes from as small as ½&nbsp;the recipe to 3×&nbsp;the recipe.')}
       ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
     </div>
   </section>
@@ -242,7 +242,7 @@ function renderLanding(member){
     <span class="lp-eyebrow">Made for sharing</span>
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
-      ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share recipes', "See friends' and family's recipes, and save a copy of the best ones to your own recipe box.")}
+      ${feat('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', 'Share recipes', "See friends' and family's recipes, and save a copy of the best ones to your own recipe box.")}
       ${feat('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>', 'Tag your recipes', 'Make your own tags, like birthday, holiday, or soup.')}
       ${feat('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>

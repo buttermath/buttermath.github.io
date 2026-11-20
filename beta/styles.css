@@ -1350,3 +1350,5 @@ button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 .lp-sec:not(.lp-white) .lp-card{background:#fff}
 .lp-mini{padding:18px 20px}
 .lp-after{margin:26px 0 0;color:var(--muted);font-size:15px;line-height:1.5}.lp-after b{color:var(--ink)}
+/* Nov 19: the step hint waits until the current step is on screen */
+.ghostchk.wait{animation:none;opacity:0}

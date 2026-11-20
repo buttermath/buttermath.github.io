@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=24';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=25';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');

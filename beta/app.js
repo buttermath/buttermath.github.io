@@ -239,7 +239,7 @@ function renderLanding(member){
       ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Add a recipe form, with a box for a recipe link and a Chocolate Chip Cookies recipe filled in')}
       ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Blueberry Pie recipe with the Add to your shopping list sheet open')}
       ${step(3, 'Shop', 'Check things off your shopping list at the store.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
-      ${step(4, 'Cook', 'Follow along a checklist to cook your recipe.', 'step-4-cook.webp', 'A pie recipe in cooking mode, with the first steps checked off')}
+      ${step(4, 'Cook', 'Follow along with a checklist to cook your recipe.', 'step-4-cook.webp', 'A pie recipe in cooking mode, with the first steps checked off')}
     </ol>
   </section>
   <section class="lp-sec">

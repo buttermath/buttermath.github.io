@@ -1,13 +1,7 @@
 -- Error report limits (Hayley OK'd, Nov 20, 2026; applied in Supabase the same day). Deletes nothing.
--- The rate cap is the new protection. The size check below turned out to repeat one that was already there,
--- error_log_len (same sizes, kind up to 20), so error_log_len is the one that counts. Both are harmless together.
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'error_log_sizes') then
-    alter table public.error_log add constraint error_log_sizes check (
-      char_length(coalesce(msg, '')) <= 300 and char_length(coalesce(detail, '')) <= 1500 and char_length(coalesce(page, '')) <= 200
-      and char_length(coalesce(ua, '')) <= 300 and char_length(coalesce(ver, '')) <= 20 and char_length(coalesce(kind, '')) <= 30) not valid;
-  end if;
-end $$;
+-- Adds a rate cap and two indexes.
+-- A second size check (error_log_sizes) was added here on Nov 20 and removed the same day (Hayley OK'd):
+-- it repeated error_log_len, the size limit that was already there. See error-reports.sql.
 
 create index if not exists error_log_at on public.error_log (at);
 create index if not exists error_log_user_at on public.error_log (user_id, at);

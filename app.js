@@ -736,10 +736,12 @@ function tinLoad(){
   document.body.appendChild(o);
   setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 1900);
 }
+// Going from a friend's recipe to your saved copy shows the recipe tin, the same as going back to your recipe box (Nov 20, 2026).
 function openMine(id){
+  filedNew = false;
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){ location.hash = 'r-' + id; return; }
   const o = document.createElement('div'); o.className = 'bookload'; o.setAttribute('role', 'status');
-  o.innerHTML = `<div class="loader">${BOOK_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
+  o.innerHTML = `<div class="loader">${TIN_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
   document.body.appendChild(o);
   setTimeout(() => { location.hash = 'r-' + id; }, 1650);
   setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 1850);
@@ -1110,54 +1112,60 @@ function renderEditItem(){
     return head('Check this amount') + w.map(x => `<p class="frp amtwarn">${x.label ? `<b>${esc(x.label)}:</b> ` : ''}${esc(x.msg)}</p>`).join('') +
       (fx.length ? `<button class="askopt main" data-act="amtfix"><b>Use ${fx.map(x => esc(x.fix)).join(', ')}</b><span>Recommended</span></button>` : '') +
       `<button class="askopt${fx.length ? '' : ' main'}" data-act="amtback"><b>Change the amount</b></button><button class="askopt" data-act="amtkeep"><b>Keep what I typed</b></button></div>`; }
-  if(editItem.step === 'askmulti'){ const ch = editItem.parts.filter(x => x.nq !== x.oq), rids = [...new Set(ch.map(x => x.rid))], many = rids.length > 1, nm = joinNames(rids.map(x => `<b>${esc(D(R(x)).short || D(R(x)).title)}</b>`));
-    return head(many ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${ch.map(x => `${esc(partLabel(x))}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`).join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${many ? 'they are' : 'it is'} right next time?</p>
+  if(editItem.step === 'askmulti'){ const it0 = allItems().find(i => i.id === editItem.id), renamed = it0 && editItem.name !== it0.name, ch = editItem.parts.filter(x => x.nq !== x.oq), rids = [...new Set((renamed ? editItem.parts : ch).map(x => x.rid))], many = rids.length > 1, nm = joinNames(rids.map(x => `<b>${esc(D(R(x)).short || D(R(x)).title)}</b>`));
+    return head(many ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${[...(renamed ? [`Name: <b>${esc(it0.name)}</b> → <b>${esc(editItem.name)}</b>`] : []), ...ch.map(x => `${esc(partLabel(x))}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`)].join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${many ? 'they are' : 'it is'} right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>${many ? 'Update the recipes too' : 'Update the recipe too'}</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>${many ? 'The recipes stay' : 'The recipe stays'} as ${many ? 'they are' : 'it is'}</span></button></div>`; }
   if(editItem.step === 'ask'){ const r = R(editItem.rid);
-    return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
+    return head('Update the recipe too?') + (editItem.nameOnly ? `<p class="frp">Call it <b>${esc(editItem.name)}</b> in <b>${esc(D(r).title)}</b> too, so it's right next time? The recipe's amount stays as it is, because your list is at a different size.</p>` : `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>`) + `
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
   const parts = itemScaled(it) ? null : itemRecipeParts(it);
   if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(editItem.draft ? editItem.draft.qs[i] : partQ(it, x))}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button><a class="mreport" href="${reportHref(it)}">Report a wrong amount</a></form></div>`;
   const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
   return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(editItem.draft ? editItem.draft.qty : it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button><a class="mreport" href="${reportHref(it)}">Report a wrong amount</a></form></div>`;
 }
-function saveItemList(id, name, qty){
+function saveItemList(id, name, qty, msg){
   mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; if(qty !== (x.qty || '')){ x.qty = qty; if((x.recipes || []).length) x.qtyEdit = true; } });
-  editItem = null; render(); toast('Updated your list');
+  editItem = null; render(); toast(msg || 'Updated your list');
 }
 // After the amount check: the same steps as before (offer to update the recipe, or save to the list).
+// Any change to an item from a recipe, a new amount or a new name, asks whether to change the recipe too (Nov 20, 2026).
+// If the recipe's line can't be matched, only the list changes, and the toast says so.
+const NO_MATCH = "Updated your list. Couldn't match this to the recipe's wording, so the recipe stays the same.";
+const partFix = (x, name, renamed) => rebuildLine(x.l, renamed ? name : splitIngredient(x.l).name, x.nq !== x.oq ? x.nq : splitIngredient(x.l).qty);
 function itemEditGo(it, name, qty, ps){
-  if(ps){ const ch = ps.filter(x => x.nq !== x.oq);
-    if(!ch.length){ if(name !== it.name) saveItemList(it.id, name, it.qty || ''); else { editItem = null; render(); } return; }
-    if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
-    editItem = {id: it.id, name, parts: ps}; saveItemParts(false); return; }
+  if(ps){ const ch = ps.filter(x => x.nq !== x.oq), renamed = name !== it.name, touch = renamed ? ps : ch;
+    if(!touch.length){ editItem = null; render(); return; }
+    if(touch.every(x => partFix(x, name, renamed))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
+    editItem = {id: it.id, name, parts: ps}; saveItemParts(false, NO_MATCH); return; }
   if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
-  const hit = itemScaled(it) ? null : itemRecipeLine(it);
-  if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }
-  saveItemList(it.id, name, qty);
+  const scaled = itemScaled(it), renamed = name !== it.name;
+  if(scaled && !renamed){ saveItemList(it.id, name, qty); return; }
+  const hit = itemRecipeLine(it);
+  if(hit && rebuildLine(hit.l, name, scaled ? splitIngredient(hit.l).qty : qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid, nameOnly: scaled}; render(); return; }
+  saveItemList(it.id, name, qty, (it.recipes || []).some(x => R(x)) && !it.custom ? NO_MATCH : null);
 }
-async function saveItemParts(toRecipes){
+async function saveItemParts(toRecipes, msg){
   const {id, name, parts} = editItem, it = allItems().find(i => i.id === id); if(!it) return;
-  const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq);
+  const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq), renamed = name !== it.name;
   if(!toRecipes){ mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; const pq = y.pq = y.pq || {};
       parts.forEach(x => { if(x.nq === x.oq) return; const kk = pqKey(x.rid, x.gi, x.li, x.pi); if(x.nq === splitIngredient(x.l).qty) delete pq[kk]; else pq[kk] = {q: x.nq, base: x.l}; });
       delete y.qtyEdit; fixItem(y); });
-    editItem = null; render(); toast('Updated your list'); return; }
+    editItem = null; render(); toast(msg || 'Updated your list'); return; }
   const done = [];
-  for(const x of ch){ const r = R(x.rid); if(!r) continue; const nl = rebuildLine(x.l, splitIngredient(x.l).name, x.nq); if(!nl) continue;
+  for(const x of (renamed ? parts : ch)){ const r = R(x.rid); if(!r) continue; const nl = partFix(x, name, renamed); if(!nl) continue;
     const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = ingReplacePart(data.ingredients[x.gi].items[x.li], x.pi, nl);
     const {error} = await sb.from('recipes').update({data}).eq('id', x.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
     r.data = data; const dn = D(r).short || D(r).title; if(!done.includes(dn)) done.push(dn); }
-  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[pqKey(x.rid, x.gi, x.li, x.pi)]; }); fixItem(y); });
+  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; if(renamed) y.key = splitIngredient(name).key; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[pqKey(x.rid, x.gi, x.li, x.pi)]; }); fixItem(y); });
   editItem = null; render(); toast(`Updated ${joinNames(done)} and your list`);
 }
-async function saveItemRecipe(id, name, qty){
-  const it = allItems().find(i => i.id === id), hit = it && itemRecipeLine(it); if(!hit){ saveItemList(id, name, qty); return; }
-  const nl = rebuildLine(hit.l, name, qty); if(!nl){ saveItemList(id, name, qty); return; }
+async function saveItemRecipe(id, name, qty, nameOnly){
+  const it = allItems().find(i => i.id === id), hit = it && itemRecipeLine(it); if(!hit){ saveItemList(id, name, qty, NO_MATCH); return; }
+  const nl = rebuildLine(hit.l, name, nameOnly ? splitIngredient(hit.l).qty : qty); if(!nl){ saveItemList(id, name, qty, NO_MATCH); return; }
   const r = R(hit.rid), data = JSON.parse(JSON.stringify(D(r))); data.ingredients[hit.gi].items[hit.li] = ingReplacePart(data.ingredients[hit.gi].items[hit.li], hit.pi, nl);
   const {error} = await sb.from('recipes').update({data}).eq('id', hit.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
   r.data = data; const nk = splitIngredient(nl).key;
-  mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; x.key = nk; delete x.qtyEdit; fixItem(x); });
+  mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; x.key = nk; if(nameOnly && qty !== (x.qty || '')){ x.qty = qty; x.qtyEdit = true; } else delete x.qtyEdit; fixItem(x); });
   editItem = null; render(); toast(`Updated ${D(r).short || D(r).title} and your list`);
 }
 const ICON_BOOKADD = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v6"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="M9 10h6"/></svg>';
@@ -1819,7 +1827,7 @@ function aisleOrder(){ return [...new Set(kitchen.shopping.sections.concat(allIt
 function drawAisles(focus){
   const o = aisleOrder(), f = typeof focus === 'string' ? o.indexOf(focus) : focus;
   const grip = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
-  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card aisles" data-stop><h3>Aisle order</h3><p class="muted anote">Drag aisles to match the way you walk your store.</p>
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card aisles" data-stop><h3>Aisle order</h3><p class="muted anote">Drag aisles to match the way you walk through your store.</p>
     <ol class="alist">${o.map((s, i) => `<li class="${i === f ? 'moved' : ''}" data-s="${esc(s)}"><button class="agrip" type="button" data-i="${i}" aria-label="Move ${esc(s)}. Use the up and down arrow keys.">${grip}</button><span>${esc(s)}</span></li>`).join('')}</ol>
     <div class="row"><button class="btn primary" data-act="mclose">Done</button></div></div></div>`;
   const m = f >= 0 && document.querySelectorAll('.alist li')[f]; if(m) m.scrollIntoView({block: 'nearest'});
@@ -1970,16 +1978,45 @@ function enterKitchen(){
   go();
 }
 let isAdmin = false, adminData = null, adminBusy = false, adminUsage = null, adminFr = null, adminErr = null, admSort = 'new', admQ = '';
+// Admin sections fold up (Nov 20, 2026). Errors opens on its own when there are new ones.
+let admOpen = (() => { try{ return JSON.parse(localStorage.getItem('bm-admopen') || '{}'); }catch(e){ return {}; } })();
+const admTop = (key, title, def, force) => `<details class="card panel admbox ${key}" data-adm="${key}"${force || (admOpen[key] ?? def) ? ' open' : ''}><summary><h3>${title}</h3>${ICON_CHEV}</summary><div class="admb">`;
+// New errors are highlighted until Hayley opens them, or taps Mark all read. What she's read is saved to her account, so it carries across devices.
+const errKey = x => String(x.id ?? (x.at + '|' + x.msg));
+// Saving what's read redraws the page, so keep open errors open and the list where it was scrolled.
+const errOpenK = new Set(); let errScroll = 0;
+const errNew = x => new Date(x.at).getTime() > (P().errSeenAt || 0) && !(P().errSeen || {})[errKey(x)];
 function renderErrors(){
-  const e = adminErr, head = n => `<div class="card panel errs"><h3>Errors${n !== '' ? ` <small>${n}</small>` : ''}</h3>`;
-  if(!e) return head('') + `<div class="muted">Checking…</div></div>`;
-  if(e.err) return head('') + `<div class="muted">Couldn't load the error log right now.</div></div>`;
-  if(!e.length) return head(0) + `<div class="muted">No errors logged yet.</div></div>`;
+  const e = adminErr, nn = Array.isArray(e) ? e.filter(errNew).length : 0;
+  const head = n => admTop('errs', `Errors${n !== '' ? ` <small>${n}</small>` : ''}<span class="newpill"${nn ? '' : ' hidden'}>${nn} new</span>`, false, nn > 0);
+  if(!e) return head('') + `<div class="muted">Checking…</div></div></details>`;
+  if(e.err) return head('') + `<div class="muted">Couldn't load the error log right now.</div></div></details>`;
+  if(!e.length) return head(0) + `<div class="muted">No errors logged yet.</div></div></details>`;
   const dev = ua => { ua = ua || ''; const d = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other'; const b = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : ''; return d + (b ? ' · ' + b : ''); };
   const when = t => new Date(t).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
   const lbl = {shown:'Shown to member', error:'Error', crash:'Crash', amount:'Amount not understood'};
-  return head(e.length) + `<p class="muted errnote">The last 50 problems members ran into, newest first. Tap one for details.</p><div class="errlist">${e.map(x => `<details class="errrow"><summary><b>${esc(x.msg)}</b><small>${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div>`;
+  queueMicrotask(() => { const l = document.querySelector('.errlist'); if(l) l.scrollTop = errScroll; });
+  return head(e.length) + `<div class="errtop"><p class="muted errnote">The last 50 problems members ran into, newest first. New ones are highlighted until you open them.</p><button class="btn sm" data-act="errall"${nn ? '' : ' hidden'}>Mark all read</button></div><div class="errlist">${e.map(x => `<details class="errrow${errNew(x) ? ' new' : ''}" data-ek="${esc(errKey(x))}"${errOpenK.has(errKey(x)) ? ' open' : ''}><summary><b><i class="edot" aria-hidden="true"></i>${esc(x.msg)}</b><small>${errNew(x) ? '<span class="vh">New. </span>' : ''}${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div></details>`;
 }
+function errRead(key){
+  const keep = new Set((Array.isArray(adminErr) ? adminErr : []).map(errKey));
+  mutate(k => { const s = {}; Object.keys(k.progress.errSeen || {}).forEach(x => { if(keep.has(x)) s[x] = 1; }); s[key] = 1; k.progress.errSeen = s; }, true);
+  errPill();
+}
+function errPill(){
+  const nn = Array.isArray(adminErr) ? adminErr.filter(errNew).length : 0;
+  document.querySelectorAll('.errrow.new').forEach(r => { if(!errNew((adminErr || []).find(x => errKey(x) === r.dataset.ek) || {at: 0})){ r.classList.remove('new'); r.querySelector('.vh')?.remove(); } });
+  const p = document.querySelector('.errs .newpill'); if(p){ p.textContent = nn + ' new'; p.hidden = !nn; }
+  const b = document.querySelector('[data-act="errall"]'); if(b) b.hidden = !nn;
+}
+document.addEventListener('toggle', ev => { const d = ev.target; if(!(d instanceof HTMLDetailsElement)) return;
+  if(d.classList.contains('errrow')){ if(d.open) errOpenK.add(d.dataset.ek); else errOpenK.delete(d.dataset.ek); }
+  if(d.open && d.classList.contains('errrow') && d.classList.contains('new')) errRead(d.dataset.ek);
+}, true);
+document.addEventListener('scroll', ev => { if(ev.target.classList && ev.target.classList.contains('errlist')) errScroll = ev.target.scrollTop; }, true);
+// Only Hayley's own taps are remembered, so Errors still opens on its own the next time something new comes in.
+document.addEventListener('click', ev => { const sm = ev.target.closest && ev.target.closest('.admbox>summary'); if(!sm) return; const d = sm.parentElement;
+  admOpen[d.dataset.adm] = !d.open; try{ localStorage.setItem('bm-admopen', JSON.stringify(admOpen)); }catch(e){} }, true);
 function renderAdmin(){
   const back = `${backBtn()}<h2 class="ptitle">Admin</h2>`;
   if(!isAdmin) return back + `<div class="card empty">This page is only for the site administrator.</div>`;
@@ -2002,17 +2039,17 @@ function renderAdmin(){
   const q = admQ.trim().toLowerCase();
   const friendLine = u => { const f = fr(u); if(!adminFr) return ''; if(!f) return ' · 0 friends';
     return ` · ${f.friends} friend${f.friends == 1 ? '' : 's'}${f.pending ? ` (${f.pending} waiting)` : ''}${f.shared ? ` · ${f.shared} recipe${f.shared == 1 ? '' : 's'} sent` : ''}`; };
-  return back + renderHealth() + renderErrors() + `<div class="card panel"><h3>Members <small>${adminData.length}</small></h3>
+  return back + renderHealth() + renderErrors() + admTop('members', `Members <small>${adminData.length}</small>`, true) + `
     ${using !== null ? `<div class="muted afr">${using} of ${adminData.length} member${adminData.length === 1 ? ' has' : 's have'} at least one friend.</div>` : ''}
     <div class="atools"><input class="tin" id="adm-q" data-keep type="search" placeholder="Search members" value="${esc(admQ)}" autocomplete="off" aria-label="Search members">
     <select class="tin" id="adm-sort" aria-label="Sort members">${[['new', 'Newest joined'], ['old', 'Oldest joined'], ['az', 'A–Z'], ['active', 'Last signed in'], ['friends', 'Most friends']].map(([k, l]) => `<option value="${k}"${admSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
     <div class="atable ascroll">${list.map(u => { const s = (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase(); return `<div class="arow amem" data-s="${esc(s)}"${q && !s.includes(q) ? ' hidden' : ''}><div class="amtop"><b>${esc(u.name || '—')}</b><span class="muted">${esc(u.email)}</span></div><div class="muted">Joined ${fmtD(u.created_at)} · Last in ${fmtD(u.last_sign_in_at)}</div><div class="muted">${u.recipes} recipe${u.recipes == 1 ? '' : 's'}${friendLine(u)}</div></div>`; }).join('')}
-    <div class="muted anone"${q && !list.some(u => (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase().includes(q)) ? '' : ' hidden'}>No members match.</div></div></div>`;
+    <div class="muted anone"${q && !list.some(u => (String(u.name || '') + ' ' + String(u.email || '')).toLowerCase().includes(q)) ? '' : ' hidden'}>No members match.</div></div></div></details>`;
 }
 function renderHealth(){
   const u = adminUsage;
-  if(!u) return `<div class="card panel health"><h3>Site health</h3><div class="muted">Checking…</div></div>`;
-  if(u.err) return `<div class="card panel health"><h3>Site health</h3><div class="muted">Couldn't check usage right now.</div></div>`;
+  if(!u) return admTop('health', 'Site health', true) + `<div class="muted">Checking…</div></div></details>`;
+  if(u.err) return admTop('health', 'Site health', true) + `<div class="muted">Couldn't check usage right now.</div></div></details>`;
   const MB = 1024 * 1024, mb = b => (b / MB < 10 ? (b / MB).toFixed(1) : Math.round(b / MB)) + ' MB';
   const rows = [
     ['Recipes & lists', u.db_bytes, 500 * MB, mb(u.db_bytes) + ' of 500 MB'],
@@ -2022,12 +2059,12 @@ function renderHealth(){
   const days = u.last_active ? Math.floor((Date.now() - new Date(u.last_active)) / 864e5) : null;
   const worst = Math.max(...rows.map(r => r[1] / r[2]));
   const warn = worst >= .8 ? `<div class="hwarn red">Something is close to the free limit. Time to clean up or upgrade Supabase.</div>` : worst >= .6 ? `<div class="hwarn">Getting fuller. Keep an eye on it.</div>` : `<div class="hok">✓ Everything's well within the free limits.</div>`;
-  return `<div class="card panel health"><h3>Site health</h3>${warn}
+  return admTop('health', 'Site health', true) + `${warn}
     ${rows.map(([n, v, max, label]) => { const p = Math.min(100, v / max * 100); return `<div class="hrow"><div class="hlbl"><span>${n}</span><span class="muted">${label}</span></div><div class="hbar ${p >= 80 ? 'red' : p >= 60 ? 'amber' : ''}"><i style="width:${Math.max(p, 1.5)}%"></i></div></div>`; }).join('')}
     <div class="muted" style="font-size:14px;margin-top:6px">Last sign-in: ${days === null ? '—' : days === 0 ? 'today' : days + ' day' + (days === 1 ? '' : 's') + ' ago'}. Supabase pauses free sites after 7 quiet days.</div>
     ${(() => { const lb = P().lastBackup, bd = lb ? Math.floor((Date.now() - lb) / 864e5) : null, late = bd === null || bd > 14; return `<div class="hbk${late ? ' late' : ''}">Last backup: ${bd === null ? 'none recorded yet' : (bd === 0 ? 'today' : bd === 1 ? 'yesterday' : bd + ' days ago') + ' (' + new Date(lb).toLocaleDateString(undefined, {month: 'long', day: 'numeric'}) + ')'}${bd !== null && bd > 14 ? '. Overdue. Download a new one.' : bd === null ? '. Download one now.' : ''}</div>`; })()}
     <div class="row" style="margin-top:12px"><button class="btn" data-act="backup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download backup</button><label class="btn" id="f-restorelbl"><input type="file" id="f-restore" accept=".zip,.json,application/zip,application/json" hidden><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Restore from backup</label></div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos, and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px">Saves every member's recipes, lists, progress, photos, and friend connections to one zip file. Aim for one every two weeks. Restore adds anything missing from a backup. It never overwrites or deletes.</div></div></details>`;
 }
 const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
@@ -2425,6 +2462,7 @@ document.addEventListener('click', async e => {
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; adminErr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }
+  if(a === 'errall'){ const t = Math.max(...(adminErr || []).map(x => new Date(x.at).getTime()), Date.now()); mutate(k => { k.progress.errSeenAt = t; k.progress.errSeen = {}; }, true); errPill(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
   if(a === 'fcatpick'){ const t = el.dataset.t; fCat = fCat.includes(t) ? fCat.filter(x => x !== t) : fCat.concat(t); render(); return; }
   if(a === 'fcatclear'){ fCat = []; fCatOpen = false; render(); return; }
@@ -2517,7 +2555,7 @@ document.addEventListener('click', async e => {
     itemEditGo(it, name, qty, ps); return; }
   if(a === 'amtback' && editItem && editItem.step === 'warn'){ editItem = {id: editItem.id, draft: editItem.draft}; render(); return; }
   if(a === 'itemsave' && editItem && editItem.step === 'askmulti'){ saveItemParts(el.dataset.to === 'recipe'); return; }
-  if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty); else saveItemList(iid, name, qty); return; }
+  if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty, editItem.nameOnly); else saveItemList(iid, name, qty); return; }
   if(a === 'homemode'){ homeMode = true; render(); window.scrollTo({top: 0}); return; }
   if(a === 'homedone'){ homeMode = false; render(); const n = allItems().filter(i => P().shop[i.id] === 'have').length;
     if(n){ toast(`${n} item${n === 1 ? '' : 's'} at home`); const pill = document.querySelector('.cl-home'); if(pill){ pill.scrollIntoView({behavior: 'smooth', block: 'center'}); pill.classList.add('flash'); setTimeout(() => pill.classList.remove('flash'), 2600); } }

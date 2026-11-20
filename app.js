@@ -6,7 +6,7 @@ import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, 
 const $ = s => document.querySelector(s);
 const app = $('#app');
 // Phantom check on the first step: shows twice per recipe per visit to the site, then stops
-const stepHinted = new Set(), stepHintT = {};
+const stepHinted = new Set(), stepHintT = {}, stepHintSeen = new Set(); let stepHintObs = null;
 let tabHintAt = 0, tabHintT = null, tabsHtml = ''; // the Shopping list tab pulses after ingredients are added somewhere else
 const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -177,7 +177,7 @@ function renderLanding(member){
   const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
   const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
   const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;
-  const step = (n, h, p) => `<li><span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
+  const step = (n, h, p, img, alt) => `<li>${img ? `<figure class="lp-shot"><img src="/landing/${img}" alt="${alt}" width="600" height="923" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}<span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
   const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
   return `<div class="lp">
@@ -188,15 +188,15 @@ function renderLanding(member){
       <p class="lp-lede">Pick your recipes. Get one shopping list, sorted by aisle, with every amount added up.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
-    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 1¼ cups">
+    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>
         <div class="lp-chips"><span class="lp-chip" style="--c:#0072B2;background:#E6F1F8"><i></i>Blueberry pie</span><span class="lp-chip" style="--c:#D55E00;background:#FBEFE6"><i></i>Lemon bars</span></div>
         <span class="lp-aisle">Dairy &amp; eggs</span>
         <div class="lp-items">
-          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>1¼ cups</small>
-            <div class="lp-math"><span class="lp-mrow"><b>½ cup</b><em><i style="--c:#0072B2"></i>Blueberry pie</em></span><span class="lp-mrow"><b>¾ cup</b><em><i style="--c:#D55E00"></i>Lemon bars</em></span><span class="lp-mrow lp-tot"><em>Total</em><b>1¼ cups</b></span></div></div></div>
+          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>2 sticks + 4 Tbsp</small>
+            <div class="lp-math"><span class="lp-mrow"><b>½ cup</b><em><i style="--c:#0072B2"></i>Blueberry pie</em></span><span class="lp-mrow"><b>¾ cup</b><em><i style="--c:#D55E00"></i>Lemon bars</em></span><span class="lp-mrow lp-tot"><em>Total</em><b>2 sticks + 4 Tbsp</b></span></div></div></div>
           <div class="lp-item done"><span class="lp-ck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><div><b>Eggs</b><small>5 large</small></div></div>
         </div>
       </div>
@@ -226,9 +226,9 @@ function renderLanding(member){
     <span class="lp-eyebrow">How it works</span>
     <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
     <ol class="lp-three lp-steps">
-      ${step(1, 'Save', 'Add a recipe from a link, a photo, or your own words.')}
-      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.')}
-      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.')}
+      ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Add a recipe form, with a box for a recipe link and a Chocolate Chip Cookies recipe filled in')}
+      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'The Add from a recipe sheet, with Blueberry Pie picked')}
+      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
     </ol>
     <p class="lp-after">Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</p>
   </section>
@@ -925,7 +925,7 @@ function render0(){
   if(sameView && mlX){ const ml = document.getElementById('mlanes'); if(ml){ ml.scrollLeft = mlX; mealScrollTab(); } }
   if(r.v === 'meal' && !mealTick) mealTick = setInterval(() => { if(route().v !== 'meal'){ clearInterval(mealTick); mealTick = null; return; } if(!mealShop && !mealPick && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) render(); }, 60000);
   if(sameView && icolTop){ const ic = document.querySelector('.ing-col'); if(ic) ic.scrollTop = icolTop; }
-  setTimeout(() => { stepPreview(); onNavScroll(); }, 0);
+  setTimeout(() => { stepPreview(); onNavScroll(); armStepHint(); }, 0);
   if(sameView) document.querySelectorAll('[data-keep]').forEach(el => { if(el.id && kept[el.id] != null && el.type !== 'file'){ if(el.type === 'checkbox') el.checked = kept[el.id]; else el.value = kept[el.id]; } });
   { const fp = $('#f-paste'), fb = $('#f-parsebtn'); if(fp && fb) fb.disabled = !fp.value.trim(); }
   if(ae && sameView){ const el = document.getElementById(ae.id); if(el){ el.focus({preventScroll:true}); if(sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
@@ -1376,10 +1376,10 @@ function scaleNotes(d, f){ if(near1(f, 1) || !PANW.test(d.yield || '')) return '
   const x = ({1.5: '1½'})[f] || (Number.isInteger(f) ? String(f) : '');
   return `<div class="scalenotes"><p>${x ? `It's recommended to use ${n} similarly sized pans. Not a pan ${x}x as large` : `It's recommended to use ${n} similarly sized pans. Not one larger pan`}</p></div>`; }
 function scaleRow(r, d, f){
-  const opts = [[.5, '½×'], [1, '1×'], [1.5, '1½×'], [2, '2×'], [3, '3×']], id = esc(r.id);
-  const N = /serv|people|person|portion/i.test(d.yield || '') ? yieldCount(d.yield) : 0, now = Math.round(N * f);
-  return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div>` +
-    (N ? `<div class="servstep"><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now - 1) / N}" aria-label="Fewer servings" ${now <= 1 ? 'disabled' : ''}>${ICON_MINUS}</button><span>${esc(scaleYield(d.yield, f))}</span><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now + 1) / N}" aria-label="More servings" ${now >= N * 10 ? 'disabled' : ''}>${ICON_PLUS}</button></div>` : '') + `</div>` + scaleNotes(d, f);
+  // Four sizes (decided Nov 19, 2026). A size picked earlier that isn't one of them (like 1½× or a serving count) stays shown until another is picked.
+  const opts = [[.5, '½×'], [1, '1×'], [2, '2×'], [3, '3×']], id = esc(r.id);
+  if(!opts.some(([v]) => near1(v, f))){ const t = sizeTag(r.id).replace(/<[^>]*>|[()\s]/g, ''); opts.push([f, t ? t + '×' : f + '×']); opts.sort((a, b) => a[0] - b[0]); }
+  return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div></div>` + scaleNotes(d, f);
 }
 // "Shop for ingredients" on a recipe that's already on the list: say so, and never add it twice.
 // On the list in any state (still needed, in the cart, or at home)
@@ -1392,6 +1392,17 @@ function addSheetBody(r, d){
       (missing ? `<button class="askopt" data-act="addall" data-id="${id}"><b>Add missing ingredients</b><span>${missing} not on your list yet</span></button>` : '') +
       `<button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`; }
   return head(addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list') + `<button class="askopt main" data-act="addall" data-id="${id}"><b>Add all ${lines.length} ingredients</b></button><button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`;
+}
+// The green check hint on the current step waits until that step is on screen, so it isn't missed while someone reads the top of a recipe.
+// Once it has played for 7 seconds, it doesn't come back on that recipe until the app is opened again.
+function armStepHint(){
+  if(stepHintObs){ stepHintObs.disconnect(); stepHintObs = null; }
+  const g = document.querySelector('.ghostchk'); if(!g) return;
+  const id = g.dataset.id, go = () => { g.classList.remove('wait'); stepHintSeen.add(id); if(!stepHintT[id]) stepHintT[id] = setTimeout(() => stepHinted.add(id), 7000); };
+  if(!g.classList.contains('wait')) return go();
+  const step = g.closest('.num'); if(!step || !('IntersectionObserver' in window)) return go();
+  stepHintObs = new IntersectionObserver(es => { if(es.some(e => e.isIntersecting)){ stepHintObs.disconnect(); stepHintObs = null; go(); } }, {threshold: 1, rootMargin: '0px 0px -15% 0px'});
+  stepHintObs.observe(step);
 }
 function renderRecipe(id){
   const r = R(id);
@@ -1406,11 +1417,10 @@ function renderRecipe(id){
     const inl = ingListed(r.id, t);
     return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${ingTx(t)}</span></button>`; }).join('')).join('');
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
-  if(!p.done && !stepHinted.has(r.id) && !stepHintT[r.id]) stepHintT[r.id] = setTimeout(() => stepHinted.add(r.id), 7000);
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey && choosing !== r.id;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
-    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${!near1(f, 1) && stepHasAmount(st.text) ? '<small class="noscale">Amounts in this step are for the original size.</small>' : ''}${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
+    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk${stepHintSeen.has(r.id) ? '' : ' wait'}" data-id="${esc(r.id)}" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${!near1(f, 1) && stepHasAmount(st.text) ? '<small class="noscale">Amounts in this step are for the original size.</small>' : ''}${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;

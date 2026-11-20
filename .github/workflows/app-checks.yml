@@ -1,6 +1,7 @@
 # Butter Math app checks: the beta app in a real browser with a stand-in database (beta/tests/app/app.test.mjs).
 # Checks what members see on the shopping list: totals across recipes, removing and re-adding a recipe,
 # one and many on one line, double clicks, code in recipes, a lost connection, and the phone screen.
+# Runs in Chrome's engine and in Safari's engine (WebKit), since most phone users are on iPhone Safari.
 # Not a publishing gate yet (added Nov 20, 2026). After a week of clean runs, add these steps to the checks job in pages.yml.
 name: App checks
 on:
@@ -8,7 +9,12 @@ on:
   workflow_dispatch:
 jobs:
   app:
+    name: App checks (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -16,6 +22,8 @@ jobs:
         with:
           node-version: 20
       - name: Install the test browser
-        run: npm install --no-save --no-package-lock playwright@1 && npx playwright install --with-deps chromium
+        run: npm install --no-save --no-package-lock playwright@1 && npx playwright install --with-deps ${{ matrix.browser }}
       - name: Beta app checks
+        env:
+          BROWSER: ${{ matrix.browser }}
         run: node beta/tests/app/app.test.mjs

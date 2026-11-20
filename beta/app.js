@@ -769,14 +769,16 @@ function renderSendSheet(r){
     : `<p class="frp">Add a friend first, then you can send them recipes.</p><button class="btn primary bigbtn" data-act="go" data-h="friends">${ICON_ADDF}Add friend</button>`}
     <div class="ordiv">or</div>
     <button class="btn outline bigbtn" data-act="reccopy" data-id="${esc(r.id)}">${ICON_LINK}Copy to share in a text</button>
-    <div class="frhint">For friends who aren't on Butter Math yet. ${!near1(scaleOf(r.id), 1) ? 'Copies the ingredients and steps at the size you picked' : srcOf(D(r)) ? `Copies the original ${esc(hostOf(srcOf(D(r))))} link` : 'Copies the ingredients and steps'}, plus a link to save it in their own free Butter Math recipe box.</div></div>`;
+    <div class="frhint">For friends who aren't on Butter Math yet. ${!near1(scaleOf(r.id), 1) ? 'Copies the ingredients and steps at the size you picked, plus a link' : srcOf(D(r)) ? 'Copies a link' : 'Copies the ingredients and steps, plus a link'} to save it in their own free Butter Math recipe box.</div></div>`;
 }
 const srcOf = d => ((d.links || []).find(l => /^https?:\/\//i.test(l.url || '')) || {}).url || '';
 function shareText(d, link, f = 1){
   const plain = x => prettyFractions(String(x || '')).replace(/<[^>]+>/g, '').trim();
   const bm = `Save it to your own free Butter Math recipe box: ${link || 'https://buttermath.app'}`;
   const sized = !near1(f, 1), size = ({0.5: '½×', 1.5: '1½×', 2: '2×', 3: '3×'})[f] || (d.yield ? scaleYield(d.yield, f) : '') || 'new size', title = (plain(d.title) || 'Recipe') + (sized ? ` (${size})` : ''), src = srcOf(d);
-  if(src && !sized) return `${title}\n${src}\n\n${bm}`;
+  // Recipes from a website: just the name and the Butter Math link (decided Nov 19, 2026), so the text shows the Butter Math link preview card.
+  // The original link only stays in if the Butter Math link couldn't be made, so the friend still gets the recipe.
+  if(src && !sized) return link ? `${title}\n\n${bm}` : `${title}\n${src}\n\n${bm}`;
   const out = [title];
   if(d.yield || d.total) out.push([sized ? scaleYield(d.yield, f) : d.yield, d.total].filter(Boolean).map(plain).join(' · '));
   const one = i => { if(!sized) return '• ' + plain(i); const x = scaleLine(plain(i), f); return '• ' + (x == null ? plain(i) + ' (not scaled)' : x); };

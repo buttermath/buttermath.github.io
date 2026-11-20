@@ -1429,3 +1429,56 @@ button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 .errlist .errrow{padding:10px;border-radius:8px;transition:background-color .6s}.errrow.new{background:var(--blush);border-top-color:transparent}.errrow.new+.errrow{border-top-color:transparent}
 .edot{display:none}.errrow.new .edot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;vertical-align:middle}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Design system check (Nov 20, 2026): fixes for everything that broke a rule. Kept together so they win over older rules above. */
+/* Form labels use the label style: 13px bold ink, not red capitals */
+.lbl2{display:block;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink);margin:14px 0 6px}
+.lbl2 .hint{color:var(--muted);font-weight:400}
+/* Red text uses the darker red; bright red is for buttons and the logo */
+a,.fine a,.prose a,.authnote a,.linkbtn,.lp-small .linkbtn,.frmore a,.frmore .linkbtn,.mc,button.rtag.add,.card.danger h3{color:var(--red-dark)}
+.umenu .out{color:var(--red-dark)}
+.umenu .out .ic{border-color:var(--red-dark)}
+.umenu .out .ic svg{stroke:var(--red-dark)}
+.foot a{color:#fff;text-decoration:underline;text-underline-offset:2px}
+/* Finished steps stay readable: muted text (6.5:1) instead of fading to 3.4:1 */
+.step.done .tx{opacity:1;color:var(--muted)}
+.step.done .tx *{color:inherit}
+/* Three weights only */
+.stepfab .sfl{font-weight:500}
+/* 16px text in text boxes, so iPhones don't zoom in */
+.tin,.addf input,.addf select{font-size:16px}
+/* The bold brand edge is 2px with the large sticker shadow */
+main{border-width:2px;box-shadow:0 6px 0 #141414}
+.authhero,.auth{border-width:2px}
+.auth{box-shadow:0 6px 0 #141414}
+/* Corners on the scale: 6, 12, 16, 20, pill, circle */
+.items,.ing-col{border-radius:6px 6px 12px 12px}
+.secmv button,.alist .mv{border-radius:50%}
+.moremenu button,.fmenu button{border-radius:12px}
+.fmenu .fall,.moremenu .privrow{border-radius:12px 12px 0 0}
+.tile,.skeleton,.authhero,.selbar,.gatecard,.loader,.shopstart,.lp-final{border-radius:16px}
+.hwarn,.ir-warn,.thumb,.note,.lp-math{border-radius:12px}
+.copyic{width:44px;height:44px;border-radius:50%;top:8px;right:8px}
+/* Header divider in a palette color */
+.kname{border-left-color:var(--muted)}
+/* Tap areas at least 44 x 44px. The things look the same; the area you can tap around them is bigger. */
+.avatar,.secmv .grip,.rtx,button.rtag.add{position:relative}
+.avatar::after,.secmv .grip::after,.tilefav::after,.rtx::after,button.rtag.add::after,.chipx::after,.tilex::after{content:"";position:absolute;border-radius:50%}
+.avatar::after{inset:-5px}
+.secmv .grip::after,.tilefav::after{inset:-4px}
+.rtx::after{inset:-12px}
+.chipx::after,.tilex::after{inset:-7px}
+button.rtag.add::after{inset:-7px 0;border-radius:99px}
+.foot a{display:inline-block;padding:15px 4px;margin:-15px 0}
+.back,.linkbtn.lp-back{padding-top:11px;padding-bottom:11px;margin-top:-7px;margin-bottom:3px}
+.mc{padding:12px 0;margin:-12px 0}
+.tundo{padding:13px 6px;margin:-13px -6px}
+.authlinks .linkbtn{padding-top:12px;padding-bottom:12px;margin:-8px 0}
+.lp-small .linkbtn{padding:12px 2px;margin:-12px 0}
+/* Search boxes show where you're typing: ink edge with a soft blush glow, like other text boxes */
+.rsearch:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--blush)}
+/* Recipe tags under list items wrap onto more lines, so they get the small-card corner; their tap area stays as it is so it never covers Show the math */
+.tag{border-radius:12px}
+.pplus{border-radius:6px}
+.form textarea{font-size:16px}
+.heroedit::after{content:"";position:absolute;inset:-6px;border-radius:50%}

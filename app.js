@@ -183,7 +183,7 @@ function renderLanding(member){
   const card2 = (h, p, ico) => `<div class="lp-card lp-mini">${ico ? `<svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg>` : ''}<h3>${h}</h3><p>${p}</p></div>`;
   // Lucide icons for the landing cards (Nov 19, 2026): ways to bring recipes in, and the math cards.
   const I_LINK = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
-    I_CAM = '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    I_CAM = '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
     I_CLIP = '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/>',
     I_PEN = '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
     I_RULER = '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>',
@@ -217,7 +217,7 @@ function renderLanding(member){
     <h2 class="lp-h2">Bring your recipes in wherever they live now.</h2>
     <div class="lp-three lp-four lp-ways">
       ${card2('Enter a link', 'From a recipe site.', I_LINK)}
-      ${card2('Upload a screenshot', 'Of a cookbook page, or use a screenshot.', I_CAM)}
+      ${card2('Upload a screenshot', 'Of a cookbook page or a recipe you saw online.', I_CAM)}
       ${card2('Paste the text', 'From a post, a note, or an email.', I_CLIP)}
       ${card2('Type it in', "Like Grandma's card from the drawer.", I_PEN)}
     </div>

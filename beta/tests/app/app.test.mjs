@@ -49,7 +49,7 @@ try{
     await pick(p, ['Pancakes', 'Cookies', 'Omelet']); const l = await list(p);
     check('butter: 2 Tbsp + 1 stick + 1 Tbsp', l['Butter'], '1 stick + 3 Tbsp');
     check('flour: 1 cup + 2 cups', l['Flour'], '3 cups');
-    check('eggs: 2 + 1 + 3', l['Eggs'] || l['Egg'], '6');
+    check('eggs: 2 + 1 + 3 reads "Eggs 6", not "Egg 6"', l['Eggs'], '6');
     check('milk: 1 cup + ¼ cup', l['Milk'], '1¼ cups');
     // removing a recipe takes off only its amounts, and adding it back puts them back exactly
     await p.click('[data-act="chiprm"][aria-label*="Cookies"]'); await p.waitForTimeout(900); const r = await list(p);
@@ -61,8 +61,19 @@ try{
   console.log('\nOne and many are one line');
   { const {ctx, p} = await open({seed: [rec('Salsa', ['1 tomato', '1 bay leaf', '2 stalks celery']), rec('Stew', ['3 tomatoes', '2 bay leaves', '1 cup celery'])]});
     await pick(p, ['Salsa', 'Stew']); const l = await list(p);
-    check('1 tomato + 3 tomatoes', l['Tomato'], '4'); check('1 bay leaf + 2 bay leaves', l['Bay leaf'], '3');
+    check('1 tomato + 3 tomatoes', l['Tomatoes'], '4'); check('1 bay leaf + 2 bay leaves', l['Bay leaves'], '3');
     check('celery stays one item', Object.keys(l).filter(k => /celery/i.test(k)), ['Celery']); await ctx.close(); }
+
+  console.log('\nNames on the list follow the amounts');
+  { const {ctx, p} = await open({seed: [rec('Soup', ['salt to taste', '1 egg', '2 lemons']), rec('Stew', ['1 tsp salt', '0 eggs', '1 cup broth'])]});
+    await pick(p, ['Soup']); let l = await list(p);
+    check('one egg reads "Egg 1"', l['Egg'], '1'); check('two lemons', l['Lemons'], '2');
+    await pick(p, ['Stew']); l = await list(p);
+    check('salt is named from the line with an amount', [l['Salt'], l['Salt to taste']], ['1 tsp', undefined]);
+    check('"0 eggs" adds nothing', l['Egg'], '1');
+    await p.click('[data-act="chiprm"][aria-label*="Soup"]'); await p.waitForTimeout(900); l = await list(p);
+    check('with only "0 eggs" left, eggs show no amount', l['Eggs'] ?? l['Egg'], '');
+    await ctx.close(); }
 
   console.log('\nDouble clicks and junk');
   { const {ctx, p, errors} = await open({seed: [rec('<img src=x onerror="window.__bad=1">Junk', ['', '0 eggs', '1 cup <b>milk</b>', '<script>window.__bad=2</script>1 cup sugar'])]});

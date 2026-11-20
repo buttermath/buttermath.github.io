@@ -217,7 +217,7 @@ function renderLanding(member){
     <span class="lp-eyebrow">The math</span>
     <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
     <div class="lp-three lp-four">
-      ${card2('Standard measures', '3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup. Cups never quietly turn into grams.')}
+      ${card2('Standard measures', 'The same kitchen measures you already use: 3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup.')}
       ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks before it reaches your kitchen.')}
       ${card2('Any size', 'Pick ½× to 3× on a recipe, and the ingredients and your shopping list change to match.')}
       ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}

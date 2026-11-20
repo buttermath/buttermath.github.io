@@ -219,7 +219,7 @@ function renderLanding(member){
     <div class="lp-three lp-four">
       ${card2('Standard measures', 'The same kitchen measures you already use: 3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup.')}
       ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks before it reaches your kitchen.')}
-      ${card2('Any size', 'Pick ½× to 3× on a recipe, and the ingredients and your shopping list change to match.')}
+      ${card2('Any size', 'Pick serving sizes from as small as ½ the recipe to 3× the recipe.')}
       ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
     </div>
   </section>

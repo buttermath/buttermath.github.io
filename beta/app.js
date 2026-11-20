@@ -126,13 +126,12 @@ async function checkNewVersion(){
     if(!busy) location.reload();
   }catch(e){}
 }
-// Keyboard: Escape closes an open sheet, Enter or Space works on photo buttons, and focus moves into a sheet when it opens (keyboard users only).
+// Keyboard: Escape closes an open sheet, and focus moves into a sheet when it opens (keyboard users only).
 let kbUser = false, lastSheet = null;
 document.addEventListener('pointerdown', () => { kbUser = false; }, true);
 document.addEventListener('keydown', e => {
   if(e.key === 'Tab') kbUser = true;
   if(e.key === 'Escape'){ const bg = [...document.querySelectorAll('.sheetbg[data-act]')].pop(); if(bg){ e.preventDefault(); bg.click(); return; } }
-  if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('label[role="button"]')){ e.preventDefault(); e.target.click(); }
 });
 new MutationObserver(() => { const sh = [...document.querySelectorAll('.asksheet[role="dialog"]')].pop() || null;
   if(sh && !lastSheet && kbUser && !sh.contains(document.activeElement)){ const f = sh.querySelector('input:not([type=hidden]):not([disabled]), textarea, select, button:not([disabled]), [tabindex="0"]'); if(f) f.focus({preventScroll: true}); }
@@ -937,10 +936,17 @@ const viewKey = h => h.replace(/([#"])a\d+-/g, '$1a-');
 /* Keep pictures that didn't change across a re-draw, so photos and drawings don't flash. */
 function render(){
   const old = {}; document.querySelectorAll('#app .art').forEach(el => { const k = viewKey(el.outerHTML); (old[k] = old[k] || []).push(el); });
-  render0();
+  render0(); pageHeading();
   document.querySelectorAll('#app .art').forEach(el => { const q = old[viewKey(el.outerHTML)]; if(q && q.length){ const o = q.shift(); if(o !== el) el.replaceWith(o); } });
   evenTiles();
 }
+// Screen readers move around a page by its headings, so no level should be skipped after the logo (h1).
+// Pages whose own title is a small heading (h3) have it read as the page heading. Other pages that start at a small heading get a hidden page name first.
+const PAGE_NAMES = {shopping: 'Shopping list', recipes: 'Recipes', friends: 'Friends', help: 'Good to know', trips: 'Past trips', admin: 'Admin', meal: 'Cook a meal'};
+const TITLED_PAGES = ['form', 'account', 'settings', 'privacy', 'terms', 'feedback'];
+function pageHeading(){ const first = app.querySelector('h2, h3, h4'); if(!first || first.tagName === 'H2' || first.hasAttribute('aria-level')) return; const r = route();
+  if(TITLED_PAGES.includes(r.v) && first.tagName === 'H3'){ first.setAttribute('aria-level', '2'); return; }
+  first.closest('#app > *').insertAdjacentHTML('beforebegin', `<h2 class="vh">${esc(PAGE_NAMES[r.v] || 'Butter Math')}</h2>`); }
 // Every recipe card in a grid is as tall as the tallest one, so the grid reads as even rows (titles get up to 3 lines).
 function evenTiles(){ document.querySelectorAll('.grid').forEach(g => { const ts = [...g.querySelectorAll(':scope > .tile:not(.addtile)')]; if(!ts.length) return; ts.forEach(t => { t.style.minHeight = ''; }); const h = Math.max(...ts.map(t => t.offsetHeight)); if(h) ts.forEach(t => { t.style.minHeight = h + 'px'; }); }); }
 window.addEventListener('resize', () => { clearTimeout(evenTiles.t); evenTiles.t = setTimeout(evenTiles, 120); });
@@ -1502,7 +1508,7 @@ function renderRecipe(id){
   const more = srcs.slice(1).filter(l => hostOf(l.url) !== hostOf(srcs[0].url));
   const notes = hasNotes || more.length ? `<div class="card panel extras">${hasNotes ? `<h4>Good to know</h4><ul>${d.notes.map(x => `<li>${fmt(x)}</li>`).join('')}</ul>` : ''}${more.map(l => `<a class="olink" href="${esc(l.url)}" target="_blank" rel="noopener"><span><b>${esc(l.label && l.label !== 'Original recipe' ? l.label : 'View on ' + hostOf(l.url))}</b><small>${esc(hostOf(l.url))}</small></span>${ICON_EXT}</a>`).join('')}</div>` : '';
   return `${mealBack === r.id ? `<button class="back" data-act="go" data-h="meal">${ICON_BACK}Back to your meal</button>` : `${backBtn()}`}
-  <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" role="button" tabindex="0" title="Change image" aria-label="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>'}<input type="file" accept="image/*" hidden data-photo-for="${esc(r.id)}"></label></div><div class="body">
+  <div class="card hero"><div class="art ${d.photo ? 'photo' : 'drawn'}">${d.photo ? pic(d) : `<div class="artbg">${art(kindOf(d), artText(d))}</div><div class="artfg">${art(kindOf(d), artText(d)).replace('xMidYMid slice', 'xMidYMid meet')}</div>`}<label class="heroedit" title="Change image">${photoBusy === r.id ? '<span class="spin dark"></span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>'}<input type="file" class="vh" accept="image/*" aria-label="Change image" data-photo-for="${esc(r.id)}"></label></div><div class="body">
     <div class="ttlrow"><h2>${esc(d.title)}</h2><div class="ttlbtns"><button class="ibtn" data-act="go" data-h="edit-${esc(r.id)}" title="Edit recipe" aria-label="Edit recipe">${ICON_PEN}</button><button class="ibtn ${moreOpen ? 'on' : ''}" data-act="more" aria-label="More options" aria-expanded="${moreOpen}">${ICON_MORE}</button>${moreOpen ? `<div class="moremenu" role="menu">${isArch(r.id) || !MEAL_ON ? '' : `<button role="menuitem" class="privrow mealrow" data-act="mealfrom" data-id="${esc(r.id)}">${ICON_MEAL.replace('class="bi"', '')}<span class="pl"><b>Cook with other recipes…</b><small>Start a Meal with this recipe</small></span></button>`}<button role="menuitemcheckbox" aria-checked="${isPriv(r.id)}" class="privrow" data-act="privtog" data-id="${esc(r.id)}">${ICON_LOCK.replace('class="bi"', '')}<span class="pl"><b>Private</b><small>${isPriv(r.id) ? 'Only you can see this recipe' : 'Friends can see this recipe'}</small></span><span class="tog ${isPriv(r.id) ? 'on' : ''}"><i></i></span></button><button role="menuitem" data-act="sendopen" data-id="${esc(r.id)}">${ICON_SEND}Send to friends</button><button role="menuitem" data-act="resetrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Reset progress</button>${isArch(r.id) ? `<button role="menuitem" data-act="unarch" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>Unarchive</button>` : `<button role="menuitem" data-act="archive" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>Archive</button>`}<button role="menuitem" class="danger" data-act="delrecipe" data-id="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Remove recipe</button></div>` : ''}</div></div>
     ${srcCredit(srcs)}${d.savedFrom ? `<div class="byl">${avatar(d.savedFrom.owner || d.savedFrom.name, d.savedFrom.name, 'xs')}Saved from ${esc(kitchenOf(d.savedFrom.name))}</div>` : ''}${isPriv(r.id) ? `<div class="privtag">${ICON_LOCK}Private · Only you can see this recipe</div>` : ''}
     <div class="meta">${d.yield ? `<span>${ICON_SERV}${esc(scaleYield(d.yield, f))}</span>` : ''}${d.total ? `<span>${ICON_TIME}${esc(d.total)}</span>` : d.cook ? `<span>${ICON_TIME}${esc(d.cook)}</span>` : ''}${madeOf(r.id).n ? `<span class="made">♥ Made ${madeOf(r.id).n}×</span>` : ''}</div>
@@ -1588,7 +1594,7 @@ function renderForm(id){
     <div class="lbl2">Image</div>
     <div class="picwrap">
       <div class="picprev ${photoNow ? 'canpos' : ''}" id="f-pic">${photoNow ? `<img src="${esc(photoNow)}" alt="" draggable="false"${posStyle(f.photoPos || (f.photoPos = Object.assign({x: 50, y: 50, z: 1}, d.photoPos || {})))}>` : art(guessArt(($('#f-title') || {}).value || d.title || ''), ($('#f-title') || {}).value || d.title || '')}</div>
-      <label class="picbtn" role="button" tabindex="0" title="Upload your own photo" aria-label="Upload your own photo"><input type="file" id="f-photo" accept="image/*" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></label>
+      <label class="picbtn" title="Upload your own photo"><input type="file" id="f-photo" class="vh" accept="image/*" aria-label="Upload your own photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></label>
       ${photoNow ? `<button class="picbtn picx" type="button" data-act="rmphoto" title="Use the drawing" aria-label="Use the drawing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}
     </div>
     ${photoNow ? `<div class="picfit"><span>Drag the photo to fit the frame. This is how it looks on your recipe card.</span><label>Zoom<input type="range" id="f-zoom" min="1" max="3" step="0.05" value="${+(f.photoPos || {}).z || 1}" aria-label="Zoom the photo"></label></div>` : ''}

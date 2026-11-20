@@ -1341,3 +1341,12 @@ button.tag.tago::after{inset:0 -4px -8px}
 /* Nov 19: recipe tags on the list open their recipe; they darken while pressed (no edge, no movement) */
 button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 @media(hover:hover){button.tag.tago:hover{background:color-mix(in srgb,var(--c) 20%,white)}}
+/* Nov 19 landing page: the math box in the phone picture, Free under the buttons, short cards */
+.lp-math{margin-top:4px;padding:6px 10px;border:1px dashed var(--line);border-radius:10px;background:#fff;display:flex!important;flex-direction:column;gap:2px!important}
+.lp-mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}.lp-mrow b{font-size:13px!important;font-weight:500}
+.lp-mrow em{font-style:normal;color:var(--muted);display:flex;align-items:center;gap:5px}.lp-mrow i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.lp-tot{border-top:1px solid var(--line);margin-top:2px;padding-top:4px}.lp-tot b{font-weight:700!important}
+.lp-free{margin:12px 0 0;font-size:15px;font-weight:700;color:var(--ink)}
+.lp-sec:not(.lp-white) .lp-card{background:#fff}
+.lp-mini{padding:18px 20px}
+.lp-after{margin:26px 0 0;color:var(--muted);font-size:15px;line-height:1.5}.lp-after b{color:var(--ink)}

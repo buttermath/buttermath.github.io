@@ -216,8 +216,8 @@ function renderLanding(member){
     <span class="lp-eyebrow">Your recipes</span>
     <h2 class="lp-h2">Bring your recipes in wherever they live now.</h2>
     <div class="lp-three lp-four lp-ways">
-      ${card2('Paste a link', 'From a recipe site.', I_LINK)}
-      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.', I_CAM)}
+      ${card2('Enter a link', 'From a recipe site.', I_LINK)}
+      ${card2('Upload a screenshot', 'Of a cookbook page, or use a screenshot.', I_CAM)}
       ${card2('Paste the text', 'From a post, a note, or an email.', I_CLIP)}
       ${card2('Type it in', "Like Grandma's card from the drawer.", I_PEN)}
     </div>
@@ -239,7 +239,7 @@ function renderLanding(member){
       ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Add a recipe form, with a box for a recipe link and a Chocolate Chip Cookies recipe filled in')}
       ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Blueberry Pie recipe with the Add to your shopping list sheet open')}
       ${step(3, 'Shop', 'Check things off your shopping list at the store.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
-      ${step(4, 'Cook', 'Follow along a checklist to cook your recipe.', 'step-4-cook.webp', 'A pie recipe in cooking mode, with the first steps checked off')}
+      ${step(4, 'Cook', 'Follow along with a checklist to cook your recipe.', 'step-4-cook.webp', 'A pie recipe in cooking mode, with the first steps checked off')}
     </ol>
   </section>
   <section class="lp-sec">

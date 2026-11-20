@@ -177,7 +177,8 @@ function renderLanding(member){
   const tag = (t, c, bg) => `<span class="lp-tag" style="color:${c};background:${bg}">${t}</span>`;
   const pie = tag('Blueberry pie', '#0072B2', '#E6F1F8'), bars = tag('Lemon bars', '#B34E00', '#FBEFE6');
   const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;
-  const step = (n, h, p, img, alt) => `<li>${img ? `<figure class="lp-shot"><img src="/landing/${img}" alt="${alt}" width="600" height="923" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}<span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
+  // How it works steps (Nov 19, 2026): number and title on one line, then the text, then the screenshot in a same-size frame, so the three line up on computers.
+  const step = (n, h, p, img, alt) => `<li><div class="lp-sh"><span class="lp-num">${n}</span><h3>${h}</h3></div><p>${p}</p>${img ? `<figure class="lp-shot lp-shot-${n}"><img src="/landing/${img}" alt="${alt}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}</li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
   const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
   return `<div class="lp">
@@ -185,7 +186,7 @@ function renderLanding(member){
     <div class="lp-copy">
       <span class="lp-eyebrow">For home cooks and bakers</span>
       <h2 class="lp-h1">Butter Math does the <span>ingredient math</span> for you.</h2>
-      <p class="lp-lede">Pick your recipes. Get one shopping list, sorted by aisle, with every amount added up.${member ? '' : " It's free."}</p>
+      <p class="lp-lede">Choose your recipes. Get one shopping list sorted by grocery aisle, with each ingredient added up.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">
@@ -230,7 +231,7 @@ function renderLanding(member){
       ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Blueberry Pie recipe with the Add to your shopping list sheet open')}
       ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
     </ol>
-    <p class="lp-after">Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</p>
+    <p class="lp-after"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg><span>Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</span></p>
   </section>
   <section class="lp-sec">
     <span class="lp-eyebrow">Made for sharing</span>

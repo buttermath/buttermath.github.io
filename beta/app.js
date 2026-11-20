@@ -153,7 +153,7 @@ async function startUser(){
 }
 async function loadRecipes(){
   const {data, error} = await sb.from('recipes').select('id, sort, data').eq('user_id', user.id).order('sort', {ascending:true});
-  if(!error){ recipes = notPending(data || []); render(); }
+  if(!error){ recipes = notPending(data || []).map(tidyRec); render(); }
 }
 async function loadAll(quiet){
   if(!quiet) setStatus('busy', 'Loading…');
@@ -163,7 +163,7 @@ async function loadAll(quiet){
       sb.from('kitchens').select('*').eq('user_id', user.id).maybeSingle()
     ]);
     if(r.error) throw r.error; if(k.error) throw k.error;
-    recipes = notPending(r.data || []);
+    recipes = notPending(r.data || []).map(tidyRec);
     if(!queue.length && !flushing) kitchen = normalize(k.data);
     if(!k.data){ await sb.from('kitchens').upsert({user_id: user.id, shopping: kitchen.shopping, progress: kitchen.progress}); }
     loaded = true; setStatus('ok', 'Saved'); repairQtys();
@@ -316,6 +316,16 @@ async function handleAuthForm(kind){
 /* ---------------- helpers ---------------- */
 const R = id => recipes.find(r => r.id === id);
 const D = r => (r && r.data) || {};
+// A step needs words. Lines that are only a link, a stray number or bullet, or an invisible character aren't steps,
+// and a heading left with no steps goes too. Recipes are tidied as they load, and again when saved (Nov 20, 2026).
+const realStep = st => { const t = String((st && st.text) || '').replace(/[\u200b-\u200d\u2060\ufeff]/g, '').trim().replace(/^(step\s*)?\d+\s*[.):-]?$/i, ''); return /[\p{L}\p{N}]/u.test(t) && !/^(https?:\/\/|www\.)\S+$/i.test(t); };
+function tidySteps(secs){ if(!Array.isArray(secs)) return secs; return secs.map(x => !x || typeof x === 'string' ? x : {...x, items: (x.items || []).filter(realStep)}).filter(x => typeof x === 'string' ? realStep({text: x}) : x && x.items.length); }
+function tidyRec(r){ const d = r && r.data; if(!d || !Array.isArray(d.steps)) return r;
+  const t = tidySteps(d.steps); if(JSON.stringify(t) === JSON.stringify(d.steps)) return r;
+  // A link that was sitting in the steps moves to the recipe's links if the recipe doesn't have one yet.
+  const urls = d.steps.flatMap(x => x && typeof x === 'object' ? (x.items || []).map(st => String(st.text || '').trim()) : []).filter(u => /^https?:\/\/\S+$/i.test(u));
+  if(urls.length && !(d.links || []).some(l => /^https?:\/\//i.test(l.url || ''))) d.links = [{label: 'Original recipe', url: urls[0]}].concat(d.links || []);
+  d.steps = t; return r; }
 const P = () => kitchen.progress;
 const isArch = id => !!(P().archived || {})[id];
 const isActive = id => P().active[id] !== false && !isArch(id);
@@ -642,7 +652,7 @@ async function loadFriends(force){
 async function loadFbook(fid){
   fbook[fid] = {loading: true, rows: (fbook[fid] || {}).rows || []}; render();
   const {data, error} = await sb.rpc('friend_recipes', {friend: fid});
-  fbook[fid] = {loading: false, rows: data || [], err: !!error}; render();
+  fbook[fid] = {loading: false, rows: (data || []).map(tidyRec), err: !!error}; render();
 }
 
 function renderFriends(){
@@ -1727,7 +1737,7 @@ async function saveForm(id){
   if(f.amtFix){ const fx = f.amtFix; ingredients.forEach(g => { g.items = (g.items || []).map(l => fx[l] || l); }); }
   ingredients.forEach(g => (g.items || []).flatMap(ingParts).forEach(l => logAmt(l)));
   if(!f.amtChecked){ const ws = recipeAmtWarns(old, ingredients); if(ws.length){ showAmtWarns(ws, id); return; } }
-  const steps = stepTextToSections(val('#f-steps'), old.steps);
+  const steps = tidySteps(stepTextToSections(val('#f-steps'), old.steps));
   const link = val('#f-link');
   const data = Object.assign({}, old, {
     title, short: title.length > 22 ? title.slice(0, 20).trim() + '…' : title,

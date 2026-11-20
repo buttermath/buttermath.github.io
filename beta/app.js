@@ -1376,10 +1376,10 @@ function scaleNotes(d, f){ if(near1(f, 1) || !PANW.test(d.yield || '')) return '
   const x = ({1.5: '1½'})[f] || (Number.isInteger(f) ? String(f) : '');
   return `<div class="scalenotes"><p>${x ? `It's recommended to use ${n} similarly sized pans. Not a pan ${x}x as large` : `It's recommended to use ${n} similarly sized pans. Not one larger pan`}</p></div>`; }
 function scaleRow(r, d, f){
-  const opts = [[.5, '½×'], [1, '1×'], [1.5, '1½×'], [2, '2×'], [3, '3×']], id = esc(r.id);
-  const N = /serv|people|person|portion/i.test(d.yield || '') ? yieldCount(d.yield) : 0, now = Math.round(N * f);
-  return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div>` +
-    (N ? `<div class="servstep"><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now - 1) / N}" aria-label="Fewer servings" ${now <= 1 ? 'disabled' : ''}>${ICON_MINUS}</button><span>${esc(scaleYield(d.yield, f))}</span><button class="ibtn" data-act="scale" data-id="${id}" data-f="${(now + 1) / N}" aria-label="More servings" ${now >= N * 10 ? 'disabled' : ''}>${ICON_PLUS}</button></div>` : '') + `</div>` + scaleNotes(d, f);
+  // Four sizes (decided Nov 19, 2026). A size picked earlier that isn't one of them (like 1½× or a serving count) stays shown until another is picked.
+  const opts = [[.5, '½×'], [1, '1×'], [2, '2×'], [3, '3×']], id = esc(r.id);
+  if(!opts.some(([v]) => near1(v, f))){ const t = sizeTag(r.id).replace(/<[^>]*>|[()\s]/g, ''); opts.push([f, t ? t + '×' : f + '×']); opts.sort((a, b) => a[0] - b[0]); }
+  return `<div class="scalerow"><div class="seg scalesw" role="group" aria-label="Recipe size">${opts.map(([v, l]) => `<button data-act="scale" data-id="${id}" data-f="${v}" class="${near1(v, f) ? 'on' : ''}" aria-pressed="${near1(v, f)}">${l}</button>`).join('')}</div></div>` + scaleNotes(d, f);
 }
 // "Shop for ingredients" on a recipe that's already on the list: say so, and never add it twice.
 // On the list in any state (still needed, in the cart, or at home)

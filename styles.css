@@ -1397,3 +1397,24 @@ button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 @media(max-width:760px){.lp-after{padding:0}}
 /* Nov 19: How it works has four steps (Save, Select, Shop, Cook): four across on computers, two by two on tablets, one column on phones. */
 @media(max-width:900px){.lp-three.lp-four.lp-steps{gap:32px 16px}}
+
+/* Nov 20: hero loop. The phone shows the list doing the math: the two recipe chips, the butter and each recipe's amount, the total,
+   then eggs checked off. 6 seconds a loop, one thing moving at a time. It plays 3 times (18 seconds) and then rests on the finished list,
+   so nothing keeps moving next to the page. Reduce Motion shows the finished list with no movement. */
+.lp-anim .lp-chip,.lp-anim .lp-items,.lp-anim .lp-item:first-child small,.lp-anim .lp-mrow,.lp-anim .lp-item.done,.lp-anim .lp-item.done .lp-ck,.lp-anim .lp-item.done b{animation:6s ease-out 3 none}
+.lp-anim .lp-ph-body{animation:lpfade 6s linear 2 none}
+.lp-anim .lp-chip:nth-child(1){animation-name:lpc1}.lp-anim .lp-chip:nth-child(2){animation-name:lpc2}
+.lp-anim .lp-items{animation-name:lpbox}.lp-anim .lp-item:first-child small{animation-name:lptot}
+.lp-anim .lp-mrow:nth-child(1){animation-name:lpm1}.lp-anim .lp-mrow:nth-child(2){animation-name:lpm2}.lp-anim .lp-mrow.lp-tot{animation-name:lptot}
+.lp-anim .lp-item.done{animation-name:lpegg}.lp-anim .lp-item.done .lp-ck{animation-name:lpck}.lp-anim .lp-item.done b{animation-name:lpstrike}
+@keyframes lpfade{0%,93%{opacity:1}100%{opacity:0}}
+@keyframes lpc1{0%,4%{opacity:0;transform:scale(.9)}9%,100%{opacity:1;transform:none}}
+@keyframes lpc2{0%,12%{opacity:0;transform:scale(.9)}17%,100%{opacity:1;transform:none}}
+@keyframes lpbox{0%,20%{opacity:0;transform:translateY(8px)}26%,100%{opacity:1;transform:none}}
+@keyframes lpm1{0%,30%{opacity:0;transform:translateX(-8px)}35%,100%{opacity:1;transform:none}}
+@keyframes lpm2{0%,38%{opacity:0;transform:translateX(-8px)}43%,100%{opacity:1;transform:none}}
+@keyframes lptot{0%,48%{opacity:0}54%,100%{opacity:1}}
+@keyframes lpegg{0%,58%{opacity:0;transform:translateY(8px)}63%,100%{opacity:1;transform:none}}
+@keyframes lpck{0%,72%{background:#fff;border-color:var(--line-dark)}76%,100%{background:#141414;border-color:#141414}}
+@keyframes lpstrike{0%,72%{color:var(--ink);text-decoration-color:transparent}76%,100%{color:var(--muted);text-decoration-color:var(--muted)}}
+@media (prefers-reduced-motion:reduce){.lp-anim *{animation:none!important}}

@@ -180,13 +180,22 @@ function renderLanding(member){
   // How it works steps (Nov 19, 2026): number and title on one line, then the text, then the screenshot in a same-size frame, so the three line up on computers.
   const step = (n, h, p, img, alt) => `<li><div class="lp-sh"><span class="lp-num">${n}</span><h3>${h}</h3></div><p>${p}</p>${img ? `<figure class="lp-shot lp-shot-${n}"><img src="/landing/${img}" alt="${alt}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}</li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
-  const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
+  const card2 = (h, p, ico) => `<div class="lp-card lp-mini">${ico ? `<svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg>` : ''}<h3>${h}</h3><p>${p}</p></div>`;
+  // Lucide icons for the landing cards (Nov 19, 2026): ways to bring recipes in, and the math cards.
+  const I_LINK = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    I_CAM = '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    I_CLIP = '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/>',
+    I_PEN = '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    I_RULER = '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>',
+    I_SHIELD = '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    I_LAYERS = '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+    I_EYE = '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>';
   return `<div class="lp">
   <section class="lp-hero">
     <div class="lp-copy">
       <span class="lp-eyebrow">For home cooks and bakers</span>
       <h2 class="lp-h1">Butter Math does the <span>ingredient math</span> for you.</h2>
-      <p class="lp-lede">Choose your recipes. Get one shopping list sorted by grocery aisle, with each ingredient added up.${member ? '' : " It's free."}</p>
+      <p class="lp-lede">Get your recipes onto one shopping list. Butter Math sorts the list by grocery aisle and organizes your ingredients with accurate measurements.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">
@@ -206,38 +215,38 @@ function renderLanding(member){
   <section class="lp-sec lp-white">
     <span class="lp-eyebrow">Your recipes</span>
     <h2 class="lp-h2">Bring your recipes in wherever they live now.</h2>
-    <div class="lp-three lp-four">
-      ${card2('Paste a link', 'From a recipe site.')}
-      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.')}
-      ${card2('Paste the text', 'From a post, a note, or an email.')}
-      ${card2('Type it in', "Like Grandma's card from the drawer.")}
+    <div class="lp-three lp-four lp-ways">
+      ${card2('Paste a link', 'From a recipe site.', I_LINK)}
+      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.', I_CAM)}
+      ${card2('Paste the text', 'From a post, a note, or an email.', I_CLIP)}
+      ${card2('Type it in', "Like Grandma's card from the drawer.", I_PEN)}
     </div>
   </section>
   <section class="lp-sec">
     <span class="lp-eyebrow">The math</span>
     <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
     <div class="lp-three lp-four">
-      ${card2('Standard measures', 'The same kitchen measures you already use: 3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup.')}
-      ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.')}
-      ${card2('Any size', 'Pick serving sizes from as small as ½ the recipe to 3× the recipe.')}
-      ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
+      ${card2('Standard measures', 'The same kitchen measures you already use: 3&nbsp;tsp is 1&nbsp;Tbsp, and 16&nbsp;Tbsp is 1&nbsp;cup.', I_RULER)}
+      ${card2('Math you can trust', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.', I_SHIELD)}
+      ${card2('Halve, double, or triple', 'Pick serving sizes from as small as ½&nbsp;the recipe to 3×&nbsp;the recipe.', I_LAYERS)}
+      ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.", I_EYE)}
     </div>
   </section>
   <section class="lp-sec lp-white">
     <span class="lp-eyebrow">How it works</span>
-    <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
-    <ol class="lp-three lp-steps">
+    <h2 class="lp-h2">From recipe to dinner in four steps.</h2>
+    <ol class="lp-three lp-four lp-steps">
       ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Add a recipe form, with a box for a recipe link and a Chocolate Chip Cookies recipe filled in')}
       ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Blueberry Pie recipe with the Add to your shopping list sheet open')}
-      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
+      ${step(3, 'Shop', 'Check things off your shopping list at the store.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
+      ${step(4, 'Cook', 'Follow along a checklist to cook your recipe.', 'step-4-cook.webp', 'A pie recipe in cooking mode, with the first steps checked off')}
     </ol>
-    <p class="lp-after"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg><span>Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</span></p>
   </section>
   <section class="lp-sec">
     <span class="lp-eyebrow">Made for sharing</span>
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
-      ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share recipes', "See friends' and family's recipes, and save a copy of the best ones to your own recipe box.")}
+      ${feat('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', 'Share recipes', "See friends' and family's recipes, and save a copy of the best ones to your own recipe box.")}
       ${feat('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>', 'Tag your recipes', 'Make your own tags, like birthday, holiday, or soup.')}
       ${feat('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>

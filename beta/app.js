@@ -181,11 +181,15 @@ function renderLanding(member){
   const step = (n, h, p, img, alt) => `<li><div class="lp-sh"><span class="lp-num">${n}</span><h3>${h}</h3></div><p>${p}</p>${img ? `<figure class="lp-shot lp-shot-${n}"><img src="/landing/${img}" alt="${alt}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></figure>` : ''}</li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
   const card2 = (h, p, ico) => `<div class="lp-card lp-mini">${ico ? `<svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg>` : ''}<h3>${h}</h3><p>${p}</p></div>`;
-  // Lucide icons (link, camera, clipboard, pencil) for the ways to bring recipes in (Nov 19, 2026).
+  // Lucide icons for the landing cards (Nov 19, 2026): ways to bring recipes in, and the math cards.
   const I_LINK = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     I_CAM = '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
     I_CLIP = '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/>',
-    I_PEN = '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>';
+    I_PEN = '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    I_RULER = '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>',
+    I_SHIELD = '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    I_LAYERS = '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+    I_EYE = '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>';
   return `<div class="lp">
   <section class="lp-hero">
     <div class="lp-copy">
@@ -222,10 +226,10 @@ function renderLanding(member){
     <span class="lp-eyebrow">The math</span>
     <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
     <div class="lp-three lp-four">
-      ${card2('Standard measures', 'The same kitchen measures you already use: 3&nbsp;tsp is 1&nbsp;Tbsp, and 16&nbsp;Tbsp is 1&nbsp;cup.')}
-      ${card2('Math you can trust', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.')}
-      ${card2('Halve, double, or triple', 'Pick serving sizes from as small as ½&nbsp;the recipe to 3×&nbsp;the recipe.')}
-      ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
+      ${card2('Standard measures', 'The same kitchen measures you already use: 3&nbsp;tsp is 1&nbsp;Tbsp, and 16&nbsp;Tbsp is 1&nbsp;cup.', I_RULER)}
+      ${card2('Math you can trust', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.', I_SHIELD)}
+      ${card2('Halve, double, or triple', 'Pick serving sizes from as small as ½&nbsp;the recipe to 3×&nbsp;the recipe.', I_LAYERS)}
+      ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.", I_EYE)}
     </div>
   </section>
   <section class="lp-sec lp-white">

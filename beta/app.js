@@ -179,61 +179,73 @@ function renderLanding(member){
   const card = (h, p) => `<div class="lp-card"><h3>${h}</h3><p>${p}</p></div>`;
   const step = (n, h, p) => `<li><span class="lp-num">${n}</span><h3>${h}</h3><p>${p}</p></li>`;
   const feat = (ico, h, p) => `<div class="lp-card lp-feat"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true">${ico}</svg><h3>${h}</h3><p>${p}</p></div>`;
+  const card2 = (h, p) => `<div class="lp-card lp-mini"><h3>${h}</h3><p>${p}</p></div>`;
   return `<div class="lp">
   <section class="lp-hero">
     <div class="lp-copy">
-      <span class="lp-eyebrow">Attention home cooks and bakers</span>
-      <h2 class="lp-h1">All of your recipes. <br><span>One shopping list.</span></h2>
-      <p class="lp-lede">Save recipes from any website, social media post, or screenshot, and keep them all in one recipe box. Choose what you're cooking this week, and Butter Math turns those recipes into one shopping list, sorted by grocery aisle and added up for you. No more tallying how much butter you need across three recipes. Share your favorite recipes with friends and family, too. It's free.</p>
+      <span class="lp-eyebrow">For home cooks and bakers</span>
+      <h2 class="lp-h1">Butter Math does the <span>ingredient math</span> for you.</h2>
+      <p class="lp-lede">Pick your recipes. Get one shopping list, sorted by aisle, with every amount added up.</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
+      ${member ? '' : '<p class="lp-free">Free.</p>'}
     </div>
-    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list showing butter, eggs, and lemons added up from two recipes">
+    <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 1¼ cups">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
       <div class="lp-ph-body">
         <span class="lp-lbl">Shopping for</span>
         <div class="lp-chips"><span class="lp-chip" style="--c:#0072B2;background:#E6F1F8"><i></i>Blueberry pie</span><span class="lp-chip" style="--c:#D55E00;background:#FBEFE6"><i></i>Lemon bars</span></div>
         <span class="lp-aisle">Dairy &amp; eggs</span>
         <div class="lp-items">
-          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>1 cup + 7 Tbsp</small><span class="lp-tags">${pie}${bars}</span></div></div>
+          <div class="lp-item"><span class="lp-ck"></span><div><b>Unsalted butter</b><small>1¼ cups</small>
+            <div class="lp-math"><span class="lp-mrow"><b>½ cup</b><em><i style="--c:#0072B2"></i>Blueberry pie</em></span><span class="lp-mrow"><b>¾ cup</b><em><i style="--c:#D55E00"></i>Lemon bars</em></span><span class="lp-mrow lp-tot"><em>Total</em><b>1¼ cups</b></span></div></div></div>
           <div class="lp-item done"><span class="lp-ck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><div><b>Eggs</b><small>5 large</small></div></div>
         </div>
-        <span class="lp-aisle">Produce</span>
-        <div class="lp-items"><div class="lp-item"><span class="lp-ck"></span><div><b>Lemons</b><small>5</small><span class="lp-tags">${pie}${bars}</span></div></div></div>
       </div>
     </div>
   </section>
   <section class="lp-sec lp-white">
-    <span class="lp-eyebrow">Maybe this sounds familiar</span>
-    <h2 class="lp-h2">Your recipes are stored everywhere. Your grocery list is in a notes app or written on scratch paper.</h2>
-    <div class="lp-three">
-      ${card('Recipes stay in one place', "Bookmarks, screenshots, a note on your phone and Grandma's card in a drawer. Butter Math keeps them all in one recipe box.")}
-      ${card('The butter math', 'Two recipes both call for butter, eggs, and lemons. Butter Math adds up every ingredient so you buy enough the first time.')}
-      ${card('One shopping trip', 'Your list is sorted by grocery aisle and you can keep track as you shop for multiple recipes. Check things off as you shop and nothing gets left on the shelf.')}
+    <span class="lp-eyebrow">Your recipes</span>
+    <h2 class="lp-h2">Bring your recipes in wherever they live now.</h2>
+    <div class="lp-three lp-four">
+      ${card2('Paste a link', 'From a recipe site.')}
+      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.')}
+      ${card2('Paste the text', 'From a post, a note, or an email.')}
+      ${card2('Type it in', "Like Grandma's card from the drawer.")}
     </div>
   </section>
   <section class="lp-sec">
-    <span class="lp-eyebrow">How it works</span>
-    <h2 class="lp-h2">Four steps from recipe to dinner.</h2>
-    <ol class="lp-three lp-four lp-steps">
-      ${step(1, 'Save a recipe', 'Paste a link from any recipe site or social media post, add a photo of a cookbook page, or type in your own.')}
-      ${step(2, 'Build your list', 'Tap <b>Shop for ingredients</b> on any recipe, or add recipe ingredients directly on your shopping list page. Ingredients land on one list, sorted by aisle, with shared ones added up.')}
-      ${step(3, 'Shop', 'Check things off as you go, and tap <b>Check off pantry</b> to mark anything already in your kitchen.')}
-      ${step(4, 'Cook', "Follow the recipe step by step and check off each one. Tap <b>Screen on</b> so your phone doesn't go dark mid-recipe.")}
-    </ol>
+    <span class="lp-eyebrow">The math</span>
+    <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
+    <div class="lp-three lp-four">
+      ${card2('Standard measures', '3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup. Cups never quietly turn into grams.')}
+      ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks before it reaches your kitchen.')}
+      ${card2('Any size', 'Pick ½× to 3× on a recipe, and the ingredients and your shopping list change to match.')}
+      ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
+    </div>
   </section>
   <section class="lp-sec lp-white">
+    <span class="lp-eyebrow">How it works</span>
+    <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
+    <ol class="lp-three lp-steps">
+      ${step(1, 'Save', 'Add a recipe from a link, a photo, or your own typing.')}
+      ${step(2, 'Pick', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.')}
+      ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.')}
+    </ol>
+    <p class="lp-after">Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</p>
+  </section>
+  <section class="lp-sec">
     <span class="lp-eyebrow">Made for sharing</span>
     <h2 class="lp-h2">Cook with the people you love.</h2>
     <div class="lp-three">
-      ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share recipes', "Add friends and family to see each other's recipes and save a copy of their best recipes to your own recipe box.")}
-      ${feat('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>', 'Tag your recipes', 'Add your own recipe tags like birthday, holiday, soup, or savory to name a few.')}
+      ${feat('<g transform="translate(2.4 5.4) scale(.8)" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 14.5c3 0 6 1.8 6 5.5"/></g><path transform="translate(13 3.6) scale(.75)" stroke-width="2.67" fill="#D7263D" d="M0 3.6S-3.6 1.4-3.6-.9A1.8 1.8 0 0 1 0-1.8a1.8 1.8 0 0 1 3.6.9C3.6 1.4 0 3.6 0 3.6z"/>', 'Share recipes', "See friends' and family's recipes, and save a copy of the best ones to your own recipe box.")}
+      ${feat('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>', 'Tag your recipes', 'Make your own tags, like birthday, holiday, or soup.')}
       ${feat('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>', 'Send recipes', "Send Mom the pie recipe straight to her kitchen. You'll see when a friend saves one of your recipes.")}
     </div>
   </section>
   <section class="lp-final">
     ${bowl}
-    ${member ? '' : `<h2 class="lp-h2">Set up your kitchen today.</h2>
-    <p>Make your kitchen in a minute and save your first recipe. It's free.</p>`}
+    ${member ? '' : `<h2 class="lp-h2">Your next grocery run, already added up.</h2>
+    <p>It's free.</p>`}
     ${member ? `<button class="btn primary" data-act="go" data-h="recipes">Go to my recipe box</button>` : `<button class="btn primary" data-act="authmode" data-m="signup">Create your kitchen</button>
     <p class="lp-small">Already have one? <button class="linkbtn" data-act="authmode" data-m="signin">Sign in</button></p>`}
     <a class="lp-ig" href="https://www.instagram.com/buttermath.app/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>Follow on Instagram</a>

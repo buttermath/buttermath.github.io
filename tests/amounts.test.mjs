@@ -114,6 +114,8 @@ for(const [a, b] of [['a pinch of salt', '1 tsp salt'], ['juice of 1 lemon', '1 
 check('".5 cup oil" is ½ cup', JSON.stringify(splitIngredient('.5 cup oil')), '{"qty":"0.5 cup","name":"Oil","key":"oil"}');
 check('".5 cup" adds up', addQty(splitIngredient('.5 cup milk').qty, '1 cup', {key: 'milk'}), '1½ cups');
 check('".25 tsp" adds up', addQty(splitIngredient('- .25 tsp salt').qty, '¾ tsp', {key: 'salt'}), '1 tsp');
+// EVOO is extra virgin olive oil, so the list asks before combining it with olive oil (Nov 20)
+check('EVOO reads as extra virgin olive oil', splitIngredient('1 Tbsp EVOO').key, splitIngredient('1 Tbsp extra-virgin olive oil').key);
 
 // Scaling a recipe (½×, 1½×, 2×, 3×, or a serving size). Checked by hand, Nov 19.
 console.log('\nScaling a recipe');

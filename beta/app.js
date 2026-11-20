@@ -195,7 +195,7 @@ function renderLanding(member){
     <div class="lp-copy">
       <span class="lp-eyebrow">For home cooks and bakers</span>
       <h2 class="lp-h1">Butter Math does the <span>ingredient math</span> for you.</h2>
-      <p class="lp-lede">Get your recipes onto one shopping list. Sort the list by grocery aisle and organize your ingredients with accurate measurements.${member ? '' : " It's free."}</p>
+      <p class="lp-lede">Get your recipes onto one shopping list. Butter Math sorts the list by grocery aisle and organizes your ingredients with accurate measurements.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 2 sticks plus 4 tablespoons">

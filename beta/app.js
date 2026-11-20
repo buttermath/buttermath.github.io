@@ -1983,6 +1983,8 @@ let admOpen = (() => { try{ return JSON.parse(localStorage.getItem('bm-admopen')
 const admTop = (key, title, def, force) => `<details class="card panel admbox ${key}" data-adm="${key}"${force || (admOpen[key] ?? def) ? ' open' : ''}><summary><h3>${title}</h3>${ICON_CHEV}</summary><div class="admb">`;
 // New errors are highlighted until Hayley opens them, or taps Mark all read. What she's read is saved to her account, so it carries across devices.
 const errKey = x => String(x.id ?? (x.at + '|' + x.msg));
+// Saving what's read redraws the page, so keep open errors open and the list where it was scrolled.
+const errOpenK = new Set(); let errScroll = 0;
 const errNew = x => new Date(x.at).getTime() > (P().errSeenAt || 0) && !(P().errSeen || {})[errKey(x)];
 function renderErrors(){
   const e = adminErr, nn = Array.isArray(e) ? e.filter(errNew).length : 0;
@@ -1993,7 +1995,8 @@ function renderErrors(){
   const dev = ua => { ua = ua || ''; const d = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other'; const b = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : ''; return d + (b ? ' · ' + b : ''); };
   const when = t => new Date(t).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
   const lbl = {shown:'Shown to member', error:'Error', crash:'Crash', amount:'Amount not understood'};
-  return head(e.length) + `<div class="errtop"><p class="muted errnote">The last 50 problems members ran into, newest first. New ones are highlighted until you open them.</p><button class="btn sm" data-act="errall"${nn ? '' : ' hidden'}>Mark all read</button></div><div class="errlist">${e.map(x => `<details class="errrow${errNew(x) ? ' new' : ''}" data-ek="${esc(errKey(x))}"><summary><b><i class="edot" aria-hidden="true"></i>${esc(x.msg)}</b><small>${errNew(x) ? '<span class="vh">New. </span>' : ''}${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div></details>`;
+  queueMicrotask(() => { const l = document.querySelector('.errlist'); if(l) l.scrollTop = errScroll; });
+  return head(e.length) + `<div class="errtop"><p class="muted errnote">The last 50 problems members ran into, newest first. New ones are highlighted until you open them.</p><button class="btn sm" data-act="errall"${nn ? '' : ' hidden'}>Mark all read</button></div><div class="errlist">${e.map(x => `<details class="errrow${errNew(x) ? ' new' : ''}" data-ek="${esc(errKey(x))}"${errOpenK.has(errKey(x)) ? ' open' : ''}><summary><b><i class="edot" aria-hidden="true"></i>${esc(x.msg)}</b><small>${errNew(x) ? '<span class="vh">New. </span>' : ''}${esc(when(x.at))} · ${esc(x.who || 'Signed out')} · ${esc(dev(x.ua))} · ${esc(lbl[x.kind] || x.kind || '')}</small></summary><div class="errd"><div>Page: ${esc(x.page || '—')}${x.ver ? ' · version ' + esc(x.ver) : ''}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div></details>`).join('')}</div></div></details>`;
 }
 function errRead(key){
   const keep = new Set((Array.isArray(adminErr) ? adminErr : []).map(errKey));
@@ -2007,8 +2010,10 @@ function errPill(){
   const b = document.querySelector('[data-act="errall"]'); if(b) b.hidden = !nn;
 }
 document.addEventListener('toggle', ev => { const d = ev.target; if(!(d instanceof HTMLDetailsElement)) return;
+  if(d.classList.contains('errrow')){ if(d.open) errOpenK.add(d.dataset.ek); else errOpenK.delete(d.dataset.ek); }
   if(d.open && d.classList.contains('errrow') && d.classList.contains('new')) errRead(d.dataset.ek);
 }, true);
+document.addEventListener('scroll', ev => { if(ev.target.classList && ev.target.classList.contains('errlist')) errScroll = ev.target.scrollTop; }, true);
 // Only Hayley's own taps are remembered, so Errors still opens on its own the next time something new comes in.
 document.addEventListener('click', ev => { const sm = ev.target.closest && ev.target.closest('.admbox>summary'); if(!sm) return; const d = sm.parentElement;
   admOpen[d.dataset.adm] = !d.open; try{ localStorage.setItem('bm-admopen', JSON.stringify(admOpen)); }catch(e){} }, true);

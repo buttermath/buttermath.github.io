@@ -736,10 +736,12 @@ function tinLoad(){
   document.body.appendChild(o);
   setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 1900);
 }
+// Going from a friend's recipe to your saved copy shows the recipe tin, the same as going back to your recipe box (Nov 20, 2026).
 function openMine(id){
+  filedNew = false;
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){ location.hash = 'r-' + id; return; }
   const o = document.createElement('div'); o.className = 'bookload'; o.setAttribute('role', 'status');
-  o.innerHTML = `<div class="loader">${BOOK_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
+  o.innerHTML = `<div class="loader">${TIN_ART}<div class="ltext">Loading<span class="dots"><i>.</i><i>.</i><i>.</i></span></div></div>`;
   document.body.appendChild(o);
   setTimeout(() => { location.hash = 'r-' + id; }, 1650);
   setTimeout(() => { o.classList.add('out'); setTimeout(() => o.remove(), 380); }, 1850);

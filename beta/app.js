@@ -185,9 +185,8 @@ function renderLanding(member){
     <div class="lp-copy">
       <span class="lp-eyebrow">For home cooks and bakers</span>
       <h2 class="lp-h1">Butter Math does the <span>ingredient math</span> for you.</h2>
-      <p class="lp-lede">Pick your recipes. Get one shopping list, sorted by aisle, with every amount added up.</p>
+      <p class="lp-lede">Pick your recipes. Get one shopping list, sorted by aisle, with every amount added up.${member ? '' : " It's free."}</p>
       <div class="lp-ctas">${member ? `<button class="btn primary lp-red" data-act="go" data-h="recipes">Recipe box</button><button class="btn" data-act="go" data-h="shopping">Shopping list</button>` : `<button class="btn primary lp-red" data-act="authmode" data-m="signup">Create your kitchen</button><button class="btn" data-act="authmode" data-m="signin">Sign in</button>`}</div>
-      ${member ? '' : '<p class="lp-free">Free.</p>'}
     </div>
     <div class="lp-phone" role="img" aria-label="A Butter Math shopping list adding up butter from two recipes: half a cup plus three quarters of a cup is 1¼ cups">
       <div class="lp-ph-top"><span class="lp-ph-logo">Butter <span>Math</span></span><span class="lp-ph-k">Mom's Kitchen</span></div>
@@ -218,7 +217,7 @@ function renderLanding(member){
     <h2 class="lp-h2">Real kitchen math, not guesses.</h2>
     <div class="lp-three lp-four">
       ${card2('Standard measures', 'The same kitchen measures you already use: 3 tsp is 1 Tbsp, and 16 Tbsp is 1 cup.')}
-      ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks before it reaches your kitchen.')}
+      ${card2('Checked every time', 'Every update to Butter Math has to pass hundreds of math checks behind the scenes before it reaches your kitchen.')}
       ${card2('Any size', 'Pick serving sizes from as small as ½ the recipe to 3× the recipe.')}
       ${card2('No guessing', "If Butter Math can't read an amount, it shows it as written instead of guessing.")}
     </div>

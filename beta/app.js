@@ -227,7 +227,7 @@ function renderLanding(member){
     <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
     <ol class="lp-three lp-steps">
       ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.', 'step-1-save.webp', 'The Add a recipe form, with a box for a recipe link and a Chocolate Chip Cookies recipe filled in')}
-      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'The Add from a recipe sheet, with Blueberry Pie picked')}
+      ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.', 'step-2-select.webp', 'A Blueberry Pie recipe with the Add to your shopping list sheet open')}
       ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.', 'step-3-shop.webp', 'A shopping list sorted by aisle, with blueberries, lemon juice, and lemon zest checked off')}
     </ol>
     <p class="lp-after">Then cook from a checklist, one step at a time. Tap <b>Screen on</b> so your phone stays awake.</p>

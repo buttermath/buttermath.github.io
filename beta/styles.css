@@ -1425,6 +1425,6 @@ button.tag.tago:active{background:color-mix(in srgb,var(--c) 28%,white)}
 .admb{padding:0 16px 16px}.admbox.errs{margin-bottom:14px}
 .newpill{font:700 12.5px Inter,system-ui,sans-serif;color:#fff;background:var(--red);border-radius:99px;padding:3px 9px;line-height:1.2}
 .errtop [data-act=errall]{margin:0 0 10px}
-.errrow.new{background:var(--blush);border-radius:8px;margin-top:6px;padding-left:10px;padding-right:10px;border-top-color:transparent}.errrow.new+.errrow{border-top-color:transparent}
+.errlist .errrow{padding:10px;border-radius:8px;transition:background-color .6s}.errrow.new{background:var(--blush);border-top-color:transparent}.errrow.new+.errrow{border-top-color:transparent}
 .edot{display:none}.errrow.new .edot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;vertical-align:middle}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

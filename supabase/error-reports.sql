@@ -5,6 +5,8 @@
 --   id bigint, at timestamptz default now(), user_id uuid default auth.uid(),
 --   kind text, msg text, detail text, page text, ua text, ver text
 -- alter table public.error_log enable row level security;
+-- Size limit (already there before Nov 20): error_log_len, check (msg up to 300, detail 1500, page 200, ua 300, kind 20, ver 20).
+-- Rate cap and a second size check: see error-reports-limits.sql.
 
 -- Anyone (signed in or not) can add a report, but only as themselves or with no account attached.
 -- create policy "anyone can report errors" on public.error_log for insert to anon, authenticated

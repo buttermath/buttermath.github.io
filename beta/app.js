@@ -1110,54 +1110,60 @@ function renderEditItem(){
     return head('Check this amount') + w.map(x => `<p class="frp amtwarn">${x.label ? `<b>${esc(x.label)}:</b> ` : ''}${esc(x.msg)}</p>`).join('') +
       (fx.length ? `<button class="askopt main" data-act="amtfix"><b>Use ${fx.map(x => esc(x.fix)).join(', ')}</b><span>Recommended</span></button>` : '') +
       `<button class="askopt${fx.length ? '' : ' main'}" data-act="amtback"><b>Change the amount</b></button><button class="askopt" data-act="amtkeep"><b>Keep what I typed</b></button></div>`; }
-  if(editItem.step === 'askmulti'){ const ch = editItem.parts.filter(x => x.nq !== x.oq), rids = [...new Set(ch.map(x => x.rid))], many = rids.length > 1, nm = joinNames(rids.map(x => `<b>${esc(D(R(x)).short || D(R(x)).title)}</b>`));
-    return head(many ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${ch.map(x => `${esc(partLabel(x))}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`).join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${many ? 'they are' : 'it is'} right next time?</p>
+  if(editItem.step === 'askmulti'){ const it0 = allItems().find(i => i.id === editItem.id), renamed = it0 && editItem.name !== it0.name, ch = editItem.parts.filter(x => x.nq !== x.oq), rids = [...new Set((renamed ? editItem.parts : ch).map(x => x.rid))], many = rids.length > 1, nm = joinNames(rids.map(x => `<b>${esc(D(R(x)).short || D(R(x)).title)}</b>`));
+    return head(many ? 'Update the recipes too?' : 'Update the recipe too?') + `<p class="frp">${[...(renamed ? [`Name: <b>${esc(it0.name)}</b> → <b>${esc(editItem.name)}</b>`] : []), ...ch.map(x => `${esc(partLabel(x))}: <b>${esc(x.oq || 'no amount')}</b> → <b>${esc(x.nq || 'no amount')}</b>`)].join('<br>')}</p><p class="frp">Make the same change in ${nm}, so ${many ? 'they are' : 'it is'} right next time?</p>
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>${many ? 'Update the recipes too' : 'Update the recipe too'}</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>${many ? 'The recipes stay' : 'The recipe stays'} as ${many ? 'they are' : 'it is'}</span></button></div>`; }
   if(editItem.step === 'ask'){ const r = R(editItem.rid);
-    return head('Update the recipe too?') + `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>
+    return head('Update the recipe too?') + (editItem.nameOnly ? `<p class="frp">Call it <b>${esc(editItem.name)}</b> in <b>${esc(D(r).title)}</b> too, so it's right next time? The recipe's amount stays as it is, because your list is at a different size.</p>` : `<p class="frp">Your list now says <b>${esc((editItem.qty ? editItem.qty + ' ' : '') + editItem.name.charAt(0).toLowerCase() + editItem.name.slice(1))}</b>. Make the same change in <b>${esc(D(r).title)}</b>, so it's right next time?</p>`) + `
     <button class="askopt main" data-act="itemsave" data-to="recipe"><b>Update the recipe too</b><span>Recommended</span></button><button class="askopt" data-act="itemsave" data-to="list"><b>Just this list</b><span>The recipe stays as it is</span></button></div>`; }
   const parts = itemScaled(it) ? null : itemRecipeParts(it);
   if(parts) return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><p class="frhint">Your list adds this up from ${new Set(parts.map(x => x.rid)).size > 1 ? `${new Set(parts.map(x => x.rid)).size} recipes` : `${parts.length} lines in the recipe`}${it.qty ? ` (<b>${fmt(it.qty)}</b> in all)` : ''}. Change each amount:</p>${parts.map((x, i) => `<label class="lab" for="ed-q${i}">${esc(partLabel(x))}</label><input class="tin" id="ed-q${i}" data-keep maxlength="60" value="${esc(editItem.draft ? editItem.draft.qs[i] : partQ(it, x))}">`).join('')}<button class="btn primary bigbtn" type="submit">Save</button><a class="mreport" href="${reportHref(it)}">Report a wrong amount</a></form></div>`;
   const rs = (it.recipes || []).filter(x => R(x)), n = rs.length, names = joinNames(rs.map(x => esc(D(R(x)).short || D(R(x)).title)));
   return head('Edit item') + `<form class="editform" data-form="itemedit" autocomplete="off"><label class="lab" for="ed-name">Item</label><input class="tin" id="ed-name" data-keep maxlength="80" required value="${esc(editItem.draft ? editItem.draft.name : it.name)}"><label class="lab" for="ed-qty">Amount</label><input class="tin" id="ed-qty" data-keep maxlength="60" placeholder="2 cups" value="${esc(editItem.draft ? editItem.draft.qty : it.qty || '')}">${n > 1 ? `<p class="frhint">This amount is added up from ${n} recipes: ${names}. Your change only updates your shopping list. The recipes stay the same.</p>` : ''}<button class="btn primary bigbtn" type="submit">Save</button><a class="mreport" href="${reportHref(it)}">Report a wrong amount</a></form></div>`;
 }
-function saveItemList(id, name, qty){
+function saveItemList(id, name, qty, msg){
   mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; if(qty !== (x.qty || '')){ x.qty = qty; if((x.recipes || []).length) x.qtyEdit = true; } });
-  editItem = null; render(); toast('Updated your list');
+  editItem = null; render(); toast(msg || 'Updated your list');
 }
 // After the amount check: the same steps as before (offer to update the recipe, or save to the list).
+// Any change to an item from a recipe, a new amount or a new name, asks whether to change the recipe too (Nov 20, 2026).
+// If the recipe's line can't be matched, only the list changes, and the toast says so.
+const NO_MATCH = "Updated your list. Couldn't match this to the recipe's wording, so the recipe stays the same.";
+const partFix = (x, name, renamed) => rebuildLine(x.l, renamed ? name : splitIngredient(x.l).name, x.nq !== x.oq ? x.nq : splitIngredient(x.l).qty);
 function itemEditGo(it, name, qty, ps){
-  if(ps){ const ch = ps.filter(x => x.nq !== x.oq);
-    if(!ch.length){ if(name !== it.name) saveItemList(it.id, name, it.qty || ''); else { editItem = null; render(); } return; }
-    if(ch.every(x => rebuildLine(x.l, splitIngredient(x.l).name, x.nq))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
-    editItem = {id: it.id, name, parts: ps}; saveItemParts(false); return; }
+  if(ps){ const ch = ps.filter(x => x.nq !== x.oq), renamed = name !== it.name, touch = renamed ? ps : ch;
+    if(!touch.length){ editItem = null; render(); return; }
+    if(touch.every(x => partFix(x, name, renamed))){ editItem = {id: it.id, step: 'askmulti', name, parts: ps}; render(); return; }
+    editItem = {id: it.id, name, parts: ps}; saveItemParts(false, NO_MATCH); return; }
   if(name === it.name && qty === (it.qty || '')){ editItem = null; render(); return; }
-  const hit = itemScaled(it) ? null : itemRecipeLine(it);
-  if(hit && rebuildLine(hit.l, name, qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid}; render(); return; }
-  saveItemList(it.id, name, qty);
+  const scaled = itemScaled(it), renamed = name !== it.name;
+  if(scaled && !renamed){ saveItemList(it.id, name, qty); return; }
+  const hit = itemRecipeLine(it);
+  if(hit && rebuildLine(hit.l, name, scaled ? splitIngredient(hit.l).qty : qty)){ editItem = {id: it.id, step: 'ask', name, qty, rid: hit.rid, nameOnly: scaled}; render(); return; }
+  saveItemList(it.id, name, qty, (it.recipes || []).some(x => R(x)) && !it.custom ? NO_MATCH : null);
 }
-async function saveItemParts(toRecipes){
+async function saveItemParts(toRecipes, msg){
   const {id, name, parts} = editItem, it = allItems().find(i => i.id === id); if(!it) return;
-  const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq);
+  const key = it.key || splitIngredient(it.name).key, ch = parts.filter(x => x.nq !== x.oq), renamed = name !== it.name;
   if(!toRecipes){ mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; const pq = y.pq = y.pq || {};
       parts.forEach(x => { if(x.nq === x.oq) return; const kk = pqKey(x.rid, x.gi, x.li, x.pi); if(x.nq === splitIngredient(x.l).qty) delete pq[kk]; else pq[kk] = {q: x.nq, base: x.l}; });
       delete y.qtyEdit; fixItem(y); });
-    editItem = null; render(); toast('Updated your list'); return; }
+    editItem = null; render(); toast(msg || 'Updated your list'); return; }
   const done = [];
-  for(const x of ch){ const r = R(x.rid); if(!r) continue; const nl = rebuildLine(x.l, splitIngredient(x.l).name, x.nq); if(!nl) continue;
+  for(const x of (renamed ? parts : ch)){ const r = R(x.rid); if(!r) continue; const nl = partFix(x, name, renamed); if(!nl) continue;
     const data = JSON.parse(JSON.stringify(D(r))); data.ingredients[x.gi].items[x.li] = ingReplacePart(data.ingredients[x.gi].items[x.li], x.pi, nl);
     const {error} = await sb.from('recipes').update({data}).eq('id', x.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
     r.data = data; const dn = D(r).short || D(r).title; if(!done.includes(dn)) done.push(dn); }
-  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[pqKey(x.rid, x.gi, x.li, x.pi)]; }); fixItem(y); });
+  mutate(k => { const y = k.shopping.items.find(i => i.id === id); if(!y) return; y.name = name; if(renamed) y.key = splitIngredient(name).key; delete y.qtyEdit; if(y.pq) ch.forEach(x => { delete y.pq[pqKey(x.rid, x.gi, x.li, x.pi)]; }); fixItem(y); });
   editItem = null; render(); toast(`Updated ${joinNames(done)} and your list`);
 }
-async function saveItemRecipe(id, name, qty){
-  const it = allItems().find(i => i.id === id), hit = it && itemRecipeLine(it); if(!hit){ saveItemList(id, name, qty); return; }
-  const nl = rebuildLine(hit.l, name, qty); if(!nl){ saveItemList(id, name, qty); return; }
+async function saveItemRecipe(id, name, qty, nameOnly){
+  const it = allItems().find(i => i.id === id), hit = it && itemRecipeLine(it); if(!hit){ saveItemList(id, name, qty, NO_MATCH); return; }
+  const nl = rebuildLine(hit.l, name, nameOnly ? splitIngredient(hit.l).qty : qty); if(!nl){ saveItemList(id, name, qty, NO_MATCH); return; }
   const r = R(hit.rid), data = JSON.parse(JSON.stringify(D(r))); data.ingredients[hit.gi].items[hit.li] = ingReplacePart(data.ingredients[hit.gi].items[hit.li], hit.pi, nl);
   const {error} = await sb.from('recipes').update({data}).eq('id', hit.rid); if(error){ toast("Couldn't update the recipe. Try again."); return; }
   r.data = data; const nk = splitIngredient(nl).key;
-  mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; x.key = nk; delete x.qtyEdit; fixItem(x); });
+  mutate(k => { const x = k.shopping.items.find(i => i.id === id); if(!x) return; x.name = name; x.key = nk; if(nameOnly && qty !== (x.qty || '')){ x.qty = qty; x.qtyEdit = true; } else delete x.qtyEdit; fixItem(x); });
   editItem = null; render(); toast(`Updated ${D(r).short || D(r).title} and your list`);
 }
 const ICON_BOOKADD = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v6"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="M9 10h6"/></svg>';
@@ -1819,7 +1825,7 @@ function aisleOrder(){ return [...new Set(kitchen.shopping.sections.concat(allIt
 function drawAisles(focus){
   const o = aisleOrder(), f = typeof focus === 'string' ? o.indexOf(focus) : focus;
   const grip = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
-  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card aisles" data-stop><h3>Aisle order</h3><p class="muted anote">Drag aisles to match the way you walk your store.</p>
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="mclose"><div class="card aisles" data-stop><h3>Aisle order</h3><p class="muted anote">Drag aisles to match the way you walk through your store.</p>
     <ol class="alist">${o.map((s, i) => `<li class="${i === f ? 'moved' : ''}" data-s="${esc(s)}"><button class="agrip" type="button" data-i="${i}" aria-label="Move ${esc(s)}. Use the up and down arrow keys.">${grip}</button><span>${esc(s)}</span></li>`).join('')}</ol>
     <div class="row"><button class="btn primary" data-act="mclose">Done</button></div></div></div>`;
   const m = f >= 0 && document.querySelectorAll('.alist li')[f]; if(m) m.scrollIntoView({block: 'nearest'});
@@ -2517,7 +2523,7 @@ document.addEventListener('click', async e => {
     itemEditGo(it, name, qty, ps); return; }
   if(a === 'amtback' && editItem && editItem.step === 'warn'){ editItem = {id: editItem.id, draft: editItem.draft}; render(); return; }
   if(a === 'itemsave' && editItem && editItem.step === 'askmulti'){ saveItemParts(el.dataset.to === 'recipe'); return; }
-  if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty); else saveItemList(iid, name, qty); return; }
+  if(a === 'itemsave'){ if(!editItem) return; const {id: iid, name, qty} = editItem; if(el.dataset.to === 'recipe') saveItemRecipe(iid, name, qty, editItem.nameOnly); else saveItemList(iid, name, qty); return; }
   if(a === 'homemode'){ homeMode = true; render(); window.scrollTo({top: 0}); return; }
   if(a === 'homedone'){ homeMode = false; render(); const n = allItems().filter(i => P().shop[i.id] === 'have').length;
     if(n){ toast(`${n} item${n === 1 ? '' : 's'} at home`); const pill = document.querySelector('.cl-home'); if(pill){ pill.scrollIntoView({behavior: 'smooth', block: 'center'}); pill.classList.add('flash'); setTimeout(() => pill.classList.remove('flash'), 2600); } }

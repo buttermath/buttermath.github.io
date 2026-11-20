@@ -216,8 +216,8 @@ function renderLanding(member){
     <span class="lp-eyebrow">Your recipes</span>
     <h2 class="lp-h2">Bring your recipes in wherever they live now.</h2>
     <div class="lp-three lp-four lp-ways">
-      ${card2('Paste a link', 'From a recipe site.', I_LINK)}
-      ${card2('Snap a photo', 'Of a cookbook page, or use a screenshot.', I_CAM)}
+      ${card2('Enter a link', 'From a recipe site.', I_LINK)}
+      ${card2('Upload a screenshot', 'Of a cookbook page, or use a screenshot.', I_CAM)}
       ${card2('Paste the text', 'From a post, a note, or an email.', I_CLIP)}
       ${card2('Type it in', "Like Grandma's card from the drawer.", I_PEN)}
     </div>

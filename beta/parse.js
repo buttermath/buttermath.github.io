@@ -148,7 +148,8 @@ export const maybeSame = (a, b) => a !== b && MAYBE_SAME.some(g => g.includes(a)
 const MODW = '(?:heaping|heaped|scant|level|rounded|generous|(?:lightly |firmly )?packed)';
 const MODQ = new RegExp('^([\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?)\\s+' + MODW + '\\s+(?=(?:cups?|c\\.|tablespoons?|tbsps?|tbs|teaspoons?|tsps?|T\\.?|t\\.?)(?![A-Za-z]))', 'i');
 export function splitIngredient(line){
-  let s = prettyFractions(String(line||'').trim().replace(BULLET,'')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
+  // ".5 cup oil" is 0.5 cup: a decimal written without the 0 in front
+  let s = prettyFractions(String(line||'').trim().replace(BULLET,'').replace(/^\.(\d)/, '0.$1')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   // Recipe cards often write T. for tablespoon and t. for teaspoon (capital T is the bigger spoon)
   // "3 garlic cloves" is 3 cloves of garlic, the same item as "2 cloves garlic", so the two add up
@@ -186,7 +187,8 @@ export function splitIngredient(line){
     const t = name.replace(new RegExp('\\s+' + PREP + '(?:\\s+(?:and|&)\\s+' + PREP + ')*$', 'i'), ''); if(t && t !== name && /[a-z]/i.test(t)) name = t; }
   if(!name) name = s;
   name = name.charAt(0).toUpperCase() + name.slice(1);
-  const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'') || name.toLowerCase();
+  // The key's last word is the same for one or many: tomato/tomatoes, cherry/cherries, bay leaf/bay leaves all share a key
+  const key = name.toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f') || name.toLowerCase();
   // rest: the line after its amount, used to show the line at another recipe size. Not enumerable, so the result's shape is unchanged.
   return Object.defineProperty({qty, name, key: SAME_KEY[key] || key}, 'rest', {value: rest});
 }

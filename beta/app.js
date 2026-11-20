@@ -6,7 +6,7 @@ import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, 
 const $ = s => document.querySelector(s);
 const app = $('#app');
 // Phantom check on the first step: shows twice per recipe per visit to the site, then stops
-const stepHinted = new Set(), stepHintT = {};
+const stepHinted = new Set(), stepHintT = {}, stepHintSeen = new Set(); let stepHintObs = null;
 let tabHintAt = 0, tabHintT = null, tabsHtml = ''; // the Shopping list tab pulses after ingredients are added somewhere else
 const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -226,7 +226,7 @@ function renderLanding(member){
     <span class="lp-eyebrow">How it works</span>
     <h2 class="lp-h2">Three steps to a full grocery bag.</h2>
     <ol class="lp-three lp-steps">
-      ${step(1, 'Save', 'Add a recipe from a link, a photo, or your own words.')}
+      ${step(1, 'Save', 'Add a recipe from a link, a photo, or by typing it in.')}
       ${step(2, 'Select', 'Tap <b>Shop for ingredients</b> on each recipe you\'re making.')}
       ${step(3, 'Shop', 'Your list is sorted by aisle. Check things off as you go, and tap <b>Check off pantry</b> for what you already have.')}
     </ol>
@@ -925,7 +925,7 @@ function render0(){
   if(sameView && mlX){ const ml = document.getElementById('mlanes'); if(ml){ ml.scrollLeft = mlX; mealScrollTab(); } }
   if(r.v === 'meal' && !mealTick) mealTick = setInterval(() => { if(route().v !== 'meal'){ clearInterval(mealTick); mealTick = null; return; } if(!mealShop && !mealPick && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) render(); }, 60000);
   if(sameView && icolTop){ const ic = document.querySelector('.ing-col'); if(ic) ic.scrollTop = icolTop; }
-  setTimeout(() => { stepPreview(); onNavScroll(); }, 0);
+  setTimeout(() => { stepPreview(); onNavScroll(); armStepHint(); }, 0);
   if(sameView) document.querySelectorAll('[data-keep]').forEach(el => { if(el.id && kept[el.id] != null && el.type !== 'file'){ if(el.type === 'checkbox') el.checked = kept[el.id]; else el.value = kept[el.id]; } });
   { const fp = $('#f-paste'), fb = $('#f-parsebtn'); if(fp && fb) fb.disabled = !fp.value.trim(); }
   if(ae && sameView){ const el = document.getElementById(ae.id); if(el){ el.focus({preventScroll:true}); if(sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
@@ -1393,6 +1393,17 @@ function addSheetBody(r, d){
       `<button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`; }
   return head(addSheet.again ? 'Add ingredients to your list?' : 'Add to your shopping list') + `<button class="askopt main" data-act="addall" data-id="${id}"><b>Add all ${lines.length} ingredients</b></button><button class="askopt" data-act="choose" data-id="${id}"><b>Select specific ingredients</b></button>`;
 }
+// The green check hint on the current step waits until that step is on screen, so it isn't missed while someone reads the top of a recipe.
+// Once it has played for 7 seconds, it doesn't come back on that recipe until the app is opened again.
+function armStepHint(){
+  if(stepHintObs){ stepHintObs.disconnect(); stepHintObs = null; }
+  const g = document.querySelector('.ghostchk'); if(!g) return;
+  const id = g.dataset.id, go = () => { g.classList.remove('wait'); stepHintSeen.add(id); if(!stepHintT[id]) stepHintT[id] = setTimeout(() => stepHinted.add(id), 7000); };
+  if(!g.classList.contains('wait')) return go();
+  const step = g.closest('.num'); if(!step || !('IntersectionObserver' in window)) return go();
+  stepHintObs = new IntersectionObserver(es => { if(es.some(e => e.isIntersecting)){ stepHintObs.disconnect(); stepHintObs = null; go(); } }, {threshold: 1, rootMargin: '0px 0px -15% 0px'});
+  stepHintObs.observe(step);
+}
 function renderRecipe(id){
   const r = R(id);
   if(!r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
@@ -1406,11 +1417,10 @@ function renderRecipe(id){
     const inl = ingListed(r.id, t);
     return `<button class="ing pick ${inl ? 'in' : ''}" data-act="ingadd" data-id="${esc(r.id)}" data-k="${key}" aria-pressed="${inl}" aria-label="${inl ? 'On your shopping list. Tap to take it off' : 'Add to shopping list'}"><i class="pk">${CHECK}</i><span>${ingTx(t)}</span></button>`; }).join('')).join('');
   let n = 0; const curKey = p.cur >= 0 && p.all[p.cur] ? p.all[p.cur].key : null;
-  if(!p.done && !stepHinted.has(r.id) && !stepHintT[r.id]) stepHintT[r.id] = setTimeout(() => stepHinted.add(r.id), 7000);
   const steps = (d.steps || []).map((sec, si) => (sec.section ? `<div class="stephead">${esc(sec.section)}</div>` : '') + (sec.items || []).map((st, k) => {
     const key = si + '-' + k; n++; const done = !!c.s[key]; const cur = !done && key === curKey && choosing !== r.id;
     const tm = (st.timers || []).map(t => `<span class="tchip" data-act="timer" data-min="${+t.min}" data-label="${esc(t.label)}">${ICON_TIMER}${esc(t.label)}</span>`).join('');
-    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${!near1(f, 1) && stepHasAmount(st.text) ? '<small class="noscale">Amounts in this step are for the original size.</small>' : ''}${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
+    return `<button class="step ${done ? 'done' : ''} ${cur ? 'cur' : ''}" id="s-${key}" data-act="step" data-id="${esc(r.id)}" data-k="${key}"><span class="num">${done ? CHECK : n}${cur && !p.done && !stepHinted.has(r.id) ? `<i class="ghostchk${stepHintSeen.has(r.id) ? '' : ' wait'}" data-id="${esc(r.id)}" aria-hidden="true">${CHECK}</i>` : ''}</span><span class="tx">${st.title ? `<div class="tt">${esc(st.title)}</div>` : ''}<p>${fmtStep(d, key, st.text, f)}</p>${!near1(f, 1) && stepHasAmount(st.text) ? '<small class="noscale">Amounts in this step are for the original size.</small>' : ''}${tm ? `<div class="tchips">${tm}</div>` : ''}</span></button>`;
   }).join('')).join('');
   const srcs = (d.links || []).filter(l => /^https?:\/\//i.test(l.url || ''));
   const hasNotes = d.notes && d.notes.length;

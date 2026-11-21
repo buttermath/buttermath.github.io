@@ -11,6 +11,7 @@ export const HAND = [
   // [what it is, ingredient key, amounts..., expected total]
   ['"1-½ teaspoons" adds up (reported line)', 'onion powder', '1½ teaspoons', '1½ teaspoons', '1 Tbsp'],
   ['2% milk from two recipes (reported line)', '2% milk', '¼ cup', '¼ cup', '½ cup'],
+  ['whole milk from two recipes', 'whole milk', '1 cup', '½ cup', '1½ cups'],
   ['"15-oz." cans add up (reported line)', 'tomato sauce', '1 (15 oz) can', '1 (15 oz) can', '2 (15 oz) cans'],
   ['dash can sizes add up', 'tomato puree', '1 (14 oz) can', '1 (14 oz) can', '2 (14 oz) cans'],
   ['different can sizes stay apart', 'tomato', '1 (14 oz) can', '1 (28 oz) can', '1 (14 oz) can + 1 (28 oz) can'],

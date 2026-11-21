@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=26';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=27';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -70,8 +70,8 @@ function logErr(kind, msg, detail){
 const LOG_AMT = true;
 const amtSeen = new Set(), amtPend = [];
 function amtUnread(line){ try{ const {qty, name, key} = splitIngredient(line); if(!key) return false;
-  // a total that can't be added up, a number left in the name ("13.5 oz can coconut milk"), or a name starting with a stray unit ("-inch piece", "x 400g tins")
-  if(qty) return addQty(qty, qty) === qty + ' + ' + qty || /\d/.test(name) || /^(?:[-–x×]|[a-z]\b|heaping|scant|level|rounded)/i.test(name); return /^\s*[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(String(line).replace(BULLET, '')); }catch(_){ return false; } }
+  // a total that can't be added up, a number left in the name ("13.5 oz can coconut milk", but a percent like "2% milk" is part of the name), or a name starting with a stray unit ("-inch piece", "x 400g tins")
+  if(qty) return addQty(qty, qty) === qty + ' + ' + qty || /\d/.test(name.replace(/\d+(?:\.\d+)?\s*%/g, '')) || /^(?:[-–x×]|[a-z]\b|heaping|scant|level|rounded)/i.test(name); return /^\s*[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(String(line).replace(BULLET, '')); }catch(_){ return false; } }
 function logAmt(line){
   try{ line = String(line || '').trim().slice(0, 250); if(!LOG_AMT || !line || amtSeen.has(line) || amtSeen.size >= 15 || !amtUnread(line)) return; amtSeen.add(line);
     const sv = document.querySelector('script[src*="app.js"]'), ver = sv ? ((sv.getAttribute('src').match(/v=(\w+)/) || [])[1] || '') : '';
@@ -553,6 +553,19 @@ function fixSplit(k){ let ch = false; const items = k.shopping.items, marks = k.
   return ch; }
 // Lists saved before prep words at the end of a name were dropped ("Chickpeas drained" is now "Chickpeas") keep the old name.
 // It's renamed (or merged into the same item already there) so its amount still adds up from the recipes.
+// Lists saved before 2% milk and plain milk were told apart have one Milk item for both. The 2% (or 1%) lines go back on as their own item,
+// Milk is added up again from what's left, and a checked-off item stays checked off.
+function fixPct(k){ let ch = false; const items = k.shopping.items, marks = k.progress.shop = k.progress.shop || {};
+  for(const it of items.slice()){ if(it.custom || !(it.recipes || []).length) continue; const ok = it.key || splitIngredient(it.name).key;
+    const rids = it.recipes.filter(x => R(x)), lines = rid => ingLines(D(R(rid))), moved = rid => lines(rid).filter(l => { const p = splitIngredient(l).key; return p !== ok && p.replace(/^pct[a-jx]+ /, '') === ok; });
+    if(!rids.some(rid => moved(rid).length)) continue;
+    const stays = rids.some(rid => lines(rid).some(l => splitIngredient(l).key === ok)), mark = marks[it.id];
+    if(!stays){ items.splice(items.indexOf(it), 1); delete marks[it.id]; }
+    rids.forEach(rid => { const m = moved(rid); if(m.length) addIngredientsTo(k, rid, [{items: m}]); });
+    const nk = new Set(rids.flatMap(rid => moved(rid).map(l => splitIngredient(l).key)));
+    items.forEach(x => { if(nk.has(x.key || splitIngredient(x.name).key) && rids.some(r => (x.recipes || []).includes(r))){ fixItem(x); if(mark && !marks[x.id]) marks[x.id] = mark; } });
+    if(stays) fixItem(it); ch = true; }
+  return ch; }
 function fixPrep(k){ let ch = false; const items = k.shopping.items;
   for(const it of items.slice()){ if(it.custom || !(it.recipes || []).length) continue;
     // also tried with an amount in front: an item saved as "Garlic cloves" is now Garlic, counted in cloves
@@ -582,8 +595,8 @@ function fixPlus(k){ let ch = false; const items = k.shopping.items;
     else { it.name = p.name; it.key = p.key; }
     ch = true; }
   return ch; }
-function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c) | fixSplit(c) | fixPrep(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
-  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); fixSplit(k); fixPrep(k); k.shopping.items.forEach(fixItem); }, true); }
+function repairQtys(){ if(!loaded) return; const c = JSON.parse(JSON.stringify(kitchen)); const a = pruneDone(c), a1 = fixBullets(c), a2 = fixAnd(c) | fixPlus(c) | fixSplit(c) | fixPrep(c) | fixPct(c), b = c.shopping.items.map(fixItem).some(Boolean); if(!a && !a1 && !a2 && !b) return;
+  mutate(k => { pruneDone(k); fixBullets(k); fixAnd(k); fixPlus(k); fixSplit(k); fixPrep(k); fixPct(k); k.shopping.items.forEach(fixItem); }, true); }
 function unlinkRecipe(k, id, keys){
   const marks = k.progress.shop = k.progress.shop || {};
   k.shopping.items = k.shopping.items.filter(i => {
@@ -963,7 +976,10 @@ function render0(){
   if(r.v === 'invite' && sb){ rememberInvite(r.id); if(!user && authView.mode === 'signin' && !authView.invSet){ authView = {mode:'signup', msg:'', err:'', busy:false, invSet:true}; } if(user){ history.replaceState(null, '', '#friends'); r = route(); } }
   if(!(user && !recovering && gate !== 'in')) delete app.dataset.gate;
   if(user && !recovering && !hadAcct){ hadAcct = true; landing = false; try{ localStorage.setItem('mb-had-account', '1'); }catch(e){} }
-  $('#hdr').innerHTML = renderHeader(r);
+  // The header is part of index.html and is always there while the page is open. If it's gone (the page is being closed or replaced
+  // when a late answer from the server arrives), there's nothing to draw into, so stop quietly instead of crashing.
+  const hdrEl = $('#hdr'); if(!hdrEl) return;
+  hdrEl.innerHTML = renderHeader(r);
   if(!sb){ return; }
   if(!user && r.v === 'privacy'){ app.innerHTML = renderPrivacy(); $('#tabs').innerHTML = ''; }
   else if(!user && r.v === 'terms'){ app.innerHTML = renderTerms(); $('#tabs').innerHTML = ''; }

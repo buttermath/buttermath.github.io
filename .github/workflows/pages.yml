@@ -25,17 +25,23 @@ jobs:
         run: node beta/tests/run.mjs
       - name: Live site checks (tests/ holds the checks for the live parse.js; copy beta/tests there on go live)
         run: node tests/run.mjs
-  publish:
+  # Upload and deploy run as two jobs (GitHub's standard Pages setup). When they shared one job,
+  # the deploy step often couldn't find the upload yet and failed with "No artifacts named github-pages" (fixed Nov 21, 2026).
+  build:
     needs: checks
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4

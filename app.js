@@ -1396,7 +1396,12 @@ const tagsOf = r => ((P().tags || {})[r.id]) || autoTags(D(r));
 const favOf = id => !!((P().fav || {})[id]);
 const allTags = () => { const used = recipes.flatMap(r => tagsOf(r)); return [...new Set(TAGS0.concat(P().ctags || [], used))]; };
 let recTags = [], recFav = false, recQ = '', catOpen = false, sortOpen = false, tagEdit = null;
-const SORTS = {recent:'Recent', az:'A–Z', made:'Most made', progress:'In progress'};
+// Just added: newest recipe first. Recently viewed: the recipe opened most recently first; ones never opened follow, newest first.
+const SORTS = {recent:'Just added', viewed:'Recently viewed', az:'A–Z', made:'Most made', progress:'In progress'};
+const viewedAt = id => ((P().viewed || {})[id]) || 0;
+// Remember when a recipe was last opened (kept with this person's other settings). Saved at most every 10 minutes per recipe.
+function noteView(id){ if(!user || !R(id) || Date.now() - viewedAt(id) < 600000) return; setTimeout(() => mutate(k => { const v = k.progress.viewed = k.progress.viewed || {}; v[id] = Date.now();
+  const ids = new Set(recipes.map(x => x.id)); Object.keys(v).forEach(x => { if(!ids.has(x)) delete v[x]; }); }, true)); }
 const ICON_SERV = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
 const ICON_TIME = '<svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
 const ICON_AGAIN = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
@@ -1436,7 +1441,7 @@ function renderRecipes(){
   let shown = live.filter(r => (!catOn || hasAll(r, recTags)) && (!recFav || favOf(r.id)) && (sortK !== 'progress' || rank(r) === 0));
   const pos = new Map(live.map((r, i) => [r.id, i]));
   // Favorites keep their place in the list (Hayley, Nov 18). The Favorites filter is how to find them.
-  shown = shown.slice().sort((a, b) => (sortK === 'az' ? D(a).title.localeCompare(D(b).title) : sortK === 'made' ? (madeOf(b.id).n || 0) - (madeOf(a.id).n || 0) : sortK === 'progress' ? rank(a) - rank(b) : 0) || pos.get(a.id) - pos.get(b.id));
+  shown = shown.slice().sort((a, b) => sortK === 'recent' ? pos.get(b.id) - pos.get(a.id) : sortK === 'viewed' ? (viewedAt(b.id) - viewedAt(a.id)) || pos.get(b.id) - pos.get(a.id) : (sortK === 'az' ? D(a).title.localeCompare(D(b).title) : sortK === 'made' ? (madeOf(b.id).n || 0) - (madeOf(a.id).n || 0) : sortK === 'progress' ? rank(a) - rank(b) : 0) || pos.get(a.id) - pos.get(b.id));
   const q = recQ.trim().toLowerCase();
   const filtered = catOn || recFav || sortK === 'progress';
   const fnote = catOn ? `<div class="selchips">${recTags.map(t => `<span class="selchip">${esc(t)}<button data-act="catpick" data-t="${esc(t)}" aria-label="Remove ${esc(t)} filter">${ICON_X}</button></span>`).join('')}${recTags.length > 1 ? `<button class="clearall" data-act="catclear">Clear all</button>` : ''}</div>${recTags.length > 1 ? `<div class="fnote">Showing recipes with ${recTags.length === 2 ? 'both' : 'all ' + recTags.length} tags</div>` : ''}` : '';
@@ -1496,7 +1501,7 @@ function armStepHint(){
   stepHintObs.observe(step);
 }
 function renderRecipe(id){
-  const r = R(id);
+  const r = R(id); noteView(id);
   if(!r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
   const d = D(r), c = cookOf(r.id), p = progressOf(r), pct = p.total ? Math.round(p.done / p.total * 100) : 0, f = scaleOf(r.id);
   const ingTx = t => { if(near1(f, 1)) return fmt(t); const sl = scaleLine(t, f); if(sl == null) return fmt(t) + '<small class="noscale">Not scaled</small>';

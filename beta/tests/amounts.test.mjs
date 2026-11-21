@@ -98,7 +98,8 @@ for(const [a, b] of [['2 tbsp rice wine vinegar', '1 tbsp rice vinegar'], ['3 sc
   check('same item: ' + a.replace(/^[^a-z]+/i, '') + ' = ' + b.replace(/^[^a-z]+/i, ''), key(a), key(b));
 // Different things never share a line on their own (the list asks first for some of these)
 for(const [a, b] of [['1 tsp kosher salt', '1 tsp salt'], ['2 tbsp unsalted butter', '2 tbsp butter'], ['1 cup brown sugar', '1 cup sugar'],
-  ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro']])
+  ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro'],
+  ['¼ cup 2% milk', '1 cup whole milk'], ['¼ cup 2% milk', '1 cup milk'], ['1 cup 2% milk', '1 cup 1% milk'], ['1 cup 2% Greek yogurt', '1 cup Greek yogurt']])
   check('kept apart: ' + a.replace(/^[^a-z]+/i, '') + ' / ' + b.replace(/^[^a-z]+/i, ''), key(a) === key(b), false);
 
 // One and many are the same item (stress test, Nov 20): "1 tomato" + "2 tomatoes" is one line of 3

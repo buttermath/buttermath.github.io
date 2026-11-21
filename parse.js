@@ -149,9 +149,9 @@ const MODW = '(?:heaping|heaped|scant|level|rounded|generous|(?:lightly |firmly 
 const MODQ = new RegExp('^([\\d½¼¾⅓⅔⅛⅜⅝⅞][\\d\\/ .½¼¾⅓⅔⅛⅜⅝⅞–-]*?)\\s+' + MODW + '\\s+(?=(?:cups?|c\\.|tablespoons?|tbsps?|tbs|teaspoons?|tsps?|T\\.?|t\\.?)(?![A-Za-z]))', 'i');
 export function splitIngredient(line){
   // ".5 cup oil" is 0.5 cup: a decimal written without the 0 in front
-  // "4-1/2 teaspoons" (Taste of Home and older cookbooks) is 4½; "one 16-ounce can" is 1 16-ounce can; "Optional: ½ cup corn" is ½ cup corn
+  // "4-1/2 teaspoons" (Taste of Home and older cookbooks) is 4½, and so is "4-½ teaspoons"; "one 16-ounce can" is 1 16-ounce can; "Optional: ½ cup corn" is ½ cup corn
   let s = prettyFractions(String(line||'').trim().replace(BULLET,'').replace(/^optional\s*:\s*/i, '').replace(/^(\S+\s+)leaf bay\b/i, '$1bay leaf').replace(/^\.(\d)/, '0.$1')
-    .replace(/(^|\()(\d+)-(\d+\/\d+)(?=\s)/g, '$1$2 $3').replace(/^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=\d)/i, (m, w) => NUMW[w.toLowerCase()] + ' ')).replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
+    .replace(/(^|\()(\d+)-(\d+\/\d+)(?=\s)/g, '$1$2 $3').replace(/^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=\d)/i, (m, w) => NUMW[w.toLowerCase()] + ' ')).replace(/(^|\()(\d+)\s*[-–]\s*([½¼¾⅓⅔⅛⅜⅝⅞])(?=\s)/g, '$1$2$3').replace(/^(\d+)\s+and\s+(\d+\/\d+|[½¼¾⅓⅔⅛⅜⅝⅞])/i, (m, w, f) => w + (/\d/.test(f) ? ' ' : '') + f).replace(/^(\d+)\s+and\s+(?:a\s+)?half\b/i, '$1½');
   let qty = '', name = s;
   // Recipe cards often write T. for tablespoon and t. for teaspoon (capital T is the bigger spoon)
   // "3 garlic cloves" is 3 cloves of garlic, the same item as "2 cloves garlic", so the two add up
@@ -195,7 +195,10 @@ export function splitIngredient(line){
   name = name.charAt(0).toUpperCase() + name.slice(1);
   // The key's last word is the same for one or many: tomato/tomatoes, cherry/cherries, bay leaf/bay leaves all share a key
   // Accents don't make a different item (jalapeño, jalapeno), and "whole or 2% milk" is milk
-  const key = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f').replace(/^or /, '') || name.toLowerCase();
+  // 2% milk, 1% milk and whole milk are different things to buy, so for milk, yogurt and cottage cheese the percent stays in the key.
+  // A line that offers a choice ("1 or 2% milk", "whole or 2% milk") keeps the plain key.
+  const pct = /\b(?:milk|yogurt|cottage cheese)\b/i.test(name) && !/\bor\b/i.test(name) ? (name.match(/(\d+(?:\.\d+)?)\s*%/) || [])[1] : '';
+  const key = (pct ? 'pct' + pct.replace(/\./g, 'x').replace(/\d/g, c => 'abcdefghij'[c]) + ' ' : '') + name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f').replace(/^or /, '') || name.toLowerCase();
   // rest: the line after its amount, used to show the line at another recipe size. Not enumerable, so the result's shape is unchanged.
   return Object.defineProperty({qty, name, key: SAME_KEY[key] || key}, 'rest', {value: rest});
 }

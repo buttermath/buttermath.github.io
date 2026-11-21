@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { STARTERS } from './starter.js';
 import { art, guessArt as guessKind } from './art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=27';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=28';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -554,11 +554,11 @@ function fixSplit(k){ let ch = false; const items = k.shopping.items, marks = k.
   return ch; }
 // Lists saved before prep words at the end of a name were dropped ("Chickpeas drained" is now "Chickpeas") keep the old name.
 // It's renamed (or merged into the same item already there) so its amount still adds up from the recipes.
-// Lists saved before 2% milk and plain milk were told apart have one Milk item for both. The 2% (or 1%) lines go back on as their own item,
+// Lists saved before 2% milk, whole milk and plain milk were told apart have one Milk item for all of them. The 2% (or 1%) and whole milk lines go back on as their own items,
 // Milk is added up again from what's left, and a checked-off item stays checked off.
 function fixPct(k){ let ch = false; const items = k.shopping.items, marks = k.progress.shop = k.progress.shop || {};
   for(const it of items.slice()){ if(it.custom || !(it.recipes || []).length) continue; const ok = it.key || splitIngredient(it.name).key;
-    const rids = it.recipes.filter(x => R(x)), lines = rid => ingLines(D(R(rid))), moved = rid => lines(rid).filter(l => { const p = splitIngredient(l).key; return p !== ok && p.replace(/^pct[a-jx]+ /, '') === ok; });
+    const rids = it.recipes.filter(x => R(x)), lines = rid => ingLines(D(R(rid))), moved = rid => lines(rid).filter(l => { const p = splitIngredient(l).key; return p !== ok && p.replace(/^pct[a-jx]+ /, '').replace(/\bwholemilk\b/, 'milk') === ok; });
     if(!rids.some(rid => moved(rid).length)) continue;
     const stays = rids.some(rid => lines(rid).some(l => splitIngredient(l).key === ok)), mark = marks[it.id];
     if(!stays){ items.splice(items.indexOf(it), 1); delete marks[it.id]; }

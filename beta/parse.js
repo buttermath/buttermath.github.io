@@ -25,6 +25,7 @@ function metaFrom(line, out){
   return true;
 }
 const looksIng = l => l.length < 140 && (new RegExp('^(\\d|['+FRAC+']|one |two |three |a |an |pinch|dash|handful|juice of|zest of|salt|pepper|kosher salt|black pepper)','i')).test(l);
+const STEP_VERB = /\b(mix|stir|bake|add|cook|heat|combine|place|pour|whisk|serve|preheat|bring|simmer|season|remove|let|cut|chop|spread|cover|fold|beat|boil|drain|roast|grill|transfer|top|sprinkle|layer|blend|knead|melt|saut[eé]|fry|toss|slice|dice|mince|marinate|chill|refrigerate|cool|garnish|arrange|wrap|roll|brush|reduce|stuff|bring)\b/i;
 const cleanStep = l => l.replace(/^(step\s*)?\d+\s*[.):-]\s*/i,'').replace(/^step\s*\d+\s*/i,'').trim();
 
 // Some recipes (Claude's, and many apps) write each step as a short numbered title, an optional time line like "3m" or "2m 30s",
@@ -58,7 +59,7 @@ export function parseRecipeText(raw){
   lines = lines.filter(l => !metaFrom(l,out) && !JUNK.test(l));
   let iIng = lines.findIndex(l => ING_HEAD.test(l));
   let iStep = lines.findIndex((l,i) => i > iIng && STEP_HEAD.test(l));
-  let ings = [], steps = [], notes = [];
+  let ings = [], steps = [], notes = [], listOnly = false;
   if(iIng >= 0){
     const endIng = iStep > iIng ? iStep : lines.length;
     ings = lines.slice(iIng+1, endIng);
@@ -68,7 +69,13 @@ export function parseRecipeText(raw){
     }
   } else {
     ings = lines.filter(looksIng);
-    steps = lines.filter(l => !looksIng(l) && l.length > 50);
+    // Without headings, only real sentences become steps: a messy line read from a photo isn't a step (Nov 21, 2026).
+    steps = lines.filter(l => !looksIng(l) && l.length > 50 && (/[.!?]$/.test(l) || STEP_VERB.test(l)));
+    // A plain list with no amounts ("Canned soup", "Peanut butter"): short lines that aren't sentences are ingredients too.
+    if(ings.length < 2){
+      const listy = lines.filter(l => !looksIng(l) && l.length <= 45 && l.split(/\s+/).length <= 7 && !/[.!?]$/.test(l));
+      if(listy.length >= 2){ ings = lines.filter(l => looksIng(l) || listy.includes(l)); listOnly = true; }
+    }
   }
   if(iStep >= 0){
     let rest = lines.slice(iStep+1);
@@ -78,6 +85,7 @@ export function parseRecipeText(raw){
   }
   const before = iIng > 0 ? lines.slice(0, iIng) : lines;
   out.title = (before.find(l => l.length > 2 && l.length < 80 && !looksIng(l)) || '').replace(/\s*recipe$/i,'');
+  if(listOnly) out.title = ''; // a plain list has no title line: don't name the recipe after its first item
   ings = ings.filter(l => l.length < 200);
   // A short line ending in ":" or a "For the ..." line is a group heading.
   out.ingredients = ings.map(l => /^for (the )?/i.test(l) && l.length < 50 && !l.endsWith(':') ? l + ':' : l).map(prettyFractions).join('\n');

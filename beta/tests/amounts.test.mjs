@@ -57,8 +57,8 @@ check('1 cup + 4 oz (volume vs weight)', sum('1 cup', '4 oz'), '1 cup + 4 oz');
 
 console.log('\nReading ingredient lines');
 const line = (s, name, qty) => { const p = splitIngredient(s); check(`"${s.slice(0, 40)}"`, `${p.name} | ${p.qty}`, `${name} | ${qty}`); };
-line('1/2 cup (120ml) whole milk, warmed to about 95°F (35°C)', 'Milk', '½ cup (120ml) whole');
-line('1/2 cup (120ml) whole milk (warmed to about 95°F (35°C))', 'Milk', '½ cup (120ml) whole');
+line('1/2 cup (120ml) whole milk, warmed to about 95°F (35°C)', 'Whole milk', '½ cup (120ml)');
+line('1/2 cup (120ml) whole milk (warmed to about 95°F (35°C))', 'Whole milk', '½ cup (120ml)');
 line('6 Tablespoons (85g) unsalted butter, softened', 'Unsalted butter', '6 Tablespoons (85g)');
 line('2 Tablespoons heavy cream or milk)', 'Heavy cream or milk', '2 Tablespoons');
 line('18 large eggs', 'Eggs', '18 large');
@@ -70,7 +70,7 @@ line('1 and a half cups milk', 'Milk', '1½ cups');
 console.log('\nMatching the same ingredient across recipes');
 const same = (a, b) => check(`"${a}" = "${b}"`, String(splitIngredient(a).key === splitIngredient(b).key), 'true');
 same('2 large eggs', '1 egg');
-same('1 cup whole milk', '½ cup milk');
+same('1 cup whole milk', '½ cup Whole Milk');
 
 
 // Nov 19: the four gaps
@@ -99,7 +99,7 @@ for(const [a, b] of [['2 tbsp rice wine vinegar', '1 tbsp rice vinegar'], ['3 sc
 // Different things never share a line on their own (the list asks first for some of these)
 for(const [a, b] of [['1 tsp kosher salt', '1 tsp salt'], ['2 tbsp unsalted butter', '2 tbsp butter'], ['1 cup brown sugar', '1 cup sugar'],
   ['1 cup whipping cream', '1 cup heavy cream'], ['2 tbsp olive oil', '2 tbsp extra virgin olive oil'], ['1 tsp ground coriander', '1 bunch cilantro'],
-  ['¼ cup 2% milk', '1 cup whole milk'], ['¼ cup 2% milk', '1 cup milk'], ['1 cup 2% milk', '1 cup 1% milk'], ['1 cup 2% Greek yogurt', '1 cup Greek yogurt']])
+  ['¼ cup 2% milk', '1 cup whole milk'], ['¼ cup 2% milk', '1 cup milk'], ['1 cup whole milk', '½ cup milk'], ['1 cup 2% milk', '1 cup 1% milk'], ['1 cup 2% Greek yogurt', '1 cup Greek yogurt']])
   check('kept apart: ' + a.replace(/^[^a-z]+/i, '') + ' / ' + b.replace(/^[^a-z]+/i, ''), key(a) === key(b), false);
 
 // One and many are the same item (stress test, Nov 20): "1 tomato" + "2 tomatoes" is one line of 3

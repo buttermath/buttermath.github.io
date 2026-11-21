@@ -260,6 +260,11 @@ export const LINES = [
   ['1 15-oz can tomato sauce', 'Tomato sauce', '1 (15 oz) can'],
   ['1 15.5-ounce can chickpeas', 'Chickpeas', '1 (15.5 oz) can'],
   ['2 15 oz cans black beans', 'Black beans', '2 (15 oz) cans'],
+  // ---- a dash between a whole number and a fraction character (reported from the live site, Nov 20, 2026)
+  ['1-½ teaspoons onion powder', 'Onion powder', '1½ teaspoons'],
+  ['2-½ cups flour', 'Flour', '2½ cups'],
+  ['½-1 tsp salt', 'Salt', '½-1 tsp'],
+  ['¼ cup 2% milk', '2% milk', '¼ cup'],
   // ---- no amount
   ['Salt and pepper, to taste', 'Salt and pepper', ''],
   ['Fresh parsley, for garnish', 'Fresh parsley', ''],

@@ -125,7 +125,7 @@ export function sectionsToStepText(secs){
 }
 
 // ---- shopping ----
-const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tb','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','gr','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','qts?','pints?','containers?','cartons?','bottles?','pouch(?:es)?','jars?','bags?','tins?','packets?','blocks?','bricks?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','x-large','large','medium','small','whole(?!\\s+(?:or\\b|cloves?(?![A-Za-z])(?!\\s+(?:of\\s+)?garlic)))'];
+const UNITS = ['(?:small|medium|large)-(?:small|medium|large)','cups?','c\\.','c','tablespoons?','tbsps?','tbs','tb','tsps?','teaspoons?','ounces?','oz','pounds?','lbs?','grams?','g','gr','kg','kilograms?','ml','milliliters?','liters?','litres?','l','cloves?','cans?','packages?','pkgs?','sticks?','pinch(?:es)?','dash(?:es)?','bunch(?:es)?','heads?','slices?','sprigs?','quarts?','qts?','pints?','containers?','cartons?','bottles?','pouch(?:es)?','jars?','bags?','tins?','packets?','blocks?','bricks?','box(?:es)?','bars?','envelopes?','fl\\.? ?oz','x-large','large','medium','small','whole(?!\\s+(?:or\\b|milk\\b|cloves?(?![A-Za-z])(?!\\s+(?:of\\s+)?garlic)))'];
 const Q = '(?:\\d+\\s*['+FRAC+']|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?|['+FRAC+'])';
 const LEAD = new RegExp('^((?:about |approx\\.? )?'+Q+'(?:\\s*(?:-|–|to)\\s*'+Q+')?\\s*(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:\\([^)]*\\)\\s*)?(?:(?:'+UNITS.join('|')+')(?![A-Za-z])\\.?\\s*)?(?:of\\s+)?)','i');
 const DESCRIPTORS = /\b(fresh|freshly|chopped|sliced|diced|minced|softened|chilled|cold|ice[- ]cold|cubed|melted|room temperature|at room temperature|divided|optional|packed|lightly|finely|thinly|roughly|large|small|medium|extra|pure|grated|shredded|whole|to taste|for garnish|for serving|plus more|spooned and leveled|beaten|ground)\b/g;
@@ -195,10 +195,11 @@ export function splitIngredient(line){
   name = name.charAt(0).toUpperCase() + name.slice(1);
   // The key's last word is the same for one or many: tomato/tomatoes, cherry/cherries, bay leaf/bay leaves all share a key
   // Accents don't make a different item (jalapeño, jalapeno), and "whole or 2% milk" is milk
-  // 2% milk, 1% milk and whole milk are different things to buy, so for milk, yogurt and cottage cheese the percent stays in the key.
+  // 2% milk, 1% milk, whole milk and plain milk are different things to buy, so for milk, yogurt and cottage cheese the percent stays in the key,
+  // and "whole milk" stays whole milk (Hayley, Nov 20).
   // A line that offers a choice ("1 or 2% milk", "whole or 2% milk") keeps the plain key.
   const pct = /\b(?:milk|yogurt|cottage cheese)\b/i.test(name) && !/\bor\b/i.test(name) ? (name.match(/(\d+(?:\.\d+)?)\s*%/) || [])[1] : '';
-  const key = (pct ? 'pct' + pct.replace(/\./g, 'x').replace(/\d/g, c => 'abcdefghij'[c]) + ' ' : '') + name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g,' ').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f').replace(/^or /, '') || name.toLowerCase();
+  const key = (pct ? 'pct' + pct.replace(/\./g, 'x').replace(/\d/g, c => 'abcdefghij'[c]) + ' ' : '') + name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g,' ').replace(/\bwhole milk\b/g, 'wholemilk').replace(DESCRIPTORS,' ').replace(/\s+/g,' ').trim().replace(/s$/,'').replace(/ie$/,'y').replace(/oe$/,'o').replace(/ve$/,'f').replace(/^or /, '') || name.toLowerCase();
   // rest: the line after its amount, used to show the line at another recipe size. Not enumerable, so the result's shape is unchanged.
   return Object.defineProperty({qty, name, key: SAME_KEY[key] || key}, 'rest', {value: rest});
 }

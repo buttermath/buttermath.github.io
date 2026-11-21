@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { STARTERS } from '../starter.js';
 import { art, guessArt as guessKind } from '../art.js?v=11';
-import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=28';
+import { parseRecipeText, ingTextToGroups, groupsToIngText, stepTextToSections, sectionsToStepText, splitIngredient, guessSection, SECTIONS, prettyFractions, addQty, BULLET, ingParts, ingReplacePart, maybeSame, scaleQty, scaleLine, scaleYield, yieldCount } from './parse.js?v=29';
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -624,6 +624,7 @@ let addSheet = null, choosing = null, chooseSnap = null, chosenN = 0, moreOpen =
 let homeMode = false, editItem = null;
 const srcCredit = srcs => srcs.length ? `<div class="srcline">Recipe from <a href="${esc(srcs[0].url)}" target="_blank" rel="noopener">${esc(hostOf(srcs[0].url))}</a></div>` : '';
 const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./, ''); }catch(e){ return 'website'; } };
+const ICON_RESTART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
 const ICON_PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
 const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
@@ -1100,12 +1101,12 @@ function renderShopping(){
       <input id="addQty" data-keep placeholder="Amount" aria-label="Amount (optional)" maxlength="60">
       <select id="addSec" data-keep aria-label="Section">${secOpts.map(s => `<option ${s === ui.sec ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
       <select id="addFor" data-keep aria-label="Which recipe is it for?"><option value="">No recipe</option>${recipes.map(r => `<option value="${esc(r.id)}">For ${esc(D(r).short || D(r).title)}</option>`).join('')}</select>
-      <button class="btn dark" type="submit">+ Add</button>
+      <button class="btn dark" type="submit">Add</button>
       <button class="btn" type="button" data-act="addclose">Done</button>
-    </form>` : items.length || chipRecipes.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from recipe</button><button class="btn" data-act="addopen">+ Add individual item</button></div>` : ''}
+    </form>` : items.length || chipRecipes.length ? `<div class="addbtns"><button class="btn primary" data-act="pickopen">Add from recipe</button><button class="btn" data-act="addopen">Add an item</button>${SHOP_PHOTO_BTN}</div>` : ''}
   ${!items.length && !chipRecipes.length && !Q && f !== 'have' ? `<section class="shopstart"><h3>Your list is currently empty</h3><p class="muted">Add ingredients from your recipe(s) or add individual ingredients.</p>
     <ol><li><i>1</i><span>Add a recipe from your recipe box.</span></li><li><i>2</i><span>The recipe ingredients land here, sorted by aisle and added up across recipes.</span></li><li><i>3</i><span>Check things off as you shop.</span></li></ol>
-    <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">+ Add individual item</button>'}</section>
+    <button class="btn primary" data-act="pickopen">${ICON_BOOKADD}Add from recipe</button>${ui.addOpen ? '' : '<button class="btn" data-act="addopen">Add an item</button>'}${SHOP_PHOTO_BTN}</section>
     <p class="muted shophint">You can also tap <b>Shop for ingredients</b> while you are on any recipe page.</p>` : ''}
   ${!Q && !homeMode && items.length ? `<button class="homelink" data-act="homemode">${ICON_HOME}Check off pantry</button>` : ''}
   ${ask && !Q && !homeMode ? `<div class="mergeask" role="status"><p>Are these items the same? <b>${esc(ask.A.name)}</b> and <b>${esc(ask.B.name)}</b>.</p><div class="mergebtns"><button class="btn dark sm" data-act="mergeyes" data-a="${esc(ask.A.id)}" data-b="${esc(ask.B.id)}">Combine</button><button class="btn quiet sm" data-act="mergeno" data-p="${esc(ask.pk)}">Keep separate</button></div></div>` : ''}
@@ -1471,13 +1472,18 @@ const ICON_MINUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h1
 // Recipe size: ½× to 3×, and − / + for one serving at a time when the recipe says how many it serves. It lasts until the recipe is finished.
 // The note that comes with a new size of a baked thing: more pans the same size, or a smaller pan.
 const PANW = /\b(pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i;
-function scaleNotes(d, f){ if(near1(f, 1) || !PANW.test(d.yield || '')) return '';
-  if(f < 1) return `<div class="scalenotes"><p>Use a smaller pan.</p></div>`;
+// Recipes that bake but don't name a pan in the yield (like a lasagna that "serves 8") get a note too, and every note
+// says when to start checking. Butter Math never changes the times in the steps: there's no rule that's right for every dish (Nov 21, 2026).
+const BAKES = /\b(bake[sd]?|baking|oven|roast(?:ed|ing)?|broil|pans?|dish|skillet|casserole|\d+\s*(?:x|×|by)\s*\d+)\b/i;
+const bakesIn = d => PANW.test(d.yield || '') || (d.steps || []).some(sec => (sec.items || []).some(st => BAKES.test(st.text || '')));
+function scaleNotes(d, f){ if(near1(f, 1) || !bakesIn(d)) return '';
+  if(f < 1) return `<div class="scalenotes"><p>Use a smaller pan, and start checking a few minutes before the time in the recipe.</p></div>`;
+  if(!PANW.test(d.yield || '')){ const k = Math.ceil(f); return `<div class="scalenotes"><p>Use ${k} pans the same size as the recipe's, not one bigger pan. Start checking at the time in the recipe.</p></div>`; }
   // how many pans: the scaled count of pies, cakes or loaves, rounded up ("1½ pies" needs 2 pans)
   const sy = scaleYield(d.yield, f), m = sy.match(/(\d*)([½¼¾⅓⅔⅛⅜⅝⅞]?)\s+(?:\([^)]*\)\s+)?(?:[\w-]+\s+)?(?:pies?|cakes?|loaf|loaves|pans?|tarts?|bundts?|cheesecakes?|quiches?|galettes?|dish(?:es)?|skillets?|casseroles?|crusts?)\b/i);
   const n = m && (m[1] || m[2]) ? Math.ceil((m[1] ? +m[1] : 0) + (m[2] ? ({'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875})[m[2]] : 0)) : Math.ceil(f);
   const x = ({1.5: '1½'})[f] || (Number.isInteger(f) ? String(f) : '');
-  return `<div class="scalenotes"><p>${x ? `It's recommended to use ${n} similarly sized pans. Not a pan ${x}x as large` : `It's recommended to use ${n} similarly sized pans. Not one larger pan`}</p></div>`; }
+  return `<div class="scalenotes"><p>${x ? `It's recommended to use ${n} similarly sized pans. Not a pan ${x}x as large` : `It's recommended to use ${n} similarly sized pans. Not one larger pan`}. Start checking at the time in the recipe.</p></div>`; }
 function scaleRow(r, d, f){
   // Four sizes (decided Nov 19, 2026). A size picked earlier that isn't one of them (like 1½× or a serving count) stays shown until another is picked.
   const opts = [[.5, '½×'], [1, '1×'], [2, '2×'], [3, '3×']], id = esc(r.id);
@@ -1580,6 +1586,18 @@ function ensureForm(id){
   }
   return form;
 }
+// Start over on a new recipe: the arrow button clears everything after a confirm (Nov 21, 2026). It shows once something is entered.
+function formDirty(){
+  if(form && form.forId === 'new' && (form.photoUrl || form.review || form.filled || form.importMsg)) return true;
+  return [...document.querySelectorAll('.form [data-keep]')].some(el => el.type !== 'checkbox' && el.type !== 'file' && String(el.value || '').trim());
+}
+function syncClear(){ const b = $('#f-clear'); if(b) b.hidden = !formDirty(); }
+document.addEventListener('input', e => { if(e.target && e.target.closest && e.target.closest('.form')) syncClear(); });
+function clearForm(){
+  document.querySelectorAll('.form [data-keep]').forEach(el => { if(el.type !== 'checkbox' && el.type !== 'file') el.value = ''; });
+  if(form && form.photoUrl) URL.revokeObjectURL(form.photoUrl);
+  form = null; render(); window.scrollTo(0, 0); toast('Cleared the form');
+}
 function renderForm(id){
   const r = id ? R(id) : null;
   if(id && !r) return `${backBtn()}<div class="card empty">That recipe isn't here anymore.</div>`;
@@ -1589,7 +1607,7 @@ function renderForm(id){
   const photoNow = f.photoUrl || (!f.removePhoto && d.photo) || null;
   return `${r ? `<button class="back" data-act="go" data-h="r-${esc(r.id)}">${ICON_BACK}Back to recipe</button>` : backBtn()}
   <div class="card panel form">
-    <h3>${r ? 'Edit recipe' : 'Add a recipe'}</h3>
+    ${r ? `<h3>Edit recipe</h3>` : `<div class="formhead"><h3>Add a recipe</h3><button class="ibtn" type="button" id="f-clear" data-act="formclear" title="Clear form" aria-label="Clear form"${formDirty() ? '' : ' hidden'}>${ICON_RESTART}</button></div>`}
     <div class="lbl2">Recipe website link <span class="hint">recommended</span></div>
     <div class="linkrow"><input class="tin" id="f-link" data-keep type="url" inputmode="url" placeholder="Paste a recipe link" value="${v('link', link.url)}"></div>
     ${!r && f.importing ? `<div class="importmsg">Importing…</div>` : !r && f.review ? reviewCard(f.review) : !r && f.importMsg ? `<div class="importmsg ${f.importOk ? 'ok' : ''}">${esc(f.importMsg)}</div>` : ''}
@@ -1627,6 +1645,68 @@ function renderForm(id){
     ${f.err ? `<div class="err">${esc(f.err)}</div>` : ''}
   </div>`;
 }
+// ---- Add from photo on the shopping list (Nov 21, 2026) ----
+// A photo or screenshot of a written list. The text is read on the device, like recipe photos, and nothing is uploaded.
+// Each line becomes an item the person can fix or untick before it goes on the list, sorted into an aisle the usual way.
+const ICON_CAM = '<svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>';
+const SHOP_PHOTO_BTN = `<label class="btn" id="shop-ocrlbl">${ICON_CAM}Add from photo<input type="file" id="shop-ocr" accept="image/*" hidden></label>`;
+let shopOcr = null; // {busy, msg, lines:[{t, on}]}
+const LIST_HEAD = /^(grocer(y|ies)|shopping|to buy|list|groceries list|grocery list|shopping list|need|buy)\s*:?$/i;
+function listLines(text){
+  const out = [], seen = new Set();
+  for(let l of String(text || '').replace(/\r/g, '').split('\n')){
+    l = l.replace(/\s+/g, ' ').trim();
+    for(let i = 0; i < 2; i++) l = l.replace(/^(?:[-–—•*·▪●○◦□☐☑✓✔]+|\[\s*[xX✓✔]?\s*\]|\(\s*\)|\d+\s*[.)])\s*/, '');
+    if(!/[A-Za-z]{2}/.test(l) || LIST_HEAD.test(l) || l.length > 70) continue;
+    const k = l.toLowerCase(); if(seen.has(k)) continue; seen.add(k);
+    out.push(l.charAt(0).toUpperCase() + l.slice(1));
+    if(out.length >= 60) break;
+  }
+  return out;
+}
+function renderShopOcr(){
+  const s = shopOcr; if(!s){ $('#modalRoot').innerHTML = ''; return; }
+  const n = s.lines ? s.lines.filter(x => x.on && x.t.trim()).length : 0;
+  $('#modalRoot').innerHTML = `<div class="modal" data-act="shopocrclose"><div class="card ocrsheet" data-stop role="dialog" aria-modal="true" aria-labelledby="ocr-h"><h3 id="ocr-h">Add from photo</h3>
+    ${s.lines ? `<p class="muted">Fix anything that was read wrong, and untick what you don't need.</p>
+    <ul class="ocrlist">${s.lines.map((x, i) => `<li><input type="checkbox" id="ocr-c${i}" data-oi="${i}" ${x.on ? 'checked' : ''} aria-label="Add this item"><input class="tin" id="ocr-t${i}" data-oi="${i}" value="${esc(x.t)}" maxlength="80" aria-label="Item"></li>`).join('')}</ul>
+    <div class="row"><button class="btn quiet" data-act="shopocrclose">Cancel</button><button class="btn primary" data-act="shopocrok"${n ? '' : ' disabled'}>Add items</button></div>`
+    : `<p class="muted" role="status" aria-live="polite">${esc(s.msg || '')}</p>${s.busy ? '' : `<div class="row"><button class="btn" data-act="shopocrclose">Close</button></div>`}`}
+  </div></div>`;
+}
+async function readListPhoto(file){
+  if(!file || (shopOcr && shopOcr.busy)) return;
+  shopOcr = {busy: true, msg: 'Getting ready to read the photo…'}; renderShopOcr();
+  const say = t => { if(shopOcr){ shopOcr.msg = t; const p = document.querySelector('.ocrsheet [role=status]'); if(p) p.textContent = t; } };
+  try{
+    const T = await loadTess(), img = await shrink(file, 2200);
+    const {data} = await T.recognize(img, 'eng', {logger: m => { if(m.status === 'recognizing text') say('Reading your list… ' + Math.round(m.progress * 100) + '%'); }});
+    if(!shopOcr) return;
+    const lines = listLines(data.text);
+    if(!lines.length){ shopOcr = {busy: false, msg: "Couldn't find any items in that photo. Try a sharper, straight-on photo or a screenshot."}; renderShopOcr(); return; }
+    shopOcr = {busy: false, lines: lines.map(t => ({t, on: true}))}; renderShopOcr();
+  }catch(err){ console.error(err); shopOcr = {busy: false, msg: "Couldn't read that photo. Check your connection and try again."}; renderShopOcr(); }
+}
+function shopOcrAdd(){
+  if(!shopOcr || !shopOcr.lines) return;
+  const add = shopOcr.lines.filter(x => x.on && x.t.trim()).map(x => x.t.trim()); if(!add.length) return;
+  mutate(k => { add.forEach((line, j) => { const sp = splitIngredient(line), name = (sp.name || line).trim() || line, qty = sp.name ? (sp.qty || '') : '';
+    const id = 'c-' + Date.now().toString(36) + j + rid().slice(0, 4);
+    k.shopping.items.push({id, name: name.charAt(0).toUpperCase() + name.slice(1), qty, section: guessSection(name, qty) || 'Other', key: splitIngredient(name).key, recipes: [], custom: true}); }); });
+  shopOcr = null; $('#modalRoot').innerHTML = '';
+  if(ui.filter === 'cart' || ui.filter === 'have'){ ui.filter = 'all'; saveUi(); }
+  render(); toast(`Added ${add.length} item${add.length === 1 ? '' : 's'}`);
+}
+document.addEventListener('change', e => {
+  const t = e.target; if(!t) return;
+  if(t.id === 'shop-ocr'){ const f = t.files[0]; t.value = ''; if(f) readListPhoto(f); return; }
+  if(t.dataset && t.dataset.oi != null && shopOcr && shopOcr.lines){ const x = shopOcr.lines[+t.dataset.oi]; if(!x) return;
+    if(t.type === 'checkbox') x.on = t.checked; else x.t = t.value;
+    const b = document.querySelector('[data-act="shopocrok"]'); if(b) b.disabled = !shopOcr.lines.some(y => y.on && y.t.trim()); }
+});
+document.addEventListener('input', e => { const t = e.target; if(t && t.dataset && t.dataset.oi != null && t.type !== 'checkbox' && shopOcr && shopOcr.lines){ const x = shopOcr.lines[+t.dataset.oi]; if(x) x.t = t.value;
+  const b = document.querySelector('[data-act="shopocrok"]'); if(b) b.disabled = !shopOcr.lines.some(y => y.on && y.t.trim()); } });
+document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-act="shopocrclose"]'); if(!el) return; if(el.classList.contains('modal') && e.target !== el) return; if(shopOcr && shopOcr.busy) return; shopOcr = null; $('#modalRoot').innerHTML = ''; });
 // ---- Read a recipe from a photo (text is read on the device with Tesseract; nothing is uploaded) ----
 let tessP = null, ocrBusy = false;
 function loadTess(){
@@ -1692,7 +1772,7 @@ function fillFromPaste(){
   if(!p.ingredients){ toast("Couldn't find ingredients. Paste just the recipe."); return; }
   form.lastParsed = raw; form.autoIng = p.ingredients; form.autoSteps = p.steps; form.autoTitle = p.title;
   form.filled = true; form.review = {n: stepLines(p.steps).length, url: (($('#f-link') || {}).value || '').trim(), warn: stepCheck(p.steps, false), src: 'paste'}; render();
-  toast('Filled in');
+  toast(p.steps ? 'Filled in' : 'Filled in the ingredients. No steps found, so add them below if the recipe has any.');
 }
 function videoRecipeText(desc){
   const ls = String(desc || '').replace(/\r/g, '').split('\n').map(l => l.trim());
@@ -1804,8 +1884,8 @@ async function saveForm(id){
   const f = form, existing = id ? R(id) : null, old = existing ? D(existing) : {};
   const val = s => (($(s) || {}).value || '').trim();
   const title = val('#f-title');
-  if(!title){ f.err = 'Add a recipe title.'; render(); return; }
-  if(!val('#f-ing')){ f.err = 'Add the ingredients (paste the recipe and tap Download into form).'; render(); return; }
+  if(!title){ f.err = 'Add a recipe title.'; render(); toast(f.err); const tt = $('#f-title'); if(tt) tt.focus(); return; }
+  if(!val('#f-ing')){ f.err = 'Add at least one ingredient. Amounts are optional.'; render(); toast(f.err); const ig = $('#f-ing'); if(ig) ig.focus(); return; }
   const ingredients = ingTextToGroups(val('#f-ing'));
   if(f.amtFix){ const fx = f.amtFix; ingredients.forEach(g => { g.items = (g.items || []).map(l => fx[l] || l); }); }
   ingredients.forEach(g => (g.items || []).flatMap(ingParts).forEach(l => logAmt(l)));
@@ -2545,6 +2625,8 @@ document.addEventListener('click', async e => {
   if(a === 'go'){ if(el.dataset.h === 'admin'){ adminData = null; adminUsage = null; adminFr = null; adminErr = null; } location.hash = el.dataset.h; return; }
   if(a === 'backup'){ downloadBackup(); return; }
   if(a === 'dlmine'){ downloadMine(); return; }
+  if(a === 'formclear'){ confirmBox('Start over?', "This clears everything you've entered for this recipe.", 'Clear', clearForm); return; }
+  if(a === 'shopocrok'){ shopOcrAdd(); return; }
   if(a === 'errall'){ const t = Math.max(...(adminErr || []).map(x => new Date(x.at).getTime()), Date.now()); mutate(k => { k.progress.errSeenAt = t; k.progress.errSeen = {}; }, true); errPill(); return; }
   if(a === 'fcatmenu'){ fCatOpen = !fCatOpen; fSortOpen = false; render(); return; }
   if(a === 'fcatpick'){ const t = el.dataset.t; fCat = fCat.includes(t) ? fCat.filter(x => x !== t) : fCat.concat(t); render(); return; }
